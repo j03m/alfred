@@ -5,6 +5,7 @@ import yfinance as yf
 from datetime import datetime, timedelta
 import time
 import requests
+import json as js
 from requests.exceptions import HTTPError
 
 coin_base = False
