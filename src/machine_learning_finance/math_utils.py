@@ -5,9 +5,11 @@ from scipy.signal import find_peaks, peak_prominences
 from scipy.stats import poisson
 from sklearn.linear_model import LinearRegression
 
+
 def scale_to_price(series, df):
     price_range = [df['Close'].min(), df['Close'].max()]
-    scaled_series = (series - series.min()) / (series.max() - series.min()) * (price_range[1] - price_range[0]) + price_range[0]
+    scaled_series = (series - series.min()) / (series.max() - series.min()) * (price_range[1] - price_range[0]) + \
+                    price_range[0]
     return scaled_series
 
 
@@ -51,3 +53,9 @@ def generate_probability(df):
     model.fit(x, last_30_days_trend)
 
     return trend, prob_above_trend, prob_below_trend, volatility, model
+
+
+def generate_day_probability(df):
+    [trend, prob_above_trend, prob_below_trend, volatility, model] = generate_probability(df)
+    return trend.iloc[-1], prob_above_trend[-1], prob_below_trend[-1], volatility.iloc[-1]
+

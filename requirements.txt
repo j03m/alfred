@@ -14,5 +14,5 @@ statsmodels
 plotly
 pytz
 python-dateutil
-tensorflow
 joblib
+pandas-ta

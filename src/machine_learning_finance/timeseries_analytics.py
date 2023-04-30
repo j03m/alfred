@@ -158,10 +158,3 @@ def calc_extreme_percentage_deviations(df_durations, trend):
 
     return extreme_percentage_deviations
 
-
-def analyze_extreme_deviations(df_durations, trend):
-    extreme_percentage_deviations = calc_extreme_percentage_deviations(df_durations, trend)
-    mean, std = norm.fit(extreme_percentage_deviations)
-    numbers = np.arange(np.min(extreme_percentage_deviations), np.max(extreme_percentage_deviations))
-    pdf_values = norm.pdf(numbers, mean, std)
-    prob_chart(df_durations, pdf_values)

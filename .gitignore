@@ -2,5 +2,6 @@ build/*
 data/*
 venv/*
 dist/*
-src/machine_learning_finance/__pycache__/*
+src/machine_learning_finance/__pycache__/
+src/machine_learning_finance.egg-info/*
 notebooks/.ipynb_checkpoints/*

@@ -1,2 +1,0 @@
-[console_scripts]
-ppo_train = machine_learning_finance:ppo_train
