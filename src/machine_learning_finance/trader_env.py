@@ -8,12 +8,26 @@ import math
 from scipy.stats import norm
 import pandas as pd
 
+
 class TraderEnv(gym.Env):
 
     def __init__(self, product, df, curriculum_code=1):
         super(TraderEnv, self).__init__()
 
         # Define the bounds for each column
+        self.benchmark_value = None
+        self.position_value = None
+        self.cash_from_short = None
+        self.shares_owed = None
+        self.last_profit = None
+        self.cash = None
+        self.in_short = None
+        self.position_shares = None
+        self.in_long = None
+        self.last_action = None
+        self.scaler = None
+        self.benchmark_position_shares = None
+        self.in_position = None
         close_min, close_max = 0, np.inf
         volume_min, volume_max = 0, np.inf
         trend_min, trend_max = 0, np.inf
@@ -34,12 +48,6 @@ class TraderEnv(gym.Env):
         self.timeseries = self.scale(df[["Date", "Close", "weighted-volume", "trend", "prob_above_trend"]])
 
         self._reset_vars()
-        self.calculate_benchmark_metrics()
-
-        # Don't add this here. Process the tickers into data files - you already have some.
-        # self.lstm_internal = keras.models.load_model(model_path + "/lstm_cv-4.h15")
-        # predictions = self.predict_trade(self.lstm_internal, self.timeseries[["Close", "weighted-volume"]])
-        # self.timeseries["predicted-price"] = predictions
 
         self.product = product
         self.final = len(df)
@@ -92,10 +100,6 @@ class TraderEnv(gym.Env):
         price = self.get_price_with_slippage(row["Close"])
         self.benchmark_position_shares = math.floor(self.cash / price)
 
-    def predict_trade(self, model, X):
-        predicted = model.predict(X, verbose=0).flatten()
-        return predicted
-
     def expand(self, df):
         # Perform seasonal decomposition
         result = seasonal_decompose(df['Close'], model='additive', period=90, extrapolate_trend='freq')
@@ -126,7 +130,6 @@ class TraderEnv(gym.Env):
         return scaled_df.set_index('Date')  # Set the index back to 'Date'
 
     def _reset_vars(self):
-
         self._episode_ended = False
         self.ledger = self.make_ledger_row()
         self.slippage = .01
@@ -146,6 +149,10 @@ class TraderEnv(gym.Env):
         self.long_entry = -1
         self.short_entry = -1
         self.rolling_score = 0
+        self.last_action = None
+        self.last_profit = 0
+        self.calculate_benchmark_metrics()
+
 
     def reset(self):
         # Reset the environment and return the initial time step
@@ -176,12 +183,12 @@ class TraderEnv(gym.Env):
         self._apply_action(action)
 
         if self._is_episode_ended():
-            reward = self._get_reward2()
+            reward = self._get_reward()
             info("final reward:", reward)
             return self._get_next_state(), reward, False, True, {}
             # return self._get_next_state(), reward, True, {}
         else:
-            reward = self._get_reward2()
+            reward = self._get_reward()
             info("current reward:", reward)
             self.current_index += 1
             return self._get_next_state(), reward, False, False, {}
@@ -194,7 +201,7 @@ class TraderEnv(gym.Env):
 
     def should_stop(self):
         # if cash is negative
-        if (self.total_value() <= 0):
+        if self.total_value() <= 0:
             error("Bankrupt.")
             return True
         return False
@@ -203,10 +210,10 @@ class TraderEnv(gym.Env):
         # Advance the environment by one time step and return the observation, reward, and done flag
         verbose("step:", "index:", self.current_index, " of: ", self.final - 1, "action: ", int(action))
         self.update_position_value()
-        if (self.current_index >= self.final - 1):  # or  self.should_stop()
+        if self.current_index >= self.final - 1:  # or  self.should_stop()
             error("********MARKING DONE", "index:", self.current_index, " of: ", self.final - 1, " cash: ", self.cash,
                   " value: ", self.position_value)
-            if (self.position_shares != 0):
+            if self.position_shares != 0:
                 verbose("done so closing position")
                 self.close_position()
             self._episode_ended = True
@@ -214,35 +221,35 @@ class TraderEnv(gym.Env):
             self._episode_ended = False
 
         # AI says hold
-        if (action == 0):
+        if action == 0:
             info("holding action = 0.")
             self.closed_position = False
         # AI says long but we're already in a position
-        elif (action == 1 and self.in_long):
+        elif action == 1 and self.in_long:
             info("holding long.")
             self.closed_position = False
         # AI says long, we're not in a position, so buy
-        elif (action == 1 and not self.in_position):
+        elif action == 1 and not self.in_position:
             info("opening long.")
             self.open_position()
             self.closed_position = False
         # AI says long, but we're short. Close the short, open a long.
-        elif (action == 1 and self.in_short):
+        elif action == 1 and self.in_short:
             info("closing short to open long.")
             self.closed_position = True
             self.close_short()
             self.open_position()
         # AI says short, but we're already short
-        elif (action == 2 and self.in_short):
+        elif action == 2 and self.in_short:
             info("holding short.")
             self.closed_position = False
-        # AI says short and we're not in a position so exit
-        elif (action == 2 and not self.in_position):
+        # AI says short, we're not in a position so exit
+        elif action == 2 and not self.in_position:
             info("opening short.")
             self.open_short()
             self.closed_position = False
         # AI says short but we're long, close it
-        elif (action == 2 and self.in_long):
+        elif action == 2 and self.in_long:
             info("closing long to open short")
             self.close_position()
             info("opening short.")
@@ -372,33 +379,50 @@ class TraderEnv(gym.Env):
         self.position_value = (row["Close"] * self.position_shares) - (row["Close"] * self.shares_owed)
         self.benchmark_value = row["Close"] * self.benchmark_position_shares
 
-    def _get_reward2(self):
-        '''
-          What components should go into the reward?
-          We can encode some of our desired behavior here, for example if we are at 99% chance of above trend we could reward long and vice versa
-          We can remove cash from the reward calculation and simply treat it well we initially trade from. Any profits go into cash from trades, initial cash is penalized
-          Consistency - making lots of profitable trades is better then big bets or not betting
-        '''
-        score = 0
+    def _get_reward(self):
+        current_portfolio_value = self.total_value()
+        percentage_change = ((current_portfolio_value - self.benchmark_value) / self.benchmark_value) * 100
+        info(f"portfolio value at reward calculation: {current_portfolio_value} vs bench: {self.benchmark_value} ratio: {percentage_change}")
+        if self.curriculum_code == 1:
+            return self._get_reward_curriculum_1_trade_setups()
+        elif self.curriculum_code == 2:
+            return self._get_reward_curriculum_2_profitable_actions()
+        elif self.curriculum_code == 3:
+            return self._get_reward_curriculum_3_vs_benchmark()
 
+    def _get_reward_curriculum_1_trade_setups(self):
+        '''
+        This function just rewards the agent for making what we would consider a probably set up.
+        '''
         component1 = self.is_probable_set_up()
-
         return component1
-
-    def calculate_consistency_bonus(self):
-        profitable_longs = list(filter(lambda x: x >= 0, self.long_profit))
-        profitable_shorts = list(filter(lambda x: x >= 0, self.short_profit))
-        profitable_trades = len(profitable_longs) + len(profitable_shorts)
-        max = len(self.long_profit) + len(self.short_profit)
-        if max == 0:
-            return 0
-        return profitable_trades / max * 100
 
     def calculate_close_bonus(self):
         if self.closed_position and self.last_profit > 0:
             return self.last_profit * 10
+        if self.closed_position and self.last_profit < 0:
+            return self.last_profit * 5
         else:
             return 0
+
+    def _get_reward_curriculum_2_profitable_actions(self):
+        df = self.orig_timeseries
+        row = df.iloc[self.current_index, :]
+        prob = row["prob_above_trend"]
+        action = self.last_action
+        # continue to reward for high probability setups, but now start to introduce the idea of
+        # profitable rewards, so it learns to avoid losing money?
+        score = 0
+        if action == 1 and prob >= self.prob_high:
+            score += 0.5  # reward a highly probable long
+        elif action == 2 and prob <= self.prob_low:
+            score += 0.5  # reward a highly probable short
+        elif action == 0 and (self.prob_low > prob or prob < self.prob_high):
+            score += 0.01  # reward holding when probability is moderate
+
+        score += self.calculate_close_bonus()
+
+        return score
 
     def is_probable_set_up(self):
         df = self.orig_timeseries
@@ -417,7 +441,7 @@ class TraderEnv(gym.Env):
             # raise Exception(f"WHY YOU WRONG? {self.current_index} {action} {prob}")
             return -10  # penalize for taking actions against the criteria
 
-    def _get_reward(self):
+    def _get_reward_curriculum_3_vs_benchmark(self):
         df = self.orig_timeseries
         row = df.iloc[self.current_index, :]
         current_portfolio_value = self.total_value()
