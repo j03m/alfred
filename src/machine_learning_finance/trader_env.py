@@ -20,6 +20,7 @@ class TraderEnv(gym.Env):
         self.cash_from_short = None
         self.shares_owed = None
         self.last_profit = None
+        self.last_percent_gain_loss = None
         self.cash = None
         self.in_short = None
         self.position_shares = None
@@ -151,6 +152,7 @@ class TraderEnv(gym.Env):
         self.rolling_score = 0
         self.last_action = None
         self.last_profit = 0
+        self.last_percent_gain_loss = 0
         self.calculate_benchmark_metrics()
 
 
@@ -298,8 +300,10 @@ class TraderEnv(gym.Env):
         ledger_row["Fee"] = [fee]
         ledger_row["Profit"] = [0]
         ledger_row["Value"] = [self.total_value()]
-
+        verbose("opening long with:")
+        verbose(ledger_row)
         self.ledger = pd.concat([self.ledger, ledger_row])
+
 
     def open_short(self):
         self.in_position = True
@@ -323,6 +327,8 @@ class TraderEnv(gym.Env):
         ledger_row["Fee"] = [fee]
         ledger_row["Profit"] = [0]
         ledger_row["Value"] = [self.total_value()]
+        verbose("opening short with:")
+        verbose(ledger_row)
         self.ledger = pd.concat([self.ledger, ledger_row])
 
     def close_position(self):
@@ -333,19 +339,23 @@ class TraderEnv(gym.Env):
         price = self.get_price_with_slippage(row["Close"])
         value = price * self.position_shares
         fee = value * self.fee
+        self.last_profit = (self.position_shares * price) - (self.position_shares * self.long_entry)
         self.position_shares = 0
         self.cash = self.cash + value
-        self.last_profit = (price - self.long_entry) / self.long_entry
-        self.long_profit.append(self.last_profit)
+        self.last_percent_gain_loss = (price - self.long_entry) / self.long_entry * 100
+        self.long_entry = -1
         ledger_row = self.make_ledger_row()
         ledger_row["Date"] = [row["Date"]]
         ledger_row["Side"] = ["long"]
         ledger_row["Action"] = ["exit"]
         ledger_row["Price"] = [price]
         ledger_row["Fee"] = [fee]
-        ledger_row["Profit"] = [self.last_profit]
+        ledger_row["Profit"] = [self.last_percent_gain_loss]
         ledger_row["Value"] = [self.total_value()]
         self.ledger = pd.concat([self.ledger, ledger_row])
+        verbose("closing long with:")
+        verbose(ledger_row)
+        verbose("profits:", self.last_profit, self.last_percent_gain_loss)
 
     def close_short(self):
         self.in_position = False
@@ -355,20 +365,24 @@ class TraderEnv(gym.Env):
         price = self.get_price_with_slippage(row["Close"])
         value = price * self.shares_owed
         fee = value * self.fee
+        self.last_profit = self.cash_from_short - value
         self.shares_owed = 0
         self.cash_from_short = 0
         self.cash = self.cash - value
-        self.last_profit = (self.short_entry - price) / self.short_entry
-        self.short_profit.append(self.last_profit)
+        self.last_percent_gain_loss = ((self.short_entry - price) / self.short_entry) * 100
+        self.short_entry = -1
         ledger_row = self.make_ledger_row()
         ledger_row["Date"] = [row["Date"]]
         ledger_row["Side"] = ["short"]
         ledger_row["Action"] = ["exit"]
         ledger_row["Price"] = [price]
         ledger_row["Fee"] = [fee]
-        ledger_row["Profit"] = [self.short_entry - price]
+        ledger_row["Profit"] = [self.last_percent_gain_loss]
         ledger_row["Value"] = [self.total_value()]
         self.ledger = pd.concat([self.ledger, ledger_row])
+        verbose("closing short with:")
+        verbose(ledger_row)
+        verbose("profits:", self.last_profit, self.last_percent_gain_loss)
 
     def _is_episode_ended(self):
         return self._episode_ended
@@ -398,10 +412,10 @@ class TraderEnv(gym.Env):
         return component1
 
     def calculate_close_bonus(self):
-        if self.closed_position and self.last_profit > 0:
-            return self.last_profit * 10
-        if self.closed_position and self.last_profit < 0:
-            return self.last_profit * 5
+        if self.closed_position and self.last_percent_gain_loss > 0:
+            return self.last_percent_gain_loss * 10
+        if self.closed_position and self.last_percent_gain_loss < 0:
+            return self.last_percent_gain_loss * 5
         else:
             return 0
 
