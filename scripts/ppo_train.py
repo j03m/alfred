@@ -20,7 +20,7 @@ parser.add_argument("-e", "--test", action="store_true", help="Enable partial te
 parser.add_argument("-p", "--steps", type=int, default=25000, help="Number of steps (default: 25000)")
 parser.add_argument("-c", "--create", action="store_true", help="Create new environment")
 parser.add_argument("-o", "--output-dir", default="./data", help="Output directory (default: ./data)")
-parser.add_argument("-l", "--random-stocks", type=int, default=None, help="Number of random stocks to select from SPY")
+parser.add_argument("-rs", "--random-stocks", type=int, default=None, help="Number of random stocks to select from SPY")
 parser.add_argument("-u", "--curriculum", type=int, choices=[1, 2, 3], default=2, help="Curriculum level (default: 2)")
 
 args = parser.parse_args()
