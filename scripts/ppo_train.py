@@ -20,11 +20,21 @@ parser.add_argument("-e", "--test", action="store_true", help="Enable partial te
 parser.add_argument("-p", "--steps", type=int, default=25000, help="Number of steps (default: 25000)")
 parser.add_argument("-c", "--create", action="store_true", help="Create new environment")
 parser.add_argument("-o", "--output-dir", default="./data", help="Output directory (default: ./data)")
-parser.add_argument("-rs", "--random-stocks", type=int, default=None, help="Number of random stocks to select from SPY")
+parser.add_argument("-rs", "--random-spys", type=int, default=None, help="Number of random stocks to select from SPY")
+parser.add_argument("-rt", "--random-tickers", type=int, default=None, help="Number of random tickers to select from train_tickers files")
 parser.add_argument("-u", "--curriculum", type=int, choices=[1, 2, 3], default=2, help="Curriculum level (default: 2)")
 
 args = parser.parse_args()
 
+def rando_tickers(num):
+    dfs = [pd.read_csv(f"train_tickers{i}.csv") for i in range(1, 4)]
+    df = pd.concat(dfs)
+    tickers = df['Symbol'].tolist()
+
+    # Select num random tickers from the list
+    random_tickers = random.sample(tickers, num)
+
+    return random_tickers
 
 def rando_spys(num):
 
@@ -32,31 +42,28 @@ def rando_spys(num):
         'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]
     assets = sp_assets['Symbol'].str.replace('.', '-').tolist()
 
-    # Select 25 random symbols from SPY
+    # Select num random symbols from SPY
     random_symbols = random.sample(assets, num)
 
     return random_symbols
 
 
-if args.random_stocks is None:
-    if args.symbols is None:
-        parser.error("Must specify either --symbols or --random-stocks")
-
-if args.random_stocks is not None:
-    if args.symbols is not None:
-        parser.error("Cannot specify both --symbols and --random-stocks")
-
-if args.random_stocks is not None:
-    symbols = rando_spys(args.random_stocks)
+symbols = []
 
 if args.symbols is not None:
-    symbols = args.symbols.split(',')
+    symbols += args.symbols.split(',')
+
+if args.random_spys is not None:
+    symbols += rando_spys(args.random_spys)
+
+if args.random_tickers is not None:
+    symbols += rando_tickers(args.random_tickers)
 
 if args.guide:
     for symbol in symbols:
         time.sleep(0.25)
         env = make_env_for(symbol, args.curriculum, args.tail)
-        env = guided_training(symbol, args.create, args.steps, args.tail)
+        guided_training(env, args.create, args.steps, args.tail)
         env.ledger.to_csv(f"{args.output_dir}/env_{symbol}_guided.csv")
 
 if args.train:

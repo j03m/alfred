@@ -101,8 +101,8 @@ def partial_train(env, steps=500, create=False):
     model.save(os.path.join(model_path, "baseline-recurrent-ppo"))
 
 
-def back_test_expert(symbol, days):
-    env = make_env_for(symbol, 1, days)
+def back_test_expert(symbol, curriculum, days):
+    env = make_env_for(symbol, curriculum, days)
     env.expert_opinion_df()
     obs, _ = env.reset()
 
@@ -116,8 +116,8 @@ def back_test_expert(symbol, days):
     return env
 
 
-def guided_training(symbol, create, steps=250000, tail=365, head=-1):
-    env = make_env_for(symbol, 1, tail, head)
+def guided_training(env, create, steps=250000):
+
     if create:
         ppo_agent = RecurrentPPO(
             CustomActorCriticPolicy,

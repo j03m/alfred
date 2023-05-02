@@ -7,3 +7,5 @@ src/machine_learning_finance.egg-info/*
 notebooks/.ipynb_checkpoints/*
 .idea/*
 *.log
+junk/*
+.DS_Store

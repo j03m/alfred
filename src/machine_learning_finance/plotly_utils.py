@@ -27,7 +27,7 @@ def histogram(df):
     fig.show()
 
 
-def plot_full_analysis(df, trend, prob_above_trend, prob_below_trend, model, df_durations):
+def plot_full_analysis(df, trend, prob_above_trend, prob_below_trend, model, df_durations, ledger=None):
     # Scale probabilities to the same range as the original time series
     scaled_prob_above_trend = pd.Series(scale_to_price(prob_above_trend, df))  # .rolling(window=30, center=True).mean()
     scaled_prob_below_trend = pd.Series(scale_to_price(prob_below_trend, df))  # .rolling(window=30, center=True)
@@ -59,6 +59,30 @@ def plot_full_analysis(df, trend, prob_above_trend, prob_below_trend, model, df_
 
     fig.add_trace(go.Scatter(x=new_index, y=line_pred, mode='lines', name='Linear Regression Line'), row=1, col=1)
 
+    if ledger is not None:
+        # Filter ledger DataFrame to get long_entry and long_exit dates
+        long_entry_dates = ledger.loc[(ledger['Action'] == 'enter') & (ledger['Side'] == 'long'), 'Date']
+        long_exit_dates = ledger.loc[(ledger['Action'] == 'exit') & (ledger['Side'] == 'long'), 'Date']
+        short_entry_dates = ledger.loc[(ledger['Action'] == 'enter') & (ledger['Side'] == 'short'), 'Date']
+        short_exit_dates = ledger.loc[(ledger['Action'] == 'exit') & (ledger['Side'] == 'short'), 'Date']
+
+        # Create long_entry and long_exit columns in df_raw DataFrame
+        df['long_entry'] = np.where(df.index.isin(long_entry_dates), df['Close'], np.nan)
+        df['long_exit'] = np.where(df.index.isin(long_exit_dates), df['Close'], np.nan)
+        df['short_entry'] = np.where(df.index.isin(short_entry_dates), df['Close'], np.nan)
+        df['short_exit'] = np.where(df.index.isin(short_exit_dates), df['Close'], np.nan)
+
+        fig.add_trace(go.Scatter(x=df.index, y=df['long_entry'], mode='markers', name='Long Enter',
+                                 marker=dict(symbol='triangle-up', size=8, color='green')), row=1, col=1)
+
+        fig.add_trace(go.Scatter(x=df.index, y=df['long_exit'], mode='markers', name='Long Exit',
+                                 marker=dict(symbol='triangle-down', size=8, color='green')), row=1, col=1)
+
+        fig.add_trace(go.Scatter(x=df.index, y=df['short_entry'], mode='markers', name='Short Enter',
+                                 marker=dict(symbol='triangle-down', size=8, color='red')), row=1, col=1)
+
+        fig.add_trace(go.Scatter(x=df.index, y=df['short_exit'], mode='markers', name='Short Exit',
+                                 marker=dict(symbol='triangle-up', size=8, color='red')), row=1, col=1)
     # Add trace for the durations plot to the second row of the subplot
     for i, row in df_durations.iterrows():
         duration_trace = go.Scatter(x=[row['start'], row['end']], y=[5, 5], mode='lines',
