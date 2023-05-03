@@ -27,9 +27,9 @@ parser.add_argument("-u", "--curriculum", type=int, choices=[1, 2, 3], default=2
 args = parser.parse_args()
 
 def rando_tickers(num):
-    dfs = [pd.read_csv(f"train_tickers{i}.csv") for i in range(1, 4)]
+    dfs = [pd.read_csv(f"./data/training_tickers{i}.csv") for i in range(1, 4)]
     df = pd.concat(dfs)
-    tickers = df['Symbol'].tolist()
+    tickers = df['TICKERS'].tolist()
 
     # Select num random tickers from the list
     random_tickers = random.sample(tickers, num)
@@ -61,21 +61,30 @@ if args.random_tickers is not None:
 
 if args.guide:
     for symbol in symbols:
-        time.sleep(0.25)
-        env = make_env_for(symbol, args.curriculum, args.tail)
-        guided_training(env, args.create, args.steps, args.tail)
-        env.ledger.to_csv(f"{args.output_dir}/env_{symbol}_guided.csv")
+        try:
+            time.sleep(0.25)
+            env = make_env_for(symbol, args.curriculum, args.tail)
+            guided_training(env, args.create, args.steps)
+            env.ledger.to_csv(f"{args.output_dir}/env_{symbol}_guided.csv")
+        except Exception as e:
+            print(e)
 
 if args.train:
     for symbol in symbols:
-        time.sleep(0.25)
-        env = make_env_for(symbol, args.curriculum, args.tail)
-        partial_train(env, args.steps, args.create)
-        env.ledger.to_csv(f"{args.output_dir}/env_{symbol}_train.csv")
+        try:
+            time.sleep(0.25)
+            env = make_env_for(symbol, args.curriculum, args.tail)
+            partial_train(env, args.steps, args.create)
+            env.ledger.to_csv(f"{args.output_dir}/env_{symbol}_train.csv")
+        except Exception as e:
+            print(e)
 
 if args.test:
     for symbol in symbols:
-        time.sleep(0.25)
-        env = make_env_for(symbol, args.curriculum, args.tail)
-        partial_test(env)
-        env.ledger.to_csv(f"{args.output_dir}/env_{symbol}_test.csv")
+        try:
+            time.sleep(0.25)
+            env = make_env_for(symbol, args.curriculum, args.tail)
+            partial_test(env)
+            env.ledger.to_csv(f"{args.output_dir}/env_{symbol}_test.csv")
+        except Exception as e:
+            print(e)

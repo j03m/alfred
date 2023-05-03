@@ -16,3 +16,5 @@ pytz
 python-dateutil
 joblib
 pandas-ta
+QuantLib-Python
+fredapi

@@ -7,3 +7,4 @@ from .trader_env import *
 from .plotly_utils import *
 from .timeseries_analytics import *
 from .lstms import *
+from .option_utils import *

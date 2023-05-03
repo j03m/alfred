@@ -1,2 +1,0 @@
-Let's assume historically there are puts and calls that are 1-7 weeks away from the set fridays (expireys)
-Let's assume the option contracts are set at prices corresponding to our model (even tho they really aren't, maybe they are for 1-7 weeks)
