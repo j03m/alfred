@@ -27,7 +27,21 @@ def connect(url, params):
     response.raise_for_status()
     return response
 
-
+def download_ticker_list(ticker_list, tail=-1, head=-1):
+    for ticker in ticker_list:
+        time.sleep(0.25)
+        print("ticker: ", ticker)
+        try:
+            tickerObj = yf.download(tickers=ticker, interval="1d")
+            df = pd.DataFrame(tickerObj)
+            if tail != -1:
+                df = df.tail(tail)
+            if head != -1:
+                df = df.head(head)
+            df = df.reset_index()
+            df.to_csv(f"./data/{ticker}.csv")
+        except Exception as e:
+            print("Failed to download:", ticker, " with ", e)
 def get_all_products():
     if coin_base:
         return get_all_coinbase_products()

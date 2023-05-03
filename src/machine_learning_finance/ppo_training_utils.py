@@ -10,10 +10,14 @@ import os
 
 env_count = 0
 
-
-def make_env_for(symbol, code, tail=-1, head=-1):
-    tickerObj = yf.download(tickers=symbol, interval="1d")
-    df = pd.DataFrame(tickerObj)
+def make_env_for(symbol, code, tail=-1, head=-1, data_source="yahoo"):
+    if data_source == "yahoo":
+        tickerObj = yf.download(tickers=symbol, interval="1d")
+        df = pd.DataFrame(tickerObj)
+    elif data_source == "file":
+        df = pd.read_csv(f"./data/{symbol}.csv")
+    else:
+        raise Exception("Implement me")
     if tail != -1:
         df = df.tail(tail)
     if head != -1:
@@ -21,7 +25,6 @@ def make_env_for(symbol, code, tail=-1, head=-1):
     df = df.reset_index()
     env = TraderEnv(symbol, df, code)
     return env
-
 
 def create_env(product_data, code=1):
     global env_count
