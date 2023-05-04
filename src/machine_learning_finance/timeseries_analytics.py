@@ -112,17 +112,15 @@ def calculate_and_graph_price_probabilities(percentage_differences):
     print("Current price diff:", percentage_differences[-1])
 
 
-def calculate_and_graph_duration_probabilities(start_date, df_raw, df_durations):
+
+def calculate_duration_probabilities(start_date, df_raw, df_durations):
     # seed 60 days from the start of when we want to predict when the
     # mean regression will happen
     n_periods = 60
     dates = [start_date + pd.DateOffset(days=i) for i in range(n_periods)]
     df = pd.DataFrame({'date': dates})
 
-    # Calculate duration windows, filter where anything is < 5
-    df_durations = df_durations[df_durations["duration"] >= 5]
     durations = df_durations['duration'].values.tolist()
-    print("Last duration:", durations[-1])
 
     # Fit a Poisson distribution to the durations
     # Then figure out the probability of a cross in n days
@@ -136,9 +134,12 @@ def calculate_and_graph_duration_probabilities(start_date, df_raw, df_durations)
 
     # Graph as bars so we can predict when the price will
     total_probability = np.sum(window_probabilities)
-    print("total:", total_probability)
     df['probability'] = window_probabilities
     df = df.set_index("date")
+    return df
+
+def calculate_and_graph_duration_probabilities(start_date, df_raw, df_durations):
+    df = calculate_duration_probabilities(start_date, df_raw, df_durations)
     bar_chart(df, False)
 
 

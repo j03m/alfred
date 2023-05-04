@@ -20,6 +20,7 @@ Lets create a new env that overrides our position functions and instead:
     * track results
 * create a process that can just run forever, detects if there is no internet and waits
 * Another env - if we can't short or option due to restrictions is to find every possible 3x inverse etf and trade their relationships
+  * Measure the inverse correlations
 
 # Dividend Strategy
 

@@ -181,6 +181,19 @@ class TraderEnv(gym.Env):
             # The last action ended the episode. Ignore the current action and start a new episode.
             return self.reset()
 
+        # Advance the environment by one time step and return the observation, reward, and done flag
+        verbose("step:", "index:", self.current_index, " of: ", self.final - 1, "action: ", int(action))
+        self.update_position_value()
+        if self.current_index >= self.final - 1 or self.should_stop():
+            error("********MARKING DONE", "index:", self.current_index, " of: ", self.final - 1, " cash: ", self.cash,
+                  " value: ", self.position_value)
+            if self.position_shares != 0:
+                verbose("done so closing position")
+                self.close_position()
+            self._episode_ended = True
+        else:
+            self._episode_ended = False
+
         # Apply the action and update the environment state
         self._apply_action(action)
 
@@ -209,18 +222,6 @@ class TraderEnv(gym.Env):
         return False
 
     def _apply_action(self, action):
-        # Advance the environment by one time step and return the observation, reward, and done flag
-        verbose("step:", "index:", self.current_index, " of: ", self.final - 1, "action: ", int(action))
-        self.update_position_value()
-        if self.current_index >= self.final - 1 or self.should_stop():
-            error("********MARKING DONE", "index:", self.current_index, " of: ", self.final - 1, " cash: ", self.cash,
-                  " value: ", self.position_value)
-            if self.position_shares != 0:
-                verbose("done so closing position")
-                self.close_position()
-            self._episode_ended = True
-        else:
-            self._episode_ended = False
 
         # AI says hold
         if action == 0:
