@@ -7,6 +7,7 @@ Lets create a new env that overrides our position functions and instead:
 * selects a contract based on strike and expiration where strike is profitable given a mean regression and expiration is after our estimated mean regression
 * implement pricing based on whether or not we reach price before expiration
 * verify price decay (write a unit test?)
+
 # Todo
 
 * Todo: kick off guided training vs curriculum two, let it run all day.
@@ -18,6 +19,7 @@ Lets create a new env that overrides our position functions and instead:
     * take a position
     * track results
 * create a process that can just run forever, detects if there is no internet and waits
+* Another env - if we can't short or option due to restrictions is to find every possible 3x inverse etf and trade their relationships
 
 # Dividend Strategy
 
