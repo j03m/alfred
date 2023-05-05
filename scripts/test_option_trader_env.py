@@ -22,7 +22,7 @@ def make_env_for(symbol, code, tail=-1, head=-1, data_source="yahoo"):
     return env
 
 
-env = make_env_for("SPY", 2, 365)
+_env = make_env_for("SPY", 2, 365)
 
-env.timeseries.to_csv("./check_options.csv")
-print(env.timeseries)
+_env.timeseries.to_csv("./check_options.csv")
+print(_env.timeseries)

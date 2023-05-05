@@ -38,7 +38,6 @@ def download_ticker_list(ticker_list, tail=-1, head=-1):
                 df = df.tail(tail)
             if head != -1:
                 df = df.head(head)
-            df = df.reset_index()
             df.to_csv(f"./data/{ticker}.csv")
         except Exception as e:
             print("Failed to download:", ticker, " with ", e)
@@ -94,7 +93,6 @@ def load_dict(crypto=False):
 
 
 def sort_date(pric_df):
-    # pric_df.reset_index()
     pric_df = pric_df.sort_values(by=['Date'])
     return pric_df
 
@@ -175,7 +173,6 @@ def get_all_stock_timerseries_for_csv(csv_name, bars, cutoff=-1, raise_error=Fal
             df = pd.DataFrame(tickerObj)
             if len(df) == 0 or len(df) < bars:
                 continue
-            df = df.reset_index()
             product_data[ticker] = df.tail(bars)
             time.sleep(0.25)
         except Exception as inst:

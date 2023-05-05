@@ -22,7 +22,6 @@ def make_env_for(symbol, code, tail=-1, head=-1, data_source="yahoo"):
         df = df.tail(tail)
     if head != -1:
         df = df.head(head)
-    df = df.reset_index()
     env = TraderEnv(symbol, df, code)
     return env
 
@@ -57,7 +56,6 @@ def full_test(symbol, tail=1, head=-1):
     if head != -1:
         df = df.head(head)
 
-    df = df.reset_index()
     env = TraderEnv(symbol, df)
     model = RecurrentPPO.load(os.path.join(model_path, "baseline-recurrent-ppo"))
     obs, _ = env.reset()

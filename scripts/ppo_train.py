@@ -77,6 +77,7 @@ if args.guide:
             guided_training(env, args.create, args.steps)
             env.ledger.to_csv(f"{args.output_dir}/env_{symbol}_guided.csv")
         except Exception as e:
+            raise e
             print(e)
 
 if args.train:

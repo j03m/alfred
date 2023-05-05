@@ -46,7 +46,7 @@ class TraderEnv(gym.Env):
         df = self.expand(df.copy())
 
         self.orig_timeseries = df
-        self.timeseries = self.scale(df[["Date", "Close", "weighted-volume", "trend", "prob_above_trend"]])
+        self.timeseries = self.scale(df[["Close", "weighted-volume", "trend", "prob_above_trend"]])
 
         self._reset_vars()
 
@@ -122,13 +122,10 @@ class TraderEnv(gym.Env):
         return df
 
     def scale(self, timeseries):
-        df = timeseries.reset_index()  # Reset the index of the DataFrame
-        dates = df['Date']
-        data_to_scale = df.drop(['Date', 'index'], axis=1)
         self.scaler = MinMaxScaler()
-        scaled_data = self.scaler.fit_transform(data_to_scale)
-        scaled_df = pd.concat([dates, pd.DataFrame(scaled_data, columns=data_to_scale.columns)], axis=1)
-        return scaled_df.set_index('Date')  # Set the index back to 'Date'
+        scaled_data = self.scaler.fit_transform(timeseries)
+        scaled_df = pd.DataFrame(scaled_data, columns=timeseries.columns, index=timeseries.index)
+        return scaled_df
 
     def _reset_vars(self):
         self._episode_ended = False
@@ -293,7 +290,7 @@ class TraderEnv(gym.Env):
         self.cash = 0
         self.long_entry = price
         ledger_row = self.make_ledger_row()
-        ledger_row["Date"] = [row["Date"]]
+        ledger_row["Date"] = [row.name]
         ledger_row["Side"] = ["long"]
         ledger_row["Action"] = ["enter"]
         ledger_row["Price"] = [price]
@@ -304,6 +301,7 @@ class TraderEnv(gym.Env):
         verbose("opening long with:")
         verbose(ledger_row)
         self.ledger = pd.concat([self.ledger, ledger_row])
+
 
 
     def open_short(self):
@@ -321,7 +319,7 @@ class TraderEnv(gym.Env):
         verbose("Added cash on short: ", self.shares_owed * price, " total: ", self.cash, " took share debt:",
                 self.shares_owed)
         ledger_row = self.make_ledger_row()
-        ledger_row["Date"] = [row["Date"]]
+        ledger_row["Date"] = [row.name]
         ledger_row["Side"] = ["short"]
         ledger_row["Action"] = ["enter"]
         ledger_row["Price"] = [price]
@@ -347,7 +345,7 @@ class TraderEnv(gym.Env):
         self.last_percent_gain_loss = (price - self.long_entry) / self.long_entry * 100
         self.long_entry = -1
         ledger_row = self.make_ledger_row()
-        ledger_row["Date"] = [row["Date"]]
+        ledger_row["Date"] = [row.name]
         ledger_row["Side"] = ["long"]
         ledger_row["Action"] = ["exit"]
         ledger_row["Price"] = [price]
@@ -375,7 +373,7 @@ class TraderEnv(gym.Env):
         self.last_percent_gain_loss = ((self.short_entry - price) / self.short_entry) * 100
         self.short_entry = -1
         ledger_row = self.make_ledger_row()
-        ledger_row["Date"] = [row["Date"]]
+        ledger_row["Date"] = [row.name]
         ledger_row["Side"] = ["short"]
         ledger_row["Action"] = ["exit"]
         ledger_row["Price"] = [price]
@@ -488,6 +486,6 @@ class TraderEnv(gym.Env):
     def env_block(self):
         start_index = self.current_index
         end_index = self.current_index
-        df = self.timeseries.reset_index().drop(['Date'], axis=1)
+        df = self.timeseries
         block = df.iloc[start_index].to_numpy()
         return block
