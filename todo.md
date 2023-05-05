@@ -7,25 +7,41 @@ Lets create a new env that overrides our position functions and instead:
 * selects a contract based on strike and expiration where strike is profitable given a mean regression and expiration is after our estimated mean regression
 * implement pricing based on whether or not we reach price before expiration
 * verify price decay (write a unit test?)
+* Finalize the option strategy. Make a call option vs short?
 
-# Todo
+# AI
 
 * Todo: kick off guided training vs curriculum two, let it run all day.
-* Finalize the option strategy. Make a call option vs short?
+
+# Base Strategy
+
 * The "Maybe we don't need AI" plan:
     * scan all markets
     * filter by high probabilities
     * apply LSTM prediction against high probabilities
     * take a position
-    * track results
 * create a process that can just run forever, detects if there is no internet and waits
 * Another env - if we can't short or option due to restrictions is to find every possible 3x inverse etf and trade their relationships
   * Measure the inverse correlations
 
+# Tracking
+
+We need a notebook that is going to track/visualize the following off a strategy ledger:
+(see if there is something off the shelf that will track/visualize this for you)
+* mean/max/min/std duration of a hold
+* mean/max/min/std duration between trades
+* graph strategies against each other in terms of returns
+  * graph strategies again base: buy/hold, momentum, simple mr
+* Common benchmarks: max draw down etc
+* 
+
+# Risk Management
+
+
+
+
 # Dividend Strategy
 
-Scan market for highest yield dividend portfolio/ETFS?
-
-Consider risk management
-
-Consider dividend payout periods vs interest
+* Scan market for highest yield dividend portfolio/ETFS?
+* Consider risk management
+* Consider dividend payout periods vs interest
