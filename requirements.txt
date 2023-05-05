@@ -18,3 +18,5 @@ joblib
 pandas-ta
 QuantLib-Python
 fredapi
+matplotlib
+dcor
