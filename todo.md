@@ -15,11 +15,16 @@ Lets create a new env that overrides our position functions and instead:
 
 # Base Strategy
 
+* The "Let's study this data" plan:
+  * create a new environment that instead of shorting tracks positions in inverse pairs
+  * back test all of the inverse pair envs over 2500 days
+  * implement stats (see below)
+  * Wire up a daemon that scans the pairs isolates opps and takes positions
+
 * The "Maybe we don't need AI" plan:
     * scan all markets
     * filter by high probabilities
-    * apply LSTM prediction against high probabilities
-    * take a position
+    
 * create a process that can just run forever, detects if there is no internet and waits
 * Another env - if we can't short or option due to restrictions is to find every possible 3x inverse etf and trade their relationships
   * Measure the inverse correlations

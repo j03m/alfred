@@ -26,6 +26,8 @@ parser.add_argument("-rt", "--random-tickers", type=int, default=None,
                     help="Number of random tickers to select from train_tickers files")
 parser.add_argument("-ft", "--file-tickers", action="store_true", default=False,
                     help="Load data from tickers.csv (use data cacher to seed data)")
+parser.add_argument("-uc", "--use-cache", action="store_true", default=True,
+                    help="Load data from tickers.csv (use data cacher to seed data)")
 parser.add_argument("-u", "--curriculum", type=int, choices=[1, 2, 3], default=2, help="Curriculum level (default: 2)")
 
 args = parser.parse_args()
@@ -63,7 +65,8 @@ if not args.file_tickers:
     if args.random_tickers is not None:
         symbols += rando_tickers(args.random_tickers)
     symbols = list(set(symbols))
-    download_ticker_list(symbols)
+    if not args.use_cache:
+        download_ticker_list(symbols)
 else:
     # assumes data is pre cached with cache_data.py
     symbols = pd.read_csv("./data/symbols.csv")["Symbols"]
