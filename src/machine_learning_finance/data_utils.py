@@ -28,6 +28,7 @@ def connect(url, params):
     return response
 
 def download_ticker_list(ticker_list, tail=-1, head=-1):
+    bad_tickers = []
     for ticker in ticker_list:
         time.sleep(0.25)
         print("ticker: ", ticker)
@@ -41,6 +42,8 @@ def download_ticker_list(ticker_list, tail=-1, head=-1):
             df.to_csv(f"./data/{ticker}.csv")
         except Exception as e:
             print("Failed to download:", ticker, " with ", e)
+            bad_tickers.append(ticker)
+    return ticker
 def get_all_products():
     if coin_base:
         return get_all_coinbase_products()

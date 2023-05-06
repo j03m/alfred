@@ -152,7 +152,6 @@ class TraderEnv(gym.Env):
         self.last_percent_gain_loss = 0
         self.calculate_benchmark_metrics()
 
-
     def reset(self):
         # Reset the environment and return the initial time step
         self._reset_vars()
@@ -223,41 +222,41 @@ class TraderEnv(gym.Env):
         # AI says hold
         if action == 0:
             info("holding action = 0.")
-            self.closed_position = False
+
         # AI says long but we're already in a position
         elif action == 1 and self.in_long:
             info("holding long.")
-            self.closed_position = False
+
         # AI says long, we're not in a position, so buy
         elif action == 1 and not self.in_position:
             info("opening long.")
             self.open_position()
-            self.closed_position = False
+
         # AI says long, but we're short. Close the short, open a long.
         elif action == 1 and self.in_short:
             info("closing short to open long.")
-            self.closed_position = True
+
             self.close_short()
             self.open_position()
         # AI says short, but we're already short
         elif action == 2 and self.in_short:
             info("holding short.")
-            self.closed_position = False
+
         # AI says short, we're not in a position so exit
         elif action == 2 and not self.in_position:
             info("opening short.")
             self.open_short()
-            self.closed_position = False
+
         # AI says short but we're long, close it
         elif action == 2 and self.in_long:
             info("closing long to open short")
             self.close_position()
             info("opening short.")
             self.open_short()
-            self.closed_position = True
+
         else:  # assume hold
             error("unknown state! holding:", action, self.in_position, self.in_long, self.in_short)
-            self.closed_position = False
+
         self.update_position_value()
 
     def _get_next_state(self):
@@ -270,6 +269,7 @@ class TraderEnv(gym.Env):
     def make_ledger_row(self):
         ledger = pd.DataFrame()
         ledger["Date"] = []
+        ledger["Product"] = []
         ledger["Side"] = []
         ledger["Action"] = []
         ledger["Profit_Percent"] = []
@@ -283,17 +283,41 @@ class TraderEnv(gym.Env):
         self.in_position = True
         self.in_long = True
         df = self.orig_timeseries
+        self._open_position(df, self.product)
+
+    def _open_position(self, df, product):
         row = df.iloc[self.current_index, :]
         price = self.get_price_with_slippage(row["Close"])
         self.position_shares = math.floor(self.cash / price)
         fee = self.cash * self.fee
         self.cash = 0
         self.long_entry = price
-        ledger_row = self.make_ledger_row()
+        self.add_ledger_row(fee, price, row, "long", "enter", product)
 
+    def close_position(self):
+        self.in_position = False
+        self.in_long = False
+        df = self.orig_timeseries
+        self._close_position(df, self.product)
+
+    def _close_position(self, df, product):
+        row = df.iloc[self.current_index, :]
+        price = self.get_price_with_slippage(row["Close"])
+        value = price * self.position_shares
+        fee = value * self.fee
+        self.last_profit = (self.position_shares * price) - ((self.position_shares * self.long_entry) + fee)
+        self.position_shares = 0
+        self.cash = self.cash + value
+        self.last_percent_gain_loss = (price - self.long_entry) / self.long_entry * 100
+        self.long_entry = -1
+        self.add_ledger_row(fee, price, row, "long", "exit", product)
+
+    def add_ledger_row(self, fee, price, row, side, action, product):
+        ledger_row = self.make_ledger_row()
         ledger_row["Date"] = [row.name]
-        ledger_row["Side"] = ["long"]
-        ledger_row["Action"] = ["enter"]
+        ledger_row["Product"] = [product]
+        ledger_row["Side"] = [side]
+        ledger_row["Action"] = [action]
         ledger_row["Price"] = [price]
         ledger_row["Fee"] = [fee]
         ledger_row["Profit_Percent"] = [0]
@@ -303,12 +327,13 @@ class TraderEnv(gym.Env):
         verbose(ledger_row)
         self.ledger = pd.concat([self.ledger, ledger_row])
 
-
-
     def open_short(self):
         self.in_position = True
         self.in_short = True
         df = self.orig_timeseries
+        self._open_short(df, self.product)
+
+    def _open_short(self, df, product):
         row = df.iloc[self.current_index, :]
         price = self.get_price_with_slippage(row["Close"])
         max_short_pos = math.floor(self.cash / price)
@@ -319,73 +344,26 @@ class TraderEnv(gym.Env):
         self.short_entry = price
         verbose("Added cash on short: ", self.shares_owed * price, " total: ", self.cash, " took share debt:",
                 self.shares_owed)
-        ledger_row = self.make_ledger_row()
-        ledger_row["Date"] = [row.name]
-        ledger_row["Side"] = ["short"]
-        ledger_row["Action"] = ["enter"]
-        ledger_row["Price"] = [price]
-        ledger_row["Fee"] = [fee]
-        ledger_row["Profit_Percent"] = [0]
-        ledger_row["Profit_Actual"] = [0]
-        ledger_row["Value"] = [self.total_value()]
-        verbose("opening short with:")
-        verbose(ledger_row)
-        self.ledger = pd.concat([self.ledger, ledger_row])
-
-    def close_position(self):
-        self.in_position = False
-        self.in_long = False
-        df = self.orig_timeseries
-        row = df.iloc[self.current_index, :]
-        price = self.get_price_with_slippage(row["Close"])
-        value = price * self.position_shares
-        fee = value * self.fee
-        self.last_profit = (self.position_shares * price) - ((self.position_shares * self.long_entry) + fee)
-        self.position_shares = 0
-        self.cash = self.cash + value
-        self.last_percent_gain_loss = (price - self.long_entry) / self.long_entry * 100
-        self.long_entry = -1
-        ledger_row = self.make_ledger_row()
-        ledger_row["Date"] = [row.name]
-        ledger_row["Side"] = ["long"]
-        ledger_row["Action"] = ["exit"]
-        ledger_row["Price"] = [price]
-        ledger_row["Fee"] = [fee]
-        ledger_row["Profit_Percent"] = [self.last_percent_gain_loss]
-        ledger_row["Profit_Actual"] = [self.last_profit]
-        ledger_row["Value"] = [self.total_value()]
-        self.ledger = pd.concat([self.ledger, ledger_row])
-        verbose("closing long with:")
-        verbose(ledger_row)
-        verbose("profits:", self.last_profit, self.last_percent_gain_loss)
+        self.add_ledger_row(fee, price, row, "short", "enter", product)
 
     def close_short(self):
         self.in_position = False
         self.in_short = False
         df = self.orig_timeseries
+        self._close_short(df, self.product)
+
+    def _close_short(self, df, product):
         row = df.iloc[self.current_index, :]
         price = self.get_price_with_slippage(row["Close"])
         value = price * self.shares_owed
         fee = value * self.fee
-        self.last_profit = self.cash_from_short - (value+fee)
+        self.last_profit = self.cash_from_short - (value + fee)
         self.shares_owed = 0
         self.cash_from_short = 0
         self.cash = self.cash - value
         self.last_percent_gain_loss = ((self.short_entry - price) / self.short_entry) * 100
         self.short_entry = -1
-        ledger_row = self.make_ledger_row()
-        ledger_row["Date"] = [row.name]
-        ledger_row["Side"] = ["short"]
-        ledger_row["Action"] = ["exit"]
-        ledger_row["Price"] = [price]
-        ledger_row["Fee"] = [fee]
-        ledger_row["Profit_Percent"] = [self.last_percent_gain_loss]
-        ledger_row["Profit_Actual"] = [self.last_profit]
-        ledger_row["Value"] = [self.total_value()]
-        self.ledger = pd.concat([self.ledger, ledger_row])
-        verbose("closing short with:")
-        verbose(ledger_row)
-        verbose("profits:", self.last_profit, self.last_percent_gain_loss)
+        self.add_ledger_row(fee, price, row, "short", exit, product)
 
     def _is_episode_ended(self):
         return self._episode_ended
@@ -399,7 +377,8 @@ class TraderEnv(gym.Env):
     def _get_reward(self):
         current_portfolio_value = self.total_value()
         percentage_change = ((current_portfolio_value - self.benchmark_value) / self.benchmark_value) * 100
-        info(f"portfolio value at reward calculation: {current_portfolio_value} vs bench: {self.benchmark_value} ratio: {percentage_change}")
+        info(
+            f"portfolio value at reward calculation: {current_portfolio_value} vs bench: {self.benchmark_value} ratio: {percentage_change}")
         if self.curriculum_code == 1:
             return self._get_reward_curriculum_1_trade_setups()
         elif self.curriculum_code == 2:
@@ -413,14 +392,6 @@ class TraderEnv(gym.Env):
         '''
         component1 = self.is_probable_set_up()
         return component1
-
-    def calculate_close_bonus(self):
-        if self.closed_position and self.last_profit > 0:
-            return self.last_profit
-        if self.closed_position and self.last_profit < 0:
-            return self.last_profit * 10
-        else:
-            return 0
 
     def _get_reward_curriculum_2_profitable_actions(self):
         df = self.orig_timeseries

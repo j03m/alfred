@@ -10,12 +10,16 @@ import os
 
 env_count = 0
 
-def make_env_for(symbol, code, tail=-1, head=-1, data_source="yahoo"):
+def make_env_for(symbol, code, tail=-1, head=-1, data_source="yahoo", path=None):
     if data_source == "yahoo":
         tickerObj = yf.download(tickers=symbol, interval="1d")
         df = pd.DataFrame(tickerObj)
     elif data_source == "file":
         df = pd.read_csv(f"./data/{symbol}.csv")
+        df["Date"] = pd.to_datetime(df["Date"])
+        df = df.set_index("Date")
+    elif data_source == "direct":
+        df = pd.read_csv(path)
         df["Date"] = pd.to_datetime(df["Date"])
         df = df.set_index("Date")
     else:
@@ -24,7 +28,6 @@ def make_env_for(symbol, code, tail=-1, head=-1, data_source="yahoo"):
         df = df.tail(tail)
     if head != -1:
         df = df.head(head)
-    print(df)
     env = TraderEnv(symbol, df, code)
     return env
 

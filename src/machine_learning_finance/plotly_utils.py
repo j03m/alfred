@@ -60,6 +60,7 @@ def plot_full_analysis(df, trend, prob_above_trend, prob_below_trend, model, df_
     fig.add_trace(go.Scatter(x=new_index, y=line_pred, mode='lines', name='Linear Regression Line'), row=1, col=1)
 
     if ledger is not None:
+        ledger['Date'] = pd.to_datetime(ledger['Date'])
         # Filter ledger DataFrame to get long_entry and long_exit dates
         long_entry_dates = ledger.loc[(ledger['Action'] == 'enter') & (ledger['Side'] == 'long'), 'Date']
         long_exit_dates = ledger.loc[(ledger['Action'] == 'exit') & (ledger['Side'] == 'long'), 'Date']

@@ -48,10 +48,12 @@ if args.random_spys is not None:
 if args.random_tickers is not None:
     symbols += rando_tickers(args.random_tickers)
 symbols = list(set(symbols))
-download_ticker_list(symbols)
+bad_symbols = download_ticker_list(symbols)
+
+final_symbols = set(symbols) - set(bad_symbols)
 
 # Create a pandas DataFrame with symbols as data and "Symbols" as column name
-df = pd.DataFrame({'Symbols': symbols})
+df = pd.DataFrame({'Symbols': list(final_symbols)})
 
 # Save the DataFrame to a CSV file named "symbols.csv"
 df.to_csv('./data/symbols.csv', index=False)
