@@ -370,9 +370,17 @@ class TraderEnv(gym.Env):
 
     def update_position_value(self):
         df = self.orig_timeseries
-        row = df.iloc[self.current_index, :]
-        self.position_value = (row["Close"] * self.position_shares) - (row["Close"] * self.shares_owed)
-        self.benchmark_value = row["Close"] * self.benchmark_position_shares
+        self.position_value = self.get_position_value(df, self.current_index)
+        self.benchmark_value = self.get_bench_mark_value(df, self.current_index)
+
+    def get_bench_mark_value(self, df, index):
+        row = df.iloc[index, :]
+        return row["Close"] * self.benchmark_position_shares
+
+    def get_position_value(self, df, index):
+        row = df.iloc[index, :]
+        return (row["Close"] * self.position_shares) - (row["Close"] * self.shares_owed)
+
 
     def _get_reward(self):
         current_portfolio_value = self.total_value()

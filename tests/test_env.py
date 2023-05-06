@@ -1,8 +1,5 @@
-import pytest
-import json
-import datetime
 import pandas as pd
-from machine_learning_finance import TraderEnv, make_env_for
+from machine_learning_finance import make_env_for
 
 test_data = "./tests/fixtures/SPY-for-test.csv"
 
@@ -43,7 +40,6 @@ def test_ledger_column_values_multiple_steps():
     # close short, go long again
     env.step(1)
     df = pd.read_csv(test_data, parse_dates=["Date"], index_col=["Date"])
-    print(env.ledger)
 
     # on 2nd step we close long and go short (time 1)
     assert env.ledger.iloc[1]["Date"] == df.index[1]
