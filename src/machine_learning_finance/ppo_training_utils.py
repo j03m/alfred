@@ -16,12 +16,15 @@ def make_env_for(symbol, code, tail=-1, head=-1, data_source="yahoo"):
         df = pd.DataFrame(tickerObj)
     elif data_source == "file":
         df = pd.read_csv(f"./data/{symbol}.csv")
+        df["Date"] = pd.to_datetime(df["Date"])
+        df = df.set_index("Date")
     else:
         raise Exception("Implement me")
     if tail != -1:
         df = df.tail(tail)
     if head != -1:
         df = df.head(head)
+    print(df)
     env = TraderEnv(symbol, df, code)
     return env
 

@@ -290,6 +290,7 @@ class TraderEnv(gym.Env):
         self.cash = 0
         self.long_entry = price
         ledger_row = self.make_ledger_row()
+
         ledger_row["Date"] = [row.name]
         ledger_row["Side"] = ["long"]
         ledger_row["Action"] = ["enter"]

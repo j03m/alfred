@@ -7,11 +7,13 @@ import pandas as pd
 
 
 def make_env_for(symbol, code, tail=-1, head=-1, data_source="yahoo"):
+    print("da fuckj")
     if data_source == "yahoo":
         ticker_obj = yf.download(tickers=symbol)
         df = pd.DataFrame(ticker_obj)
     elif data_source == "file":
         df = pd.read_csv(f"./data/{symbol}.csv")
+        print(df)
     else:
         raise Exception("Implement me")
     if tail != -1:
