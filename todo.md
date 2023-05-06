@@ -17,9 +17,12 @@ Lets create a new env that overrides our position functions and instead:
 
 * The "Let's study this data" plan:
   * create a new environment that instead of shorting tracks positions in inverse pairs
+    * TODO: Finish me
   * back test all of the inverse pair envs over 2500 days
   * implement stats (see below)
   * Wire up a daemon that scans the pairs isolates opps and takes positions
+    * Track positions
+  
 
 * The "Maybe we don't need AI" plan:
     * scan all markets

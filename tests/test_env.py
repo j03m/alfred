@@ -34,13 +34,18 @@ def test_ledger_column_values_long_enter():
     assert env.ledger.iloc[0]["Action"] == "enter"
 
 
-def test_ledger_column_values_long_exit_short_enter():
+def test_ledger_column_values_multiple_steps():
     env = make_env_for("SPY", 1, data_source="direct", path=test_data)
+    # go long (tested above)
     env.step(1)
+    # close long, go short
     env.step(2)
+    # close short, go long again
+    env.step(1)
     df = pd.read_csv(test_data, parse_dates=["Date"], index_col=["Date"])
     print(env.ledger)
-    # Assert that the values in env.ledger are correct
+
+    # on 2nd step we close long and go short (time 1)
     assert env.ledger.iloc[1]["Date"] == df.index[1]
     assert env.ledger.iloc[1]["Product"] == "SPY"
     assert env.ledger.iloc[1]["Side"] == "long"
@@ -51,3 +56,13 @@ def test_ledger_column_values_long_exit_short_enter():
     assert env.ledger.iloc[2]["Side"] == "short"
     assert env.ledger.iloc[2]["Action"] == "enter"
 
+    # on 3rd step we close short and go long (time 2)
+    assert env.ledger.iloc[3]["Date"] == df.index[2]
+    assert env.ledger.iloc[3]["Product"] == "SPY"
+    assert env.ledger.iloc[3]["Side"] == "short"
+    assert env.ledger.iloc[3]["Action"] == "exit"
+
+    assert env.ledger.iloc[4]["Date"] == df.index[2]
+    assert env.ledger.iloc[4]["Product"] == "SPY"
+    assert env.ledger.iloc[4]["Side"] == "long"
+    assert env.ledger.iloc[4]["Action"] == "enter"

@@ -363,7 +363,7 @@ class TraderEnv(gym.Env):
         self.cash = self.cash - value
         self.last_percent_gain_loss = ((self.short_entry - price) / self.short_entry) * 100
         self.short_entry = -1
-        self.add_ledger_row(fee, price, row, "short", exit, product)
+        self.add_ledger_row(fee, price, row, "short", "exit", product)
 
     def _is_episode_ended(self):
         return self._episode_ended
