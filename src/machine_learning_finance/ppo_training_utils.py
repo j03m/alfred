@@ -108,11 +108,9 @@ def partial_train(env, steps=500, create=False):
     model.save(os.path.join(model_path, "baseline-recurrent-ppo"))
 
 
-def back_test_expert(symbol, curriculum, days):
-    env = make_env_for(symbol, curriculum, days)
+def back_test_expert(env):
     env.expert_opinion_df()
     obs, _ = env.reset()
-
     action = obs[-1]
     done = False
     while not done:
@@ -121,7 +119,6 @@ def back_test_expert(symbol, curriculum, days):
         action = state[-1]
         print("Reward:", reward, " for action: ", action, "on probability: ", state[3])
     return env
-
 
 def guided_training(env, create, steps=250000):
 

@@ -28,7 +28,6 @@ class TraderEnv(gym.Env):
         self.last_action = None
         self.scaler = None
         self.benchmark_position_shares = None
-        self.in_position = None
         close_min, close_max = 0, np.inf
         volume_min, volume_max = 0, np.inf
         trend_min, trend_max = 0, np.inf
@@ -137,8 +136,8 @@ class TraderEnv(gym.Env):
         self.position_shares = 0
         self.cash_from_short = 0
         self.position_value = 0
+        self.closed_position = False
         self.shares_owed = 0
-        self.in_position = False
         self.in_long = False
         self.in_short = False
         self.last_action = -1
@@ -194,12 +193,12 @@ class TraderEnv(gym.Env):
         self._apply_action(action)
 
         if self._is_episode_ended():
-            reward = self._get_reward()
+            reward = self.get_reward()
             info("final reward:", reward)
             return self._get_next_state(), reward, False, True, {}
             # return self._get_next_state(), reward, True, {}
         else:
-            reward = self._get_reward()
+            reward = self.get_reward()
             info("current reward:", reward)
             self.current_index += 1
             return self._get_next_state(), reward, False, False, {}
@@ -279,13 +278,17 @@ class TraderEnv(gym.Env):
 
         return ledger
 
+    @property
+    def in_position(self):
+        return self.in_long or self.in_short
+
     def open_position(self):
-        self.in_position = True
-        self.in_long = True
         df = self.orig_timeseries
         self._open_position(df, self.product)
 
     def _open_position(self, df, product):
+        self.in_long = True
+        self.last_profit = 0
         row = df.iloc[self.current_index, :]
         price = self.get_price_with_slippage(row["Close"])
         self.position_shares = math.floor(self.cash / price)
@@ -295,7 +298,7 @@ class TraderEnv(gym.Env):
         self.add_ledger_row(fee, price, row, "long", "enter", product)
 
     def close_position(self):
-        self.in_position = False
+
         self.in_long = False
         df = self.orig_timeseries
         self._close_position(df, self.product)
@@ -305,6 +308,8 @@ class TraderEnv(gym.Env):
         price = self.get_price_with_slippage(row["Close"])
         value = price * self.position_shares
         fee = value * self.fee
+
+        self.in_long = False
         self.last_profit = (self.position_shares * price) - ((self.position_shares * self.long_entry) + fee)
         self.position_shares = 0
         self.cash = self.cash + value
@@ -328,8 +333,6 @@ class TraderEnv(gym.Env):
         self.ledger = pd.concat([self.ledger, ledger_row])
 
     def open_short(self):
-        self.in_position = True
-        self.in_short = True
         df = self.orig_timeseries
         self._open_short(df, self.product)
 
@@ -342,13 +345,14 @@ class TraderEnv(gym.Env):
         fee = self.cash * self.fee
         self.cash = self.cash + self.cash_from_short
         self.short_entry = price
+
+        self.in_short = True
+        self.last_profit = 0
         verbose("Added cash on short: ", self.shares_owed * price, " total: ", self.cash, " took share debt:",
                 self.shares_owed)
         self.add_ledger_row(fee, price, row, "short", "enter", product)
 
     def close_short(self):
-        self.in_position = False
-        self.in_short = False
         df = self.orig_timeseries
         self._close_short(df, self.product)
 
@@ -357,6 +361,8 @@ class TraderEnv(gym.Env):
         price = self.get_price_with_slippage(row["Close"])
         value = price * self.shares_owed
         fee = value * self.fee
+
+        self.in_short = False
         self.last_profit = self.cash_from_short - (value + fee)
         self.shares_owed = 0
         self.cash_from_short = 0
@@ -381,8 +387,7 @@ class TraderEnv(gym.Env):
         row = df.iloc[index, :]
         return (row["Close"] * self.position_shares) - (row["Close"] * self.shares_owed)
 
-
-    def _get_reward(self):
+    def get_reward(self):
         current_portfolio_value = self.total_value()
         percentage_change = ((current_portfolio_value - self.benchmark_value) / self.benchmark_value) * 100
         info(
@@ -419,6 +424,14 @@ class TraderEnv(gym.Env):
         score += self.calculate_close_bonus()
 
         return score
+
+    def calculate_close_bonus(self):
+        if self.last_profit > 0:
+            return self.last_profit
+        if self.last_profit < 0:
+            return self.last_profit * -10
+        else:
+            return 0
 
     def is_probable_set_up(self):
         df = self.orig_timeseries

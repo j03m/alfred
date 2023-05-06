@@ -93,14 +93,10 @@ class InverseEnv(TraderEnv):
     def open_inverse(self):
         # opening a short position, is opening a long position on the inverse
         self.status = -1
-        self.in_short = True
-        self.in_position = True
         self._open_position(self.inverse_df, self.inverse_product)
 
     def close_inverse(self):
         self.status = 0
-        self.in_short = False
-        self.in_position = False
         self._close_position(self.inverse_df, self.inverse_product)
 
     def update_position_value(self):

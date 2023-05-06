@@ -18,6 +18,14 @@ def test_inverse_actions():
     assert (env.ledger.iloc[1]["Side"] == "long")
     assert (env.ledger.iloc[1]["Action"] == "exit")
 
+def test_cash_values():
+    env = make_inverse_env_for("SPY", "SH", 1, data_source="direct", paths=[
+        main_data, inverse_data
+    ])
+    env.step(1)
+    env.step(2)
+    print(env.get_reward())
+    assert(False)
 def test_ledger_column_values_multiple_steps():
     env = make_inverse_env_for("SPY", "SH", 1, data_source="direct", paths=[
         main_data, inverse_data
