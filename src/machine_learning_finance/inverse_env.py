@@ -51,29 +51,29 @@ class InverseEnv(TraderEnv):
         if action == 0:
             info("**holding")
             pass
-        elif action == 1 and self.in_long:
+        elif action == 1 and self.status == 1:
             info("**holding long")
             pass
-        elif action == 1 and not self.in_position:
+        elif action == 1 and self.status == 0:
             info("**opening long.")
             self.open_position()
         # AI says long, but we're short. Close the short, open a long.
-        elif action == 1 and self.in_short:
+        elif action == 1 and self.status == -1:
             info("**close short, open long")
             self.close_inverse()
             self.open_position()
             pass
         # AI says short, but we're already short
-        elif action == 2 and self.in_short:
+        elif action == 2 and self.status == -1:
             info("**hold short")
             pass
         # AI says short, we're not in a position so go short
-        elif action == 2 and not self.in_position:
+        elif action == 2 and self.status == 0:
             info("**opening short")
             self.open_inverse()
             pass
         # AI says short but we're long, close it
-        elif action == 2 and self.in_long:
+        elif action == 2 and self.status == 1:
             info("**closing long, opening short")
             self.close_position()
             self.open_inverse()
@@ -103,12 +103,12 @@ class InverseEnv(TraderEnv):
         if self.status == 0:
             df = self.orig_timeseries
             self.position_value = 0
-            self.benchmark_value = self.get_bench_mark_value(df, self.current_index)
+            self.benchmark_value = self.get_bench_mark_value()
         elif self.status == 1:
             df = self.orig_timeseries
             self.position_value = self.get_position_value(df, self.current_index)
-            self.benchmark_value = self.get_bench_mark_value(df, self.current_index)
+            self.benchmark_value = self.get_bench_mark_value()
         elif self.status == -1:
             df = self.inverse_df
             self.position_value = self.get_position_value(df, self.current_index)
-            self.benchmark_value = self.get_bench_mark_value(df, self.current_index)
+            self.benchmark_value = self.get_bench_mark_value()

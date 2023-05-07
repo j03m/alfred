@@ -27,6 +27,13 @@ def connect(url, params):
     response.raise_for_status()
     return response
 
+
+def read_df_from_file(file):
+    df = pd.read_csv(file)
+    df["Date"] = pd.to_datetime(df["Date"])
+    df = df.set_index("Date")
+    return df
+
 def download_ticker_list(ticker_list, tail=-1, head=-1):
     bad_tickers = []
     for ticker in ticker_list:

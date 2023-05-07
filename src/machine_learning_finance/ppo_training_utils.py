@@ -10,7 +10,7 @@ import os
 
 env_count = 0
 
-def make_env_for(symbol, code, tail=-1, head=-1, data_source="yahoo", path=None):
+def make_env_for(symbol, code, tail=-1, head=-1, data_source="yahoo", path=None, EnvClass=TraderEnv):
     if data_source == "yahoo":
         tickerObj = yf.download(tickers=symbol, interval="1d")
         df = pd.DataFrame(tickerObj)
@@ -28,7 +28,7 @@ def make_env_for(symbol, code, tail=-1, head=-1, data_source="yahoo", path=None)
         df = df.tail(tail)
     if head != -1:
         df = df.head(head)
-    env = TraderEnv(symbol, df, code)
+    env = EnvClass(symbol, df, code)
     return env
 
 def create_env(product_data, code=1):
