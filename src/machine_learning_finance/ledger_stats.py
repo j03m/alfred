@@ -53,11 +53,19 @@ def calc_win_loss_ratio(df):
 
     return len(wins) / loss_count
 
+# caches fetched stocks
+stock_map = {}
+
 
 def calc_performance_against_buy_and_hold(df, symbol, period):
-    ticker_obj = yf.download(tickers=symbol, interval="1d")
-    df_bh = pd.DataFrame(ticker_obj)
-    df_bh = df_bh.tail(period)
+    if symbol in stock_map:
+        df_bh = stock_map[symbol]
+    else:
+        ticker_obj = yf.download(tickers=symbol, interval="1d")
+        df_bh = pd.DataFrame(ticker_obj)
+        df_bh = df_bh.tail(period)
+        stock_map[symbol] = df_bh
+
     buy_hold_return = df_bh['Close'].iloc[-1] / df_bh['Close'].iloc[0] - 1
     return buy_hold_return
 

@@ -19,11 +19,10 @@ Lets create a new env that overrides our position functions and instead:
   * create a new environment that instead of shorting tracks positions in inverse pairs
     * TODO:
       * IMPORTANT: Probability needs to be generated against MAX history even when running
-      * a backtest on 365 days?
-      * Something is wrong with parent stat reporting. 
-        * Values in the individual sheet are much higher than total return is reporting
-        * We need to write some tests around fees and cash positions
-          * something is off
+      * a backtest on 365 days? Test this as variants "probability window"
+        * this might be tricky, we need to calculate the probabilty on the wider set and 
+        * then fill in the trading set
+      * Something is STILL wrong with parent stat reporting when we analyze
       * Compare the results of this in te backtest and visually
   * Wire up a daemon that scans the pairs isolates opps and takes positions
     * Track positions
