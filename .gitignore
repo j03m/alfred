@@ -10,3 +10,4 @@ notebooks/.ipynb_checkpoints/*
 junk/*
 .DS_Store
 keys/*
+backtests/*

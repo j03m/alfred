@@ -3,10 +3,13 @@ from .logger import info, debug, error, verbose
 import pandas as pd
 from .trader_env import TraderEnv
 
+
 class BuySellEnv(TraderEnv):
 
-    def __init__(self, product, df, code):
-        super(BuySellEnv, self).__init__(product, df, code)
+    def __init__(self, product, df, code, cash=5000,
+                 prob_high=0.8,
+                 prob_low=0.2):
+        super(BuySellEnv, self).__init__(product, df, code, cash, prob_high, prob_low)
         self.status = 0  # 1 long 0 none 2 short
 
     def _apply_action(self, action):

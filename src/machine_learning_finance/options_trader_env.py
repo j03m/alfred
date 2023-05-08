@@ -11,14 +11,13 @@ from machine_learning_finance import generate_probability, attach_markers, calcu
     calc_durations_with_extremes
 from .trader_env import TraderEnv
 
+# TODO FINISH ME
 
 class OptionTraderEnv(TraderEnv):
 
-    def __init__(self, product, df, curriculum_code=1):
-        super(OptionTraderEnv, self).__init__(product, df, curriculum_code)
-        # TODO: There is a bug in this code in that TraderEnv expects its input df to have date as a column not an index
-        # this is a big source of bugs lets fix it
-        # also lets fire up pycharm and start doing TDD
+    def __init__(self, product, df, curriculum_code=1, cash=5000,
+                 prob_high=0.8, prob_low=0.2):
+        super(OptionTraderEnv, self).__init__(product, df, curriculum_code, cash, prob_high, prob_low)
 
     def expand(self, df):
         df = super().expand(df)

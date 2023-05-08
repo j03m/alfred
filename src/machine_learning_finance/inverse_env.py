@@ -11,7 +11,16 @@ def read_df_from_file(file):
     return df
 
 
-def make_inverse_env_for(symbol, inverse_symbol, code, tail=-1, head=-1, data_source="yahoo", paths=[None, None]):
+def make_inverse_env_for(symbol,
+                         inverse_symbol,
+                         code,
+                         tail=-1,
+                         head=-1,
+                         data_source="yahoo",
+                         paths=[None, None],
+                         cash=5000,
+                         prob_high=0.8,
+                         prob_low=0.2):
     df = None
     inverse_df = None
     if data_source == "yahoo":
@@ -34,14 +43,22 @@ def make_inverse_env_for(symbol, inverse_symbol, code, tail=-1, head=-1, data_so
     if head != -1:
         df = df.head(head)
         inverse_df = inverse_df.head(head)
-    env = InverseEnv(symbol, df, inverse_symbol, inverse_df, code)
+    env = InverseEnv(symbol,
+                     df,
+                     inverse_symbol,
+                     inverse_df,
+                     code,
+                     cash,
+                     prob_high,
+                     prob_low)
     return env
 
 
 class InverseEnv(TraderEnv):
 
-    def __init__(self, product, df, inverse_product, inverse_df, code):
-        super(InverseEnv, self).__init__(product, df, code)
+    def __init__(self, product, df, inverse_product, inverse_df, code, cash=5000,
+                 prob_high=0.8, prob_low=0.2):
+        super(InverseEnv, self).__init__(product, df, code, cash, prob_high, prob_low)
         self.inverse_product = inverse_product
         self.inverse_df = inverse_df
         self.status = 0  # 1 long 0 none 2 short

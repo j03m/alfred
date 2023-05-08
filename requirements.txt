@@ -20,3 +20,4 @@ QuantLib-Python
 fredapi
 matplotlib
 dcor
+seaborn
