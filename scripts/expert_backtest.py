@@ -15,7 +15,7 @@ parser.add_argument("-u", "--curriculum", type=int, choices=[1, 2, 3], default=2
 parser.add_argument("-t", "--tail", type=int, default=2500, help="Tail size (default: 2500)")
 parser.add_argument("-e", "--env-type", type=str, default="long-short",
                     help="Environment to use: 'long-short, options, inverse, buy-sell")
-parser.add_argument("-c", "--cash", type=int, default=500,
+parser.add_argument("-c", "--cash", type=int, default=5000,
                     help="how much cash to trade with")
 parser.add_argument("-hp", "--high-probability", type=float, default=0.8,
                     help="high probability marker for trades")

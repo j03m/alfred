@@ -437,9 +437,12 @@ class TraderEnv(gym.Env):
         return row["Close"] * self.benchmark_position_shares
 
     def get_position_value(self, df, index):
-        row = df.iloc[index, :]
-        return (row["Close"] * self.position_shares) - (row["Close"] * self.shares_owed)
+        close = self.get_current_close(df, index)
+        return (close * self.position_shares) - (close * self.shares_owed)
 
+    def get_current_close(self, df, index):
+        row = df.iloc[index, :]
+        return row["Close"]
     def get_reward(self):
         current_portfolio_value = self.total_value()
         percentage_change = ((current_portfolio_value - self.benchmark_value) / self.benchmark_value) * 100
