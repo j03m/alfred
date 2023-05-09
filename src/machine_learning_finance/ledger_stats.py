@@ -44,6 +44,16 @@ def calc_maximum_drawdown(df):
     return df['Drawdown'].max()
 
 
+def maximum_loss(df):
+    initial_capital = df.iloc[0]['Value']
+    losses = df[df['Value'] < initial_capital]['Value'] - initial_capital
+    if losses.empty:
+        max_loss = 0
+    else:
+        max_loss = losses.max()
+    return max_loss
+
+
 def calc_win_loss_ratio(df):
     wins = df[df['Profit_Actual'] > 0]['Profit_Actual']
     losses = df[df['Profit_Actual'] < 0]['Profit_Actual']
@@ -52,6 +62,7 @@ def calc_win_loss_ratio(df):
         loss_count = 1
 
     return len(wins) / loss_count
+
 
 # caches fetched stocks
 stock_map = {}
@@ -86,6 +97,7 @@ def analyze_trades(df, symbol, period):
                'annualized_return': calc_annualized_return(df),
                'volatility': calc_volatility(df),
                'maximum_drawdown': calc_maximum_drawdown(df),
+               'maximum_loss': maximum_loss(df),
                'win_loss_ratio': calc_win_loss_ratio(df),
                'performance_against_buy_and_hold': calc_performance_against_buy_and_hold(df, symbol, period),
                'profit_stats': (calc_profit_loss_stats(df))[0],
@@ -106,6 +118,7 @@ def metrics_to_dataframe(metrics):
         'annualized_return': [metrics['annualized_return']],
         'volatility': [metrics['volatility']],
         'maximum_drawdown': [metrics['maximum_drawdown']],
+        'maximum_loss': [metrics['maximum_loss']],
         'win_loss_ratio': [metrics['win_loss_ratio']],
         'performance_against_buy_and_hold': [metrics['performance_against_buy_and_hold']],
         'profit_min': [metrics['profit_stats'][0]],
