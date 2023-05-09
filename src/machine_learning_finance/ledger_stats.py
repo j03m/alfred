@@ -21,15 +21,7 @@ def calc_duration(df):
 def calc_total_return(df):
     initial_value = df.loc[0, 'Value']
     final_value = df.loc[df.index[-1], 'Value']
-    return (final_value - initial_value) / initial_value
-
-
-def calc_annualized_return(df):
-    total_return = calc_total_return(df)
-    start_date = df.loc[0, 'Date']
-    end_date = df.loc[df.index[-1], 'Date']
-    years = (end_date - start_date).days / 365.25
-    return (1 + total_return) ** (1 / years) - 1
+    return ((final_value - initial_value) / initial_value) * 100
 
 
 def calc_volatility(df):
@@ -68,17 +60,20 @@ def calc_win_loss_ratio(df):
 stock_map = {}
 
 
-def calc_performance_against_buy_and_hold(df, symbol, period):
+def calc_buy_and_hold_performance(symbol, period):
     if symbol in stock_map:
         df_bh = stock_map[symbol]
     else:
         ticker_obj = yf.download(tickers=symbol, interval="1d")
         df_bh = pd.DataFrame(ticker_obj)
         df_bh = df_bh.tail(period)
+        df_bh = df_bh.sort_values(by='Date', ascending=True)  # Ensure data is sorted by date
         stock_map[symbol] = df_bh
 
-    buy_hold_return = df_bh['Close'].iloc[-1] / df_bh['Close'].iloc[0] - 1
-    return buy_hold_return
+    buy_hold_return = (df_bh['Close'].iloc[-1] - df_bh['Close'].iloc[0])/df_bh['Close'].iloc[0]
+    buy_hold_return_percent = buy_hold_return * 100
+    return buy_hold_return_percent
+
 
 
 def calc_profit_loss_stats(df):
@@ -103,11 +98,10 @@ def calc_profit_loss_stats_percent(df):
 def analyze_trades(df, symbol, period):
     metrics = {'duration': calc_duration(df),
                'total_return': calc_total_return(df),
-               'annualized_return': calc_annualized_return(df),
+               'buy_and_hold_performance': calc_buy_and_hold_performance(symbol, period),
                'volatility': calc_volatility(df),
                'maximum_drawdown': calc_maximum_drawdown(df),
                'win_loss_ratio': calc_win_loss_ratio(df),
-               'performance_against_buy_and_hold': calc_performance_against_buy_and_hold(df, symbol, period),
                'profit_stats': (calc_profit_loss_stats_percent(df))[0],
                'loss_stats': (calc_profit_loss_stats_percent(df))[1]}
 
@@ -123,11 +117,10 @@ def metrics_to_dataframe(metrics):
         'duration_median': [metrics['duration'][3]],
         'duration_std': [metrics['duration'][4]],
         'total_return': [metrics['total_return']],
-        'annualized_return': [metrics['annualized_return']],
+        'buy_and_hold_performance': [metrics['buy_and_hold_performance']],
         'volatility': [metrics['volatility']],
         'maximum_drawdown': [metrics['maximum_drawdown']],
         'win_loss_ratio': [metrics['win_loss_ratio']],
-        'performance_against_buy_and_hold': [metrics['performance_against_buy_and_hold']],
         'profit_min': [metrics['profit_stats'][0]],
         'profit_max': [metrics['profit_stats'][1]],
         'profit_mean': [metrics['profit_stats'][2]],
