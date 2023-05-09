@@ -99,6 +99,13 @@ class InverseEnv(TraderEnv):
             pass
         self.update_position_value()
 
+    def clear_trades(self):
+        if self.status == 1:
+            verbose("done so closing position")
+            self.close_position()
+        if self.status == -1:
+            self.close_inverse()
+
     def open_position(self):
         self.status = 1
         super().open_position()

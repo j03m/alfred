@@ -90,6 +90,15 @@ def calc_profit_loss_stats(df):
 
     return profit_stats, loss_stats
 
+def calc_profit_loss_stats_percent(df):
+    current_value = df.iloc[-1]['Value']
+    profits_percent = df[df['Profit_Actual'] > 0]['Profit_Actual'] / current_value * 100
+    losses_percent = df[df['Profit_Actual'] < 0]['Profit_Actual'] / current_value * 100
+
+    profit_stats = profits_percent.min(), profits_percent.max(), profits_percent.mean(), profits_percent.median(), profits_percent.std()
+    loss_stats = losses_percent.min(), losses_percent.max(), losses_percent.mean(), losses_percent.median(), losses_percent.std()
+
+    return profit_stats, loss_stats
 
 def analyze_trades(df, symbol, period):
     metrics = {'duration': calc_duration(df),
@@ -97,11 +106,10 @@ def analyze_trades(df, symbol, period):
                'annualized_return': calc_annualized_return(df),
                'volatility': calc_volatility(df),
                'maximum_drawdown': calc_maximum_drawdown(df),
-               'maximum_loss': maximum_loss(df),
                'win_loss_ratio': calc_win_loss_ratio(df),
                'performance_against_buy_and_hold': calc_performance_against_buy_and_hold(df, symbol, period),
-               'profit_stats': (calc_profit_loss_stats(df))[0],
-               'loss_stats': (calc_profit_loss_stats(df))[1]}
+               'profit_stats': (calc_profit_loss_stats_percent(df))[0],
+               'loss_stats': (calc_profit_loss_stats_percent(df))[1]}
 
     return metrics
 
@@ -118,7 +126,6 @@ def metrics_to_dataframe(metrics):
         'annualized_return': [metrics['annualized_return']],
         'volatility': [metrics['volatility']],
         'maximum_drawdown': [metrics['maximum_drawdown']],
-        'maximum_loss': [metrics['maximum_loss']],
         'win_loss_ratio': [metrics['win_loss_ratio']],
         'performance_against_buy_and_hold': [metrics['performance_against_buy_and_hold']],
         'profit_min': [metrics['profit_stats'][0]],

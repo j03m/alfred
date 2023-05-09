@@ -22,8 +22,8 @@ Lets create a new env that overrides our position functions and instead:
       * a backtest on 365 days? Test this as variants "probability window"
         * this might be tricky, we need to calculate the probabilty on the wider set and 
         * then fill in the trading set
-      * Something is STILL wrong with parent stat reporting when we analyze
-      * Compare the results of this in te backtest and visually
+      * Test all pairs
+      * Consider an all pairs strategy
   * Wire up a daemon that scans the pairs isolates opps and takes positions
     * Track positions
   

@@ -186,9 +186,7 @@ class TraderEnv(gym.Env):
         if self.current_index >= self.final - 1 or self.should_stop():
             error("********MARKING DONE", "index:", self.current_index, " of: ", self.final - 1, " cash: ", self.cash,
                   " value: ", self.position_value)
-            if self.position_shares != 0:
-                verbose("done so closing position")
-                self.close_position()
+            self.clear_trades()
             self._episode_ended = True
         else:
             self._episode_ended = False
@@ -207,6 +205,13 @@ class TraderEnv(gym.Env):
             self.current_index += 1
             return self._get_next_state(), reward, False, False, {}
             # return self._get_next_state(), reward, False, {}
+
+    def clear_trades(self):
+        if self.position_shares != 0:
+            verbose("done so closing position")
+            self.close_position()
+        if self.shares_owed != 0:
+            self.close_short()
 
     def _get_initial_state(self):
         # Return the initial state of the environment

@@ -10,7 +10,7 @@ parser.add_argument("-f", "--file", type=str, help="location of the ledger file"
 
 args = parser.parse_args()
 
-print("Analyzing: ", args.f)
+print("Analyzing: ", args.file)
 
 # Analyze the trades
 df = pd.read_csv(args.file)
