@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("-s", "--symbol", default="SPY", help="Symbol to use (default: SPY)")
 parser.add_argument("-u", "--curriculum", type=int, choices=[1, 2, 3], default=2, help="Curriculum level (default: 2)")
-parser.add_argument("-t", "--tail", type=int, default=2500, help="Tail size (default: 2500)")
+parser.add_argument("-t", "--tail", type=int, default=365, help="Tail size (default: 365)")
 parser.add_argument("-e", "--env-type", type=str, default="long-short",
                     help="Environment to use: 'long-short, options, inverse, buy-sell")
 parser.add_argument("-c", "--cash", type=int, default=5000,

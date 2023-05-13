@@ -14,7 +14,6 @@ warnings.filterwarnings("ignore", category=UserWarning)
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--symbols", help="Symbols to use (default: SPY), separated by comma")
 parser.add_argument("-t", "--tail", type=int, default=2500, help="Tail size (default: 2500)")
-parser.add_argument("-hd", "--head", type=int, default=-1, help="Head size (default: -1)")
 parser.add_argument("-g", "--guide", action="store_true", help="Enable guided training")
 parser.add_argument("-r", "--train", action="store_true", help="Enable partial training")
 parser.add_argument("-e", "--test", action="store_true", help="Enable partial testing")
@@ -76,7 +75,7 @@ if args.guide:
         print("guiding:", symbol)
         try:
             time.sleep(0.25)
-            env = make_env_for(symbol, args.curriculum, args.tail, args.head, "file")
+            env = make_env_for(symbol, args.curriculum, args.tail, "file")
             guided_training(env, args.create, args.steps)
             env.ledger.to_csv(f"{args.output_dir}/env_{symbol}_guided.csv")
         except Exception as e:
@@ -88,7 +87,7 @@ if args.train:
         print("training:", symbol)
         try:
             time.sleep(0.25)
-            env = make_env_for(symbol, args.curriculum, args.tail, args.head, "file")
+            env = make_env_for(symbol, args.curriculum, args.tail, "file")
             partial_train(env, args.steps, args.create)
             env.ledger.to_csv(f"{args.output_dir}/env_{symbol}_train.csv")
         except Exception as e:
@@ -99,7 +98,7 @@ if args.test:
         print("testing:", symbol)
         try:
             time.sleep(0.25)
-            env = make_env_for(symbol, args.curriculum, args.tail, args.head, "file")
+            env = make_env_for(symbol, args.curriculum, args.tail, "file")
             partial_test(env)
             env.ledger.to_csv(f"{args.output_dir}/env_{symbol}_test.csv")
         except Exception as e:

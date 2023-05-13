@@ -7,16 +7,21 @@ from sklearn.preprocessing import MinMaxScaler
 import math
 from scipy.stats import norm
 import pandas as pd
+from .defaults import DEFAULT_CASH, \
+    DEFAULT_TOP_PERCENT, \
+    DEFAULT_BOTTOM_PERCENT
 
 
 class TraderEnv(gym.Env):
 
-    def __init__(self, product, df,
+    def __init__(self,
+                 product,
+                 test_period_df,
+                 historical_period_df,
                  curriculum_code=1,
-                 cash=5000,
-                 prob_high=0.8,
-                 prob_low=0.2):
-        super(TraderEnv, self).__init__()
+                 cash=DEFAULT_CASH,
+                 prob_high=DEFAULT_TOP_PERCENT,
+                 prob_low=DEFAULT_BOTTOM_PERCENT):
 
         self.max_cash = cash
         self.benchmark_value = None
@@ -46,15 +51,16 @@ class TraderEnv(gym.Env):
         self.action_space = spaces.Discrete(3)
 
         # Initialize environment state
-        df = self.expand(df.copy())
+        test_period_df = self.expand(test_period_df.copy(), historical_period_df.copy())
 
-        self.orig_timeseries = df
-        self.timeseries = self.scale(df[["Close", "weighted-volume", "trend", "prob_above_trend"]])
-
+        self.orig_timeseries = test_period_df
+        self.timeseries = self.scale(test_period_df[["Close", "weighted-volume", "trend", "prob_above_trend"]])
+        print("TIMESERIES:", self.timeseries)
+        print("ORIG:", self.orig_timeseries)
         self._reset_vars()
 
         self.product = product
-        self.final = len(df)
+        self.final = len(test_period_df)
 
         self.curriculum_code = curriculum_code
         self.rolling_score = 0
@@ -104,25 +110,26 @@ class TraderEnv(gym.Env):
         price = self.get_price_with_slippage(row["Close"])
         self.benchmark_position_shares = math.floor(self.cash / price)
 
-    def expand(self, df):
-        # Perform seasonal decomposition
-        result = seasonal_decompose(df['Close'], model='additive', period=90, extrapolate_trend='freq')
+    def expand(self, test, hist):
 
-        # Add trend back to original time series
-        df["trend"] = result.trend
-
-        # Compute the residuals by subtracting the trend from the original time series
+        # calculate the normal distribution on the historical period. This avoids look ahead bias when trying
+        # to apply this to the test set.
+        result = seasonal_decompose(hist['Close'], model='additive', period=90, extrapolate_trend='freq')
         residuals = result.resid
+        percentage_deviations = residuals / result.trend * 100
+        mu, std = norm.fit(percentage_deviations)
 
-        # Fit a Gaussian distribution to the residuals
-        mu, std = norm.fit(residuals)
+        # calculate the deviation for the test set, but apply to it the historical percentages
+        test_result = seasonal_decompose(test['Close'], model='additive', period=90, extrapolate_trend='freq')
+        test_residuals = test_result.resid
+        test_percentage_deviations = test_residuals / test_result.trend * 100
+        z_scores = test_percentage_deviations / std
 
-        # Compute the probability of a value being above or below the trend line
-        # for each point in the time series
-        z_scores = residuals / std
-        df["prob_above_trend"] = 1 - norm.cdf(z_scores)
-        df["weighted-volume"] = df["Close"] * df["Volume"]
-        return df
+        # Calculate the probability of a value being above the trend line for each point in the time series
+        test["prob_above_trend"] = 1 - norm.cdf(z_scores)
+        test["weighted-volume"] = test["Close"] * test["Volume"]
+        test["trend"] = test_result.trend
+        return test
 
     def scale(self, timeseries):
         self.scaler = MinMaxScaler()

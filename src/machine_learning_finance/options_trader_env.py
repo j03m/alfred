@@ -15,12 +15,13 @@ from .trader_env import TraderEnv
 
 class OptionTraderEnv(TraderEnv):
 
-    def __init__(self, product, df, curriculum_code=1, cash=5000,
+    def __init__(self, product, test_period_df, historical_period_df, curriculum_code=1, cash=5000,
                  prob_high=0.8, prob_low=0.2):
-        super(OptionTraderEnv, self).__init__(product, df, curriculum_code, cash, prob_high, prob_low)
+        super(OptionTraderEnv, self).__init__(product, test_period_df, historical_period_df, curriculum_code, cash, prob_high, prob_low)
 
-    def expand(self, df):
-        df = super().expand(df)
+    def expand(self, test_period_df, historical_period_df):
+        # todo: never really finished or tested this fix and test me
+        df = super().expand(test_period_df, historical_period_df)
         # apply the top 5 expiration window probabilities as columns
         trend, prob_above_trend, prob_below_trend, volatility, model = generate_probability(df)
         df_raw = attach_markers(df, trend, prob_above_trend)

@@ -2,27 +2,31 @@ import yfinance as yf
 import datetime
 import pandas as pd
 from .trader_env import TraderEnv
-from .curriculum_policy_support import CustomActorCriticPolicy
-from .data_utils import get_data_for_training, model_path, data_path
+from .data_utils import model_path
 from sb3_contrib import RecurrentPPO
-import numpy as np
+from .defaults import DEFAULT_TEST_LENGTH, \
+    DEFAULT_HISTORICAL_MULT, \
+    DEFAULT_BOTTOM_PERCENT, \
+    DEFAULT_TOP_PERCENT, \
+    DEFAULT_CASH
 import os
 
-env_count = 0
 
 def make_env_for(symbol,
                  code,
-                 tail=-1,
-                 head=-1,
+                 tail=DEFAULT_TEST_LENGTH,  # test timeframe is 1 years default
                  data_source="yahoo",
                  path=None,
-                 cash=5000,
-                 prob_high=0.8,
-                 prob_low=0.2,
-                 EnvClass=TraderEnv):
+                 cash=DEFAULT_CASH,
+                 prob_high=DEFAULT_TOP_PERCENT,
+                 prob_low=DEFAULT_BOTTOM_PERCENT,
+                 env_class=TraderEnv,
+                 hist_tail=None):  # historical timeframe is 4 years default
+    if hist_tail is None:
+        hist_tail = tail * DEFAULT_HISTORICAL_MULT
     if data_source == "yahoo":
-        tickerObj = yf.download(tickers=symbol, interval="1d")
-        df = pd.DataFrame(tickerObj)
+        ticker_obj = yf.download(tickers=symbol, interval="1d")
+        df = pd.DataFrame(ticker_obj)
     elif data_source == "file":
         df = pd.read_csv(f"./data/{symbol}.csv")
         df["Date"] = pd.to_datetime(df["Date"])
@@ -33,19 +37,16 @@ def make_env_for(symbol,
         df = df.set_index("Date")
     else:
         raise Exception("Implement me")
-    if tail != -1:
-        df = df.tail(tail)
-    if head != -1:
-        df = df.head(head)
-    env = EnvClass(symbol, df, code, cash=cash, prob_high=prob_high, prob_low=prob_low)
-    return env
 
-def create_env(product_data, code=1):
-    global env_count
-    products = list(product_data.keys())
-    product = products[env_count]
-    env = TraderEnv(product, product_data[product], code)
-    env_count += 1
+    # history dataframe has to be data that isn't in the test, we trim it to all the data but the
+    # data under test and then apply the desired timeframe
+    hist_df = df.head(len(df)-tail)
+    hist_df = hist_df.tail(hist_tail)
+
+    # The test df is applied against the lastest data.
+    # todo: I guess is to provide some way to window both of these
+    test_df = df.tail(tail)
+    env = env_class(symbol, test_df, hist_df, code, cash=cash, prob_high=prob_high, prob_low=prob_low)
     return env
 
 
@@ -55,66 +56,23 @@ def timestr():
     return formatted_time
 
 
-def full_train(curriculum_code, num_stocks, create=True):
-    ppo_agent, sorted_envs = get_or_create_recurrent_ppo(create, num_stocks)
-    for env in sorted_envs:
-        ppo_agent.set_env(env)
-        ppo_agent.learn(total_timesteps=35000)
-        ppo_agent.save(os.path.join(model_path, "baseline-recurrent-ppo"))
-
-
-def full_test(symbol, tail=1, head=-1):
-    tickerObj = yf.download(tickers=symbol, interval="1d")
-    df = pd.DataFrame(tickerObj)
-    if tail != -1:
-        df = df.tail(tail)
-    if head != -1:
-        df = df.head(head)
-
-    env = TraderEnv(symbol, df)
-    model = RecurrentPPO.load(os.path.join(model_path, "baseline-recurrent-ppo"))
-    obs, _ = env.reset()
-    # cell and hidden state of the LSTM
-    lstm_states = None
-    num_envs = 1
-    # Episode start signals are used to reset the lstm states
-    episode_starts = np.ones((num_envs,), dtype=bool)
-    done = False
-    while not done:
-        action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_starts, deterministic=True)
-        obs, rewards, _, done, extra = env.step(action)
-        episode_starts = done
-
-
 def partial_test(env):
-    model = RecurrentPPO.load(os.path.join(model_path, "baseline-recurrent-ppo"))
-    model.set_env(env)
-    model.policy.custom_actions = None
+    ppo_agent = get_or_create_recurrent_ppo(False, env)
+    ppo_agent.policy.custom_actions = None
     obs = env.reset_test()
     done = False
     state = None
     while not done:
-        action, state = model.predict(obs, state, episode_start=False, deterministic=False)
+        action, state = ppo_agent.predict(obs, state, episode_start=False, deterministic=False)
         # take the action and observe the next state and reward
         obs, reward, _, done, info_ = env.step(action)
 
 
 def partial_train(env, steps=500, create=False):
-    if create:
-        model = RecurrentPPO(
-            "MlpLstmPolicy",
-            env,
-            ent_coef=0.1,
-            clip_range=0.3,
-            verbose=1,
-        )
-    else:
-        model = RecurrentPPO.load(os.path.join(model_path, "baseline-recurrent-ppo"))
-        model.set_env(env)
-        model.policy.custom_actions = None
-
-    model.learn(total_timesteps=steps)
-    model.save(os.path.join(model_path, "baseline-recurrent-ppo"))
+    ppo_agent = get_or_create_recurrent_ppo(False, env)
+    ppo_agent.policy.custom_actions = None
+    ppo_agent.learn(total_timesteps=steps)
+    ppo_agent.save(os.path.join(model_path, "baseline-recurrent-ppo"))
 
 
 def back_test_expert(env):
@@ -131,17 +89,7 @@ def back_test_expert(env):
 
 def guided_training(env, create, steps=250000):
 
-    if create:
-        ppo_agent = RecurrentPPO(
-            CustomActorCriticPolicy,
-            env,
-            ent_coef=0.1,
-            clip_range=0.3,
-            verbose=1,
-        )
-    else:
-        ppo_agent = RecurrentPPO.load(os.path.join(model_path, "baseline-recurrent-ppo"))
-        ppo_agent.set_env(env)
+    ppo_agent = get_or_create_recurrent_ppo(create, env)
 
     state_action_data = env.expert_opinion()
     custom_actions = [action for _, action in state_action_data]
@@ -151,29 +99,16 @@ def guided_training(env, create, steps=250000):
     return env
 
 
-def full_guided_train(num_stocks, create=True):
-    ppo_agent, sorted_envs = get_or_create_recurrent_ppo(create, num_stocks)
-    for env in sorted_envs:
-        ppo_agent.set_env(env)
-        state_action_data = env.expert_opinion()
-        custom_actions = [action for _, action in state_action_data]
-        ppo_agent.policy.custom_actions = custom_actions
-        ppo_agent.learn(total_timesteps=35000)
-        ppo_agent.save(os.path.join(model_path, "baseline-recurrent-ppo"))
-
-
-def get_or_create_recurrent_ppo(create, num_stocks):
-    product_data = get_data_for_training(num_stocks)
-    all_envs = [create_env(product_data) for _ in range(len(product_data))]
-    sorted_envs = sorted(all_envs, key=lambda env: env.product)
+def get_or_create_recurrent_ppo(create, env):
     if create:
         ppo_agent = RecurrentPPO(
             "MlpLstmPolicy",
-            sorted_envs[0],
+            env,
             ent_coef=0.1,
             clip_range=0.3,
             verbose=1,
         )
     else:
         ppo_agent = RecurrentPPO.load(os.path.join(model_path, "baseline-recurrent-ppo"))
-    return ppo_agent, sorted_envs
+        ppo_agent.set_env(env)
+    return ppo_agent

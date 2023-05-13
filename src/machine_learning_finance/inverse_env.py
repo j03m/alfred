@@ -2,7 +2,11 @@ import yfinance as yf
 from .logger import info, debug, error, verbose
 import pandas as pd
 from .trader_env import TraderEnv
-
+from .defaults import DEFAULT_TEST_LENGTH, \
+    DEFAULT_HISTORICAL_MULT, \
+    DEFAULT_CASH, \
+    DEFAULT_TOP_PERCENT, \
+    DEFAULT_BOTTOM_PERCENT
 
 def read_df_from_file(file):
     df = pd.read_csv(file)
@@ -14,15 +18,15 @@ def read_df_from_file(file):
 def make_inverse_env_for(symbol,
                          inverse_symbol,
                          code,
-                         tail=-1,
-                         head=-1,
+                         tail=DEFAULT_TEST_LENGTH,
                          data_source="yahoo",
                          paths=[None, None],
-                         cash=5000,
-                         prob_high=0.8,
-                         prob_low=0.2):
-    df = None
-    inverse_df = None
+                         cash=DEFAULT_CASH,
+                         prob_high=DEFAULT_TOP_PERCENT,
+                         prob_low=DEFAULT_BOTTOM_PERCENT,
+                         hist_tail=None):
+    if hist_tail is None:
+        hist_tail = tail * DEFAULT_HISTORICAL_MULT
     if data_source == "yahoo":
         ticker_obj = yf.download(tickers=symbol)
         df = pd.DataFrame(ticker_obj)
@@ -37,15 +41,16 @@ def make_inverse_env_for(symbol,
     else:
         raise Exception("Implement me")
 
-    if tail != -1:
-        df = df.tail(tail)
-        inverse_df = inverse_df.tail(tail)
-    if head != -1:
-        df = df.head(head)
-        inverse_df = inverse_df.head(head)
+    hist_df = df.head(len(df)-tail)
+    hist_df = hist_df.tail(hist_tail)
+
+    df = df.tail(tail)
+    inverse_df = inverse_df.tail(tail)
+
     env = InverseEnv(symbol,
-                     df,
                      inverse_symbol,
+                     df,
+                     hist_df,
                      inverse_df,
                      code,
                      cash,
@@ -56,9 +61,9 @@ def make_inverse_env_for(symbol,
 
 class InverseEnv(TraderEnv):
 
-    def __init__(self, product, df, inverse_product, inverse_df, code, cash=5000,
+    def __init__(self, product, inverse_product, test_df, hist_df, inverse_df, code, cash=5000,
                  prob_high=0.8, prob_low=0.2):
-        super(InverseEnv, self).__init__(product, df, code, cash, prob_high, prob_low)
+        super(InverseEnv, self).__init__(product, test_df, hist_df, code, cash, prob_high, prob_low)
         self.inverse_product = inverse_product
         self.inverse_df = inverse_df
         self.status = 0  # 1 long 0 none 2 short

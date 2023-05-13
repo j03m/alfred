@@ -1,6 +1,6 @@
 import pandas as pd
 from unittest.mock import MagicMock, patch
-from machine_learning_finance import make_env_for, TraderEnv
+from machine_learning_finance import make_env_for, TraderEnv, DEFAULT_TEST_LENGTH
 import math
 
 test_data = "./tests/fixtures/SPY-for-test.csv"
@@ -30,6 +30,7 @@ def test_ledger_column_values_long_enter():
     env = make_env_for("SPY", 1, data_source="direct", path=test_data)
     env.step(1)
     df = pd.read_csv(test_data, parse_dates=["Date"], index_col=["Date"])
+    df = df.tail(DEFAULT_TEST_LENGTH)
     # Assert that the values in env.ledger are correct
     assert env.ledger.iloc[0]["Date"] == df.index[0]
     assert env.ledger.iloc[0]["Product"] == "SPY"
@@ -46,7 +47,8 @@ def test_ledger_column_values_multiple_steps():
     # close short, go long again
     env.step(1)
     df = pd.read_csv(test_data, parse_dates=["Date"], index_col=["Date"])
-
+    df = df.tail(DEFAULT_TEST_LENGTH)
+    print("COMPARE: ", df)
     # on 2nd step we close long and go short (time 1)
     assert env.ledger.iloc[1]["Date"] == df.index[1]
     assert env.ledger.iloc[1]["Product"] == "SPY"
@@ -78,7 +80,7 @@ def test_close_position_win():
     }
     df = pd.DataFrame(data)
     cash = 1000
-    env = TraderEnv("SPY", df, cash=cash)
+    env = TraderEnv("SPY", df, df, cash=cash)
     prices = [100, 200]
     env.get_price_with_slippage = MagicMock(side_effect=prices)
     env._open_position(df, "SPY")
@@ -122,7 +124,7 @@ def test_close_position_loss():
     }
     df = pd.DataFrame(data)
     cash = 1000
-    env = TraderEnv("SPY", df, cash=cash)
+    env = TraderEnv("SPY", df, df, cash=cash)
     prices = [100, 50]
     env.get_price_with_slippage = MagicMock(side_effect=prices)
     env._open_position(df, "SPY")
@@ -166,7 +168,7 @@ def test_close_short_win():
     }
     df = pd.DataFrame(data)
     cash = 1000
-    env = TraderEnv("SPY", df, cash=cash)
+    env = TraderEnv("SPY", df, df, cash=cash)
     prices = [100, 50]
     env.get_price_with_slippage = MagicMock(side_effect=prices)
     env._open_short(df, "SPY")

@@ -1,30 +1,11 @@
 #!/usr/bin/env python3
 
-from machine_learning_finance import OptionTraderEnv
+from machine_learning_finance import OptionTraderEnv, make_env_for
 import yfinance as yf
 import datetime
 import pandas as pd
 
-
-def make_env_for(symbol, code, tail=-1, head=-1, data_source="yahoo"):
-    print("da fuckj")
-    if data_source == "yahoo":
-        ticker_obj = yf.download(tickers=symbol)
-        df = pd.DataFrame(ticker_obj)
-    elif data_source == "file":
-        df = pd.read_csv(f"./data/{symbol}.csv")
-        print(df)
-    else:
-        raise Exception("Implement me")
-    if tail != -1:
-        df = df.tail(tail)
-    if head != -1:
-        df = df.head(head)
-    env = OptionTraderEnv(symbol, df, code)
-    return env
-
-
-_env = make_env_for("SPY", 2, 365)
+_env = make_env_for("SPY", 2, env_class=OptionTraderEnv)
 
 _env.timeseries.to_csv("./check_options.csv")
 print(_env.timeseries)

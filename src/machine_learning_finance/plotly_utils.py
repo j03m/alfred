@@ -27,6 +27,32 @@ def histogram(df):
     fig.show()
 
 
+def plot_expert(df):
+    scaled_prob_above_trend = pd.Series(scale_to_price(df["prob_above_trend"], df))
+    line_index = df.tail(len(df["trend"])).index
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=df.index, y=df["Close"], mode="lines", name="Value"))
+    fig.add_trace(go.Scatter(x=df.index, y=df["trend"], mode="lines", name="Trend"))
+    fig.add_trace(go.Scatter(x=df.index, y=scaled_prob_above_trend, mode='lines', name='Prob Above Trend'))
+
+    long_entry_dates = df.loc[df['action'] == 1].index
+    short_entry_dates = df.loc[df['action'] == 2].index
+
+    # Create long_entry and long_exit columns in df_raw DataFrame
+    df['long_entry'] = np.where(df.index.isin(long_entry_dates), df['Close'], np.nan)
+    df['short_entry'] = np.where(df.index.isin(short_entry_dates), df['Close'], np.nan)
+
+    fig.add_trace(go.Scatter(x=df.index, y=df['long_entry'], mode='markers', name='Long Enter',
+                             marker=dict(symbol='triangle-up', size=8, color='green')))
+
+    fig.add_trace(go.Scatter(x=df.index, y=df['short_entry'], mode='markers', name='Long Exit',
+                             marker=dict(symbol='triangle-down', size=8, color='red')))
+    
+    fig.update_layout(title='Expert opinions', xaxis_title='Date',
+                      height=800)
+    fig.show()
+
+
 def plot_full_analysis(df, trend, prob_above_trend, prob_below_trend, model, df_durations, ledger=None):
     # Scale probabilities to the same range as the original time series
     scaled_prob_above_trend = pd.Series(scale_to_price(prob_above_trend, df))  # .rolling(window=30, center=True).mean()
@@ -85,11 +111,12 @@ def plot_full_analysis(df, trend, prob_above_trend, prob_below_trend, model, df_
         fig.add_trace(go.Scatter(x=df.index, y=df['short_exit'], mode='markers', name='Short Exit',
                                  marker=dict(symbol='triangle-up', size=8, color='red')), row=1, col=1)
     # Add trace for the durations plot to the second row of the subplot
-    for i, row in df_durations.iterrows():
-        duration_trace = go.Scatter(x=[row['start'], row['end']], y=[5, 5], mode='lines',
-                                    line=dict(color='red', width=row['duration'] / 2),
-                                    name=f'Duration {row["duration"]}')
-        fig.add_trace(duration_trace, row=2, col=1)
+    if df_durations is not None:
+        for i, row in df_durations.iterrows():
+            duration_trace = go.Scatter(x=[row['start'], row['end']], y=[5, 5], mode='lines',
+                                        line=dict(color='red', width=row['duration'] / 2),
+                                        name=f'Duration {row["duration"]}')
+            fig.add_trace(duration_trace, row=2, col=1)
 
     fig.update_layout(title='Time Series with Trend, Scaled Seasonal Component, and Probabilities', xaxis_title='Date',
                       height=800)

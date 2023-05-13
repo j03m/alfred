@@ -1,4 +1,4 @@
-from machine_learning_finance import InverseEnv, make_inverse_env_for
+from machine_learning_finance import InverseEnv, make_inverse_env_for, DEFAULT_TEST_LENGTH
 import pandas as pd
 import math
 from unittest.mock import MagicMock, patch
@@ -37,6 +37,8 @@ def test_ledger_column_values_multiple_steps():
     # close short, go long again
     env.step(1)
     df = pd.read_csv(main_data, parse_dates=["Date"], index_col=["Date"])
+    # apply default tail of 365
+    df = df.tail(DEFAULT_TEST_LENGTH)
 
     # 1st step we went long
     assert env.ledger.iloc[0]["Date"] == df.index[0]
@@ -75,7 +77,7 @@ def test_close_inverse_win():
     }
     df = pd.DataFrame(data)
     cash = 1000
-    env = InverseEnv("SPY", df, "SH", df, 1, cash=cash)
+    env = InverseEnv("SPY", "SH", df, df, df, 1, cash=cash)
     prices = [100, 200]
     env.get_price_with_slippage = MagicMock(side_effect=prices)
     env.open_inverse()
@@ -119,7 +121,7 @@ def test_close_short_loss():
     }
     df = pd.DataFrame(data)
     cash = 1000
-    env = InverseEnv("SPY", df, "SH", df, 1, cash=cash)
+    env = InverseEnv("SPY", "SH", df, df, df, 1, cash=cash)
     prices = [200, 100]
     env.get_price_with_slippage = MagicMock(side_effect=prices)
     env.get_current_close = MagicMock(side_effect=prices)

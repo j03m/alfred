@@ -3,6 +3,7 @@ import pandas as pd
 import decimal
 import yfinance as yf
 from datetime import datetime, timedelta
+from pandas.api.types import is_datetime64_any_dtype
 import time
 import requests
 import json as js
@@ -106,6 +107,12 @@ def sort_date(pric_df):
     pric_df = pric_df.sort_values(by=['Date'])
     return pric_df
 
+def slice_dataframe_to_range(df, start, end):
+    if not is_datetime64_any_dtype(df.index):
+        raise ValueError("DataFrame index must be a DatetimeIndex")
+    start_date = pd.to_datetime(start)
+    end_date = pd.to_datetime(end)
+    return df[(df.index >= start_date) & (df.index <= end_date)]
 
 def get_all_product_timeseries(cutoff=-1, length=320, limit=-1, raise_error=False):
     df_products = get_all_products()

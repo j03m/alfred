@@ -16,17 +16,16 @@ Lets create a new env that overrides our position functions and instead:
 # Base Strategy
 
 * The "Let's study this data" plan:
-  * create a new environment that instead of shorting tracks positions in inverse pairs
-    * TODO:
-      * IMPORTANT: Probability needs to be generated against MAX history even when running
-      * a backtest on 365 days? Test this as variants "probability window"
-        * this might be tricky, we need to calculate the probabilty on the wider set and 
-        * then fill in the trading set
-      * Test all pairs
-      * Consider an all pairs strategy
+  * Run probability on 365 days of data leading to the date in question during a back test. This is different backtest
+    * You will have to change the backtester to have excess data and run probability at each step
   * Wire up a daemon that scans the pairs isolates opps and takes positions
+    * SMS on entry/exit detected
+      * current price, probability, image?
     * Track positions
-  
+    
+    * Research: Should probability needs to be generated against MAX history?
+      * It seems like this woulld be more confident, but it would trade less. 
+      * Our year numbers are great, might just want to stick with what we have
 
 * The "Maybe we don't need AI" plan:
     * scan all markets
