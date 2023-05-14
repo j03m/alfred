@@ -53,6 +53,52 @@ def plot_expert(df):
     fig.show()
 
 
+def plot_backtest_analysis(df, ledger):
+    # Scale probabilities to the same range as the original time series
+    scaled_prob_above_trend = pd.Series(scale_to_price(df["prob_above_trend"], df))
+
+    fig = go.Figure()
+
+    trend = df.dropna()
+
+    line_index = trend.index
+
+    # Add trace for the main time series plot to the first row of the subplot
+    fig.add_trace(go.Scatter(x=df.index, y=df["Close"], mode="lines", name="Value"))
+    fig.add_trace(go.Scatter(x=line_index, y=df["trend"], mode="lines", name="Trend"))
+    fig.add_trace(go.Scatter(x=df.index, y=scaled_prob_above_trend, mode='lines', name='Prob Above Trend'))
+
+    ledger['Date'] = pd.to_datetime(ledger['Date'])
+
+    # Filter ledger DataFrame to get long_entry and long_exit dates
+    long_entry_dates = ledger.loc[(ledger['Action'] == 'enter') & (ledger['Side'] == 'long'), 'Date']
+    long_exit_dates = ledger.loc[(ledger['Action'] == 'exit') & (ledger['Side'] == 'long'), 'Date']
+    short_entry_dates = ledger.loc[(ledger['Action'] == 'enter') & (ledger['Side'] == 'short'), 'Date']
+    short_exit_dates = ledger.loc[(ledger['Action'] == 'exit') & (ledger['Side'] == 'short'), 'Date']
+
+    # Create long_entry and long_exit columns in df_raw DataFrame
+    df['long_entry'] = np.where(df.index.isin(long_entry_dates), df['Close'], np.nan)
+    df['long_exit'] = np.where(df.index.isin(long_exit_dates), df['Close'], np.nan)
+    df['short_entry'] = np.where(df.index.isin(short_entry_dates), df['Close'], np.nan)
+    df['short_exit'] = np.where(df.index.isin(short_exit_dates), df['Close'], np.nan)
+
+    fig.add_trace(go.Scatter(x=df.index, y=df['long_entry'], mode='markers', name='Long Enter',
+                             marker=dict(symbol='triangle-up', size=8, color='green')))
+
+    fig.add_trace(go.Scatter(x=df.index, y=df['long_exit'], mode='markers', name='Long Exit',
+                             marker=dict(symbol='triangle-down', size=8, color='green')))
+
+    fig.add_trace(go.Scatter(x=df.index, y=df['short_entry'], mode='markers', name='Short Enter',
+                             marker=dict(symbol='triangle-down', size=8, color='red')))
+
+    fig.add_trace(go.Scatter(x=df.index, y=df['short_exit'], mode='markers', name='Short Exit',
+                             marker=dict(symbol='triangle-up', size=8, color='red')))
+
+    fig.update_layout(title='Backtest Analysis', xaxis_title='Date',
+                      height=800)
+    fig.show()
+
+
 def plot_full_analysis(df, trend, prob_above_trend, prob_below_trend, model, df_durations, ledger=None):
     # Scale probabilities to the same range as the original time series
     scaled_prob_above_trend = pd.Series(scale_to_price(prob_above_trend, df))  # .rolling(window=30, center=True).mean()

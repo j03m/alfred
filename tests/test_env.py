@@ -26,6 +26,10 @@ def test_ledger_columns():
     assert set(env.ledger.columns) == set(expected_columns), f"env.ledger should have columns {expected_columns}"
 
 
+def test_timeseries_length():
+    env = make_env_for("SPY", 1, tail=365, data_source="direct", path=test_data)
+    assert(len(env.timeseries) == 365)
+
 def test_ledger_column_values_long_enter():
     env = make_env_for("SPY", 1, data_source="direct", path=test_data)
     env.step(1)

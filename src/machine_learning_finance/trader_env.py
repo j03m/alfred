@@ -1,11 +1,11 @@
 import numpy as np
 import gymnasium as gym
 from gymnasium import logger, spaces
-from statsmodels.tsa.seasonal import seasonal_decompose
 from .logger import info, debug, error, verbose
+from .timeseries_analytics import calc_probabilties_without_lookahead
 from sklearn.preprocessing import MinMaxScaler
 import math
-from scipy.stats import norm
+
 import pandas as pd
 from .defaults import DEFAULT_CASH, \
     DEFAULT_TOP_PERCENT, \
@@ -55,8 +55,6 @@ class TraderEnv(gym.Env):
 
         self.orig_timeseries = test_period_df
         self.timeseries = self.scale(test_period_df[["Close", "weighted-volume", "trend", "prob_above_trend"]])
-        print("TIMESERIES:", self.timeseries)
-        print("ORIG:", self.orig_timeseries)
         self._reset_vars()
 
         self.product = product
@@ -111,24 +109,7 @@ class TraderEnv(gym.Env):
         self.benchmark_position_shares = math.floor(self.cash / price)
 
     def expand(self, test, hist):
-
-        # calculate the normal distribution on the historical period. This avoids look ahead bias when trying
-        # to apply this to the test set.
-        result = seasonal_decompose(hist['Close'], model='additive', period=90, extrapolate_trend='freq')
-        residuals = result.resid
-        percentage_deviations = residuals / result.trend * 100
-        mu, std = norm.fit(percentage_deviations)
-
-        # calculate the deviation for the test set, but apply to it the historical percentages
-        test_result = seasonal_decompose(test['Close'], model='additive', period=90, extrapolate_trend='freq')
-        test_residuals = test_result.resid
-        test_percentage_deviations = test_residuals / test_result.trend * 100
-        z_scores = test_percentage_deviations / std
-
-        # Calculate the probability of a value being above the trend line for each point in the time series
-        test["prob_above_trend"] = 1 - norm.cdf(z_scores)
-        test["weighted-volume"] = test["Close"] * test["Volume"]
-        test["trend"] = test_result.trend
+        test = calc_probabilties_without_lookahead(test, hist)
         return test
 
     def scale(self, timeseries):
