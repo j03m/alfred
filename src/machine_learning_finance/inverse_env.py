@@ -7,6 +7,7 @@ from .defaults import DEFAULT_TEST_LENGTH, \
     DEFAULT_CASH, \
     DEFAULT_TOP_PERCENT, \
     DEFAULT_BOTTOM_PERCENT
+from .data_utils import get_coin_data_frames
 
 def read_df_from_file(file):
     df = pd.read_csv(file)
@@ -24,7 +25,8 @@ def make_inverse_env_for(symbol,
                          cash=DEFAULT_CASH,
                          prob_high=DEFAULT_TOP_PERCENT,
                          prob_low=DEFAULT_BOTTOM_PERCENT,
-                         hist_tail=None):
+                         hist_tail=None,
+                         crypto=False):
     if hist_tail is None:
         hist_tail = tail * DEFAULT_HISTORICAL_MULT
     if data_source == "yahoo":
@@ -38,6 +40,9 @@ def make_inverse_env_for(symbol,
     elif data_source == "direct":
         df = read_df_from_file(paths[0])
         inverse_df = read_df_from_file(paths[1])
+    elif data_source == "ku_coin":
+        df = get_coin_data_frames(hist_tail, symbol)
+        inverse_df = get_coin_data_frames(hist_tail, inverse_symbol)
     else:
         raise Exception("Implement me")
 

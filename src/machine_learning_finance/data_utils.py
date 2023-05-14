@@ -272,11 +272,13 @@ def get_all_coinbase_products():
     return df_products
 
 
-def get_coin_data_frames(time, product, granularity='86400', feature_set=["Close", "Volume"]):
-    if coin_base:
+def get_coin_data_frames(time, product, granularity='86400', target="ku_coin"):
+    if target == "coin_base":
         df_raw = coinbase_json_to_df(time, product, granularity)
-    else:
+    elif target == "ku_coin":
         df_raw = ku_coin_json_to_df(time, product, granularity)
+    else:
+        raise Exception("Unknown target " + target)
 
     if len(df_raw.index) == 0:
         raise Exception("No data for " + product)

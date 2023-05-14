@@ -11,6 +11,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 parser = argparse.ArgumentParser()
 
 parser.add_argument("-s", "--symbol", default="SPY", help="Symbol to use (default: SPY)")
+parser.add_argument("-cr", "--crypto", action="store_true", default=False, help="Use crypto")
 parser.add_argument("-u", "--curriculum", type=int, choices=[1, 2, 3], default=2, help="Curriculum level (default: 2)")
 parser.add_argument("-t", "--tail", type=int, default=365, help="Tail size (default: 365)")
 parser.add_argument("-e", "--env-type", type=str, default="long-short",
@@ -30,18 +31,26 @@ def gen_file_id(args):
     return f"{args.symbol}_{args.tail}_h{args.high_probability}_l{args.low_probability}"
 
 
+data_source = "ku_coin" if args.crypto else "yahoo"
+
+
 if args.env_type == "long-short":
     env = make_env_for(args.symbol,
                        args.curriculum,
                        args.tail,
                        cash=args.cash,
                        prob_high=args.high_probability,
-                       prob_low=args.low_probability)
+                       prob_low=args.low_probability,
+                       data_source=data_source)
     env = back_test_expert(env)
     env.ledger.to_csv(f"./backtests/backtest_long_short_{gen_file_id(args)}.csv")
 
 if args.env_type == "inverse":
-    inverse_file = "./data/inverse_pairs.csv"
+    if args.crypto:
+        inverse_file = "./data/inverse_coins.csv"
+    else:
+        inverse_file = "./data/inverse_pairs.csv"
+
     df = pd.read_csv(inverse_file)
     df = df.set_index('Main')
     if args.symbol in df.index:
@@ -56,7 +65,8 @@ if args.env_type == "inverse":
                                args.tail,
                                cash=args.cash,
                                prob_high=args.high_probability,
-                               prob_low=args.low_probability)
+                               prob_low=args.low_probability,
+                               data_source=data_source)
     env = back_test_expert(env)
     env.ledger.to_csv(f"./backtests/backtest_inverse_{gen_file_id(args)}.csv")
 
@@ -67,7 +77,8 @@ if args.env_type == "buy-sell":
                        cash=args.cash,
                        prob_high=args.high_probability,
                        prob_low=args.low_probability,
-                       env_class=BuySellEnv)
+                       env_class=BuySellEnv,
+                       data_source=data_source)
     env = back_test_expert(env)
     env.ledger.to_csv(f"./backtests/backtest_buy_sell_{gen_file_id(args)}.csv")
 

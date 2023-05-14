@@ -10,6 +10,7 @@ from .defaults import DEFAULT_TEST_LENGTH, \
     DEFAULT_TOP_PERCENT, \
     DEFAULT_CASH
 import os
+from .data_utils import get_coin_data_frames
 
 
 def make_env_for(symbol,
@@ -35,6 +36,8 @@ def make_env_for(symbol,
         df = pd.read_csv(path)
         df["Date"] = pd.to_datetime(df["Date"])
         df = df.set_index("Date")
+    elif data_source == "ku_coin":
+        df = get_coin_data_frames(hist_tail, symbol)
     else:
         raise Exception("Implement me")
 
