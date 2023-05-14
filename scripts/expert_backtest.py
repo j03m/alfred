@@ -67,7 +67,7 @@ if args.env_type == "buy-sell":
                        cash=args.cash,
                        prob_high=args.high_probability,
                        prob_low=args.low_probability,
-                       EnvClass=BuySellEnv)
+                       env_class=BuySellEnv)
     env = back_test_expert(env)
     env.ledger.to_csv(f"./backtests/backtest_buy_sell_{gen_file_id(args)}.csv")
 
