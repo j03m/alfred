@@ -21,3 +21,5 @@ fredapi
 matplotlib
 dcor
 seaborn
+kaleido
+cryptography

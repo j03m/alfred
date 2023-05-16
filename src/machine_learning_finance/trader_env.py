@@ -30,7 +30,7 @@ class TraderEnv(gym.Env):
         self.shares_owed = None
         self.last_profit = None
         self.last_percent_gain_loss = None
-        self.cash = None
+        self.cash = cash
         self.in_short = None
         self.position_shares = None
         self.in_long = None
@@ -118,6 +118,15 @@ class TraderEnv(gym.Env):
         scaled_df = pd.DataFrame(scaled_data, columns=timeseries.columns, index=timeseries.index)
         return scaled_df
 
+    @property
+    def cash(self):
+        return self._cash
+
+    @cash.setter
+    def cash(self, value):
+        assert(value >= 0)
+        self._cash = value
+
     def _reset_vars(self):
         self._episode_ended = False
         self.ledger = self.make_ledger_row()
@@ -171,16 +180,15 @@ class TraderEnv(gym.Env):
         # Advance the environment by one time step and return the observation, reward, and done flag
         verbose("step:", "index:", self.current_index, " of: ", self.final - 1, "action: ", int(action))
         self.update_position_value()
-        if self.current_index >= self.final - 1 or self.should_stop():
-            error("********MARKING DONE", "index:", self.current_index, " of: ", self.final - 1, " cash: ", self.cash,
+        if self.current_index >= self.final-1 or self.should_stop():
+            error("********MARKING DONE", "index:", self.current_index, " of: ", self.final, " cash: ", self.cash,
                   " value: ", self.position_value)
             self.clear_trades()
             self._episode_ended = True
         else:
             self._episode_ended = False
-
-        # Apply the action and update the environment state
-        self._apply_action(action)
+            # Apply the action and update the environment state
+            self._apply_action(action)
 
         if self._is_episode_ended():
             reward = self.get_reward()
@@ -292,7 +300,7 @@ class TraderEnv(gym.Env):
         fee = self.cash * self.fee
         self.cash -= fee
         self.position_shares = shares = math.floor(self.cash / price)
-        cost = shares * price + fee
+        cost = shares * price
         self.cash -= cost
 
         # state and tracking
@@ -316,8 +324,8 @@ class TraderEnv(gym.Env):
         fee = value * self.fee
 
         # cash management
-        self.cash -= fee
-        self.cash = self.cash + value
+
+        self.cash = self.cash + (value - fee)
 
         # state and tracking
         self.in_long = False
@@ -351,7 +359,6 @@ class TraderEnv(gym.Env):
         ledger_row["Profit_Percent"] = [percent]
         ledger_row["Profit_Actual"] = [profit]
         ledger_row["Value"] = [self.total_value()]
-        verbose("opening long with:")
         verbose(ledger_row)
         self.ledger = pd.concat([self.ledger, ledger_row])
 

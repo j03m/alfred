@@ -1,4 +1,5 @@
 import plotly.graph_objs as go
+import plotly.io as pio
 from plotly.subplots import make_subplots
 import pandas as pd
 import numpy as np
@@ -53,7 +54,7 @@ def plot_expert(df):
     fig.show()
 
 
-def plot_backtest_analysis(df, ledger):
+def plot_backtest_analysis(df, ledger, save_png=False, png_file=None):
     # Scale probabilities to the same range as the original time series
     scaled_prob_above_trend = pd.Series(scale_to_price(df["prob_above_trend"], df))
 
@@ -94,9 +95,11 @@ def plot_backtest_analysis(df, ledger):
     fig.add_trace(go.Scatter(x=df.index, y=df['short_exit'], mode='markers', name='Short Exit',
                              marker=dict(symbol='triangle-up', size=8, color='red')))
 
-    fig.update_layout(title='Backtest Analysis', xaxis_title='Date',
-                      height=800)
-    fig.show()
+    if save_png:
+        pio.write_image(fig, png_file)
+    else:
+        fig.update_layout(title='Backtest Analysis', xaxis_title='Date', height=800)
+        fig.show()
 
 
 def plot_full_analysis(df, trend, prob_above_trend, prob_below_trend, model, df_durations, ledger=None):

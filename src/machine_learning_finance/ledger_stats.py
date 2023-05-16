@@ -95,7 +95,8 @@ def calc_profit_loss_stats_percent(df):
 
     return profit_stats, loss_stats
 
-def analyze_trades(df, symbol, period):
+
+def analyze_trades(df, symbol, period, risk_free_rate=0.05):
     metrics = {'duration': calc_duration(df),
                'total_return': calc_total_return(df),
                'buy_and_hold_performance': calc_buy_and_hold_performance(symbol, period),
@@ -104,6 +105,12 @@ def analyze_trades(df, symbol, period):
                'win_loss_ratio': calc_win_loss_ratio(df),
                'profit_stats': (calc_profit_loss_stats_percent(df))[0],
                'loss_stats': (calc_profit_loss_stats_percent(df))[1]}
+
+    # Calculate the Sharpe Ratio
+    metrics['sharpe_ratio'] = (metrics['total_return'] - risk_free_rate) / metrics['volatility']
+
+    # Calculate the Sortino Ratio using maximum_drawdown as a proxy for downside risk
+    metrics['sortino_ratio'] = (metrics['total_return'] - risk_free_rate) / metrics['maximum_drawdown']
 
     return metrics
 

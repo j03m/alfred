@@ -83,7 +83,7 @@ def test_close_inverse_win():
     env.open_inverse()
 
     # verify cash
-    expected_cash = 95
+    expected_cash = 97.5
     assert (env.cash == expected_cash)
 
     # verify position_shares - shares should be cash - fee / price floored
@@ -128,7 +128,7 @@ def test_close_short_loss():
     env.open_inverse()
 
     # verify cash
-    expected_cash = 195
+    expected_cash = 197.5
     assert (env.cash == expected_cash)
 
     # verify position_shares - shares should be cash - fee / price floored

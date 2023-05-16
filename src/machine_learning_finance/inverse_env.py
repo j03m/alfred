@@ -26,13 +26,22 @@ def make_inverse_env_for(symbol,
                          prob_high=DEFAULT_TOP_PERCENT,
                          prob_low=DEFAULT_BOTTOM_PERCENT,
                          hist_tail=None,
-                         crypto=False):
+                         crypto=False,
+                         proxy=None,
+                         port=None):
+
+    proxy_server = None
+    if proxy is not None:
+        proxy_server = proxy
+        if port is not None:
+            proxy_server = f"{proxy_server}:{port}"
+
     if hist_tail is None:
         hist_tail = tail * DEFAULT_HISTORICAL_MULT
     if data_source == "yahoo":
-        ticker_obj = yf.download(tickers=symbol)
+        ticker_obj = yf.download(tickers=symbol, proxy=proxy_server)
         df = pd.DataFrame(ticker_obj)
-        ticker_obj = yf.download(tickers=inverse_symbol)
+        ticker_obj = yf.download(tickers=inverse_symbol, proxy=proxy_server)
         inverse_df = pd.DataFrame(ticker_obj)
     elif data_source == "file":
         df = read_df_from_file(f"./data/{symbol}.csv")

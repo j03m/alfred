@@ -90,7 +90,7 @@ def test_close_position_win():
     env._open_position(df, "SPY")
 
     # verify cash
-    expected_cash = 95
+    expected_cash = 97.5
     assert (env.cash == expected_cash)
 
     # verify position_shares - shares should be cash - fee / price floored
@@ -134,7 +134,7 @@ def test_close_position_loss():
     env._open_position(df, "SPY")
 
     # verify cash
-    expected_cash = 95
+    expected_cash = 97.5
     assert (env.cash == expected_cash)
 
     # verify position_shares - shares should be cash - fee / price floored
