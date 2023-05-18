@@ -60,16 +60,7 @@ def calc_win_loss_ratio(df):
 stock_map = {}
 
 
-def calc_buy_and_hold_performance(symbol, period):
-    if symbol in stock_map:
-        df_bh = stock_map[symbol]
-    else:
-        ticker_obj = yf.download(tickers=symbol, interval="1d")
-        df_bh = pd.DataFrame(ticker_obj)
-        df_bh = df_bh.tail(period)
-        df_bh = df_bh.sort_values(by='Date', ascending=True)  # Ensure data is sorted by date
-        stock_map[symbol] = df_bh
-
+def calc_buy_and_hold_performance(df_bh):
     buy_hold_return = (df_bh['Close'].iloc[-1] - df_bh['Close'].iloc[0])/df_bh['Close'].iloc[0]
     buy_hold_return_percent = buy_hold_return * 100
     return buy_hold_return_percent
@@ -95,17 +86,50 @@ def calc_profit_loss_stats_percent(df):
 
     return profit_stats, loss_stats
 
+def calc_patience_thresholds(df_ledger, df_prices):
+    df_trade_PL = pd.DataFrame()
+    # Loop over the ledger dataframe
+    for i in range(0, len(df_ledger), 2):  # We skip by 2 because we're considering pairs of rows (enter/exit)
+        entry_row = df_ledger.iloc[i]
+        exit_row = df_ledger.iloc[i + 1]
+
+        # Select the slice of Close prices that lies between entry and exit dates
+        mask = (df_prices.index >= entry_row['Date']) & (df_prices.index <= exit_row['Date'])
+        trade_prices = df_prices.loc[mask].copy()
+
+        # Calculate PL_Percent for each day in the trade
+        trade_prices['PL_Percent'] = (trade_prices['Close'] - entry_row['Price']) / entry_row['Price'] * 100
+
+        # Append to the main dataframe
+        df_trade_PL = pd.concat([df_trade_PL, trade_prices])
+
+    # Now df_trade_PL has PL_Percent for each day of each trade
+    # Calculate min, max, mean, and median values of PL_Percent
+    min_loss = df_trade_PL['PL_Percent'].min()
+    max_loss = df_trade_PL['PL_Percent'].max()
+    mean_loss = df_trade_PL['PL_Percent'].mean()
+    median_loss = df_trade_PL['PL_Percent'].median()
+
+    return min_loss, max_loss, mean_loss, median_loss
 
 def analyze_trades(df, symbol, period, risk_free_rate=0.05):
+    if symbol in stock_map:
+        df_bh = stock_map[symbol]
+    else:
+        ticker_obj = yf.download(tickers=symbol, interval="1d")
+        df_bh = pd.DataFrame(ticker_obj)
+        df_bh = df_bh.tail(period)
+        df_bh = df_bh.sort_values(by='Date', ascending=True)  # Ensure data is sorted by date
+        stock_map[symbol] = df_bh
     metrics = {'duration': calc_duration(df),
                'total_return': calc_total_return(df),
-               'buy_and_hold_performance': calc_buy_and_hold_performance(symbol, period),
+               'buy_and_hold_performance': calc_buy_and_hold_performance(df_bh),
                'volatility': calc_volatility(df),
                'maximum_drawdown': calc_maximum_drawdown(df),
                'win_loss_ratio': calc_win_loss_ratio(df),
                'profit_stats': (calc_profit_loss_stats_percent(df))[0],
-               'loss_stats': (calc_profit_loss_stats_percent(df))[1]}
-
+               'loss_stats': (calc_profit_loss_stats_percent(df))[1],
+               'patience': calc_patience_thresholds(df, df_bh)}
     # Calculate the Sharpe Ratio
     metrics['sharpe_ratio'] = (metrics['total_return'] - risk_free_rate) / metrics['volatility']
 
@@ -137,6 +161,10 @@ def metrics_to_dataframe(metrics):
         'loss_max': [metrics['loss_stats'][1]],
         'loss_mean': [metrics['loss_stats'][2]],
         'loss_median': [metrics['loss_stats'][3]],
-        'loss_std': [metrics['loss_stats'][4]]
+        'loss_std': [metrics['loss_stats'][4]],
+        'patience_min': [metrics['patience'][0]],
+        'patience_max': [metrics['patience'][1]],
+        'patience_mean': [metrics['patience'][2]],
+        'patience_median': [metrics['patience'][3]],
     }
     return pd.DataFrame(data)

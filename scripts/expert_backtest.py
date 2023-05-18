@@ -22,10 +22,15 @@ parser.add_argument("-hp", "--high-probability", type=float, default=0.8,
                     help="high probability marker for trades")
 parser.add_argument("-lp", "--low-probability", type=float, default=0.2,
                     help="low probability marker for trades")
+parser.add_argument("-st", "--start-time", type=str, help="Start time for the data")
+parser.add_argument("-et", "--end-time", type=str, help="End time for the data")
+
 args = parser.parse_args()
 
-print(args)
+if (args.start_time is None) ^ (args.end_time is None):
+    parser.error('-st/--start-time and -et/--end-time must be set together.')
 
+print(args)
 
 def gen_file_id(args):
     return f"{args.symbol}_{args.tail}_h{args.high_probability}_l{args.low_probability}"
@@ -38,6 +43,8 @@ if args.env_type == "long-short":
     env = make_env_for(args.symbol,
                        args.curriculum,
                        args.tail,
+                       start=args.start_time,
+                       end=args.end_time,
                        cash=args.cash,
                        prob_high=args.high_probability,
                        prob_low=args.low_probability,
@@ -64,6 +71,8 @@ if args.env_type == "inverse":
                                args.curriculum,
                                args.tail,
                                cash=args.cash,
+                               start=args.start_time,
+                               end=args.end_time,
                                prob_high=args.high_probability,
                                prob_low=args.low_probability,
                                data_source=data_source)

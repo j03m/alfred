@@ -54,7 +54,7 @@ def plot_expert(df):
     fig.show()
 
 
-def plot_backtest_analysis(df, ledger, save_png=False, png_file=None):
+def plot_backtest_analysis(df, ledger, save_png=False, png_file=None, inverse=None):
     # Scale probabilities to the same range as the original time series
     scaled_prob_above_trend = pd.Series(scale_to_price(df["prob_above_trend"], df))
 
@@ -72,10 +72,20 @@ def plot_backtest_analysis(df, ledger, save_png=False, png_file=None):
     ledger['Date'] = pd.to_datetime(ledger['Date'])
 
     # Filter ledger DataFrame to get long_entry and long_exit dates
-    long_entry_dates = ledger.loc[(ledger['Action'] == 'enter') & (ledger['Side'] == 'long'), 'Date']
-    long_exit_dates = ledger.loc[(ledger['Action'] == 'exit') & (ledger['Side'] == 'long'), 'Date']
-    short_entry_dates = ledger.loc[(ledger['Action'] == 'enter') & (ledger['Side'] == 'short'), 'Date']
-    short_exit_dates = ledger.loc[(ledger['Action'] == 'exit') & (ledger['Side'] == 'short'), 'Date']
+    if inverse is None:
+        long_entry_dates = ledger.loc[(ledger['Action'] == 'enter') & (ledger['Side'] == 'long'), 'Date']
+        long_exit_dates = ledger.loc[(ledger['Action'] == 'exit') & (ledger['Side'] == 'long'), 'Date']
+        short_entry_dates = ledger.loc[(ledger['Action'] == 'enter') & (ledger['Side'] == 'short'), 'Date']
+        short_exit_dates = ledger.loc[(ledger['Action'] == 'exit') & (ledger['Side'] == 'short'), 'Date']
+    else:
+        long_entry_dates = ledger.loc[
+            (ledger['Action'] == 'enter') & (ledger['Side'] == 'long') & (ledger['Product'] == inverse), 'Date']
+        long_exit_dates = ledger.loc[
+            (ledger['Action'] == 'exit') & (ledger['Side'] == 'long') & (ledger['Product'] == inverse), 'Date']
+        short_entry_dates = ledger.loc[
+            (ledger['Action'] == 'enter') & (ledger['Side'] == 'long') & (ledger['Product'] != inverse), 'Date']
+        short_exit_dates = ledger.loc[
+            (ledger['Action'] == 'exit') & (ledger['Side'] == 'long') & (ledger['Product'] != inverse), 'Date']
 
     # Create long_entry and long_exit columns in df_raw DataFrame
     df['long_entry'] = np.where(df.index.isin(long_entry_dates), df['Close'], np.nan)

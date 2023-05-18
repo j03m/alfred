@@ -7,7 +7,8 @@ from .defaults import DEFAULT_TEST_LENGTH, \
     DEFAULT_CASH, \
     DEFAULT_TOP_PERCENT, \
     DEFAULT_BOTTOM_PERCENT
-from .data_utils import get_coin_data_frames
+from .data_utils import get_coin_data_frames, create_train_test_windows
+
 
 def read_df_from_file(file):
     df = pd.read_csv(file)
@@ -27,6 +28,8 @@ def make_inverse_env_for(symbol,
                          prob_low=DEFAULT_BOTTOM_PERCENT,
                          hist_tail=None,
                          crypto=False,
+                         start=None,
+                         end=None,
                          proxy=None,
                          port=None):
 
@@ -36,8 +39,6 @@ def make_inverse_env_for(symbol,
         if port is not None:
             proxy_server = f"{proxy_server}:{port}"
 
-    if hist_tail is None:
-        hist_tail = tail * DEFAULT_HISTORICAL_MULT
     if data_source == "yahoo":
         ticker_obj = yf.download(tickers=symbol, proxy=proxy_server)
         df = pd.DataFrame(ticker_obj)
@@ -55,15 +56,15 @@ def make_inverse_env_for(symbol,
     else:
         raise Exception("Implement me")
 
-    hist_df = df.head(len(df)-tail)
-    hist_df = hist_df.tail(hist_tail)
+    hist_df, test_df = create_train_test_windows(df, start=start, end=end, tail=tail, hist_tail=hist_tail)
+    start_date = test_df.index.min()
+    end_date = test_df.index.max()
 
-    df = df.tail(tail)
-    inverse_df = inverse_df.tail(tail)
+    inverse_df = inverse_df[(inverse_df.index >= start_date) & (inverse_df.index <= end_date)]
 
     env = InverseEnv(symbol,
                      inverse_symbol,
-                     df,
+                     test_df,
                      hist_df,
                      inverse_df,
                      code,

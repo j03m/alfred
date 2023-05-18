@@ -5,12 +5,11 @@ from .trader_env import TraderEnv
 from .data_utils import model_path
 from sb3_contrib import RecurrentPPO
 from .defaults import DEFAULT_TEST_LENGTH, \
-    DEFAULT_HISTORICAL_MULT, \
     DEFAULT_BOTTOM_PERCENT, \
     DEFAULT_TOP_PERCENT, \
     DEFAULT_CASH
 import os
-from .data_utils import get_coin_data_frames
+from .data_utils import get_coin_data_frames, create_train_test_windows
 
 
 def make_env_for(symbol,
@@ -22,9 +21,9 @@ def make_env_for(symbol,
                  prob_high=DEFAULT_TOP_PERCENT,
                  prob_low=DEFAULT_BOTTOM_PERCENT,
                  env_class=TraderEnv,
+                 start=None,
+                 end=None,
                  hist_tail=None):  # historical timeframe is 4 years default
-    if hist_tail is None:
-        hist_tail = tail * DEFAULT_HISTORICAL_MULT
     if data_source == "yahoo":
         ticker_obj = yf.download(tickers=symbol, interval="1d")
         df = pd.DataFrame(ticker_obj)
@@ -41,14 +40,7 @@ def make_env_for(symbol,
     else:
         raise Exception("Implement me")
 
-    # history dataframe has to be data that isn't in the test, we trim it to all the data but the
-    # data under test and then apply the desired timeframe
-    hist_df = df.head(len(df)-tail)
-    hist_df = hist_df.tail(hist_tail)
-
-    # The test df is applied against the lastest data.
-    # todo: I guess is to provide some way to window both of these
-    test_df = df.tail(tail)
+    hist_df, test_df = create_train_test_windows(df, end, hist_tail, start, tail)
     env = env_class(symbol, test_df, hist_df, code, cash=cash, prob_high=prob_high, prob_low=prob_low)
     return env
 

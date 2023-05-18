@@ -7,7 +7,7 @@ from pandas.api.types import is_datetime64_any_dtype
 import time
 import requests
 import json as js
-from requests.exceptions import HTTPError
+from .defaults import DEFAULT_HISTORICAL_MULT
 
 coin_base = False
 ku_coin = True
@@ -295,6 +295,31 @@ def download_stocks(total):
 
 LENGTH_OF_STOCK_TRAINGING_DATA = 145  # I might need to fix this, but the model is tied to the number of symbols we trained on
 
+
+def create_train_test_windows(df, start=None, end=None, hist_tail=None, tail=None):
+    if start is not None and end is not None:
+        start = pd.to_datetime(start)
+        end = pd.to_datetime(end)
+
+        # Use start and end to slice the dataframe
+        test_df = df.loc[start:end]
+
+        # Calculate historical tail based on start and end if not provided
+        if hist_tail is None:
+            hist_tail = (end - start).days * DEFAULT_HISTORICAL_MULT
+
+        # Get the historical dataframe
+        hist_start = start - pd.Timedelta(days=hist_tail)
+        hist_df = df.loc[hist_start:start]
+    else:
+        if hist_tail is None:
+            hist_tail = tail * DEFAULT_HISTORICAL_MULT
+
+        # Existing code...
+        hist_df = df.head(len(df) - tail)
+        hist_df = hist_df.tail(hist_tail)
+        test_df = df.tail(tail)
+    return hist_df, test_df
 
 def download_crypto():
     return get_all_product_timeseries(-1, 180, LENGTH_OF_STOCK_TRAINGING_DATA)

@@ -16,38 +16,25 @@ Lets create a new env that overrides our position functions and instead:
 # Base Strategy
 
 * The "Let's study this data" plan:
-  * Run probability on 365 days of data leading to the date in question during a back test. This is different backtest
-    * You will have to change the backtester to have excess data and run probability at each step
-  * Wire up a daemon that scans the pairs isolates opps and takes positions
-    * SMS on entry/exit detected
-      * current price, probability, image?
-    * Track positions
-    
-    * Research: Should probability needs to be generated against MAX history?
-      * It seems like this woulld be more confident, but it would trade less. 
-      * Our year numbers are great, might just want to stick with what we have
+  * Still doesn't run behind proxy - yahoo fails
+  * Is there a way to measure the relationship between the amount of divergence in either direction and the profitability of the trade
+    * As such we could look at the divergence and get a sense for which ETF to take a position in
+    * In addition, are any additional signals we could take into account we which had a relationship to profitibility
+  * Build the ability to backtest different year periods
+    * Run a few scenarios
+      * covid
+      * 2008
+      * run up to and after trump
+      * 2008 recovery etc
+      * Running behind proxy?
+  
 
-* The "Maybe we don't need AI" plan:
-    * scan all markets
-    * filter by high probabilities
     
-* create a process that can just run forever, detects if there is no internet and waits
-* Another env - if we can't short or option due to restrictions is to find every possible 3x inverse etf and trade their relationships
-  * Measure the inverse correlations
 
 # Tracking
 
-We need a notebook that is going to track/visualize the following off a strategy ledger:
-(see if there is something off the shelf that will track/visualize this for you)
-* mean/max/min/std duration of a hold
-* mean/max/min/std duration between trades
-* graph strategies against each other in terms of returns
-  * graph strategies again base: buy/hold, momentum, simple mr
-* Common benchmarks: max draw down etc
-* 
 
 # Risk Management
-
 
 
 

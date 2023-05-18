@@ -17,6 +17,7 @@ proxy_server = None
 proxy_port = None
 
 def check_internet(host="http://google.com"):
+    print("check_internet_without_proxy:")
     try:
         urllib.request.urlopen(host, timeout=3)
         return True
@@ -25,17 +26,22 @@ def check_internet(host="http://google.com"):
 
 
 def check_internet_with_proxy(host="http://google.com"):
+    global proxy_server
+    global proxy_port
+
     if check_internet(host):
         return True
     else:
-        proxy = os.getenv('HTTP_PROXY')
-        port = os.getenv('HTTP_PORT')
+        print("check_internet_with_proxy:")
+        proxy = os.getenv('MY_PROXY')
+        port = os.getenv('MY_PORT')
         proxy_str = f'{proxy}:{port}'
         if proxy:
             proxy_handler = urllib.request.ProxyHandler({'http': proxy_str, 'https': proxy_str})
             opener = urllib.request.build_opener(proxy_handler)
             urllib.request.install_opener(opener)
             try:
+                print("trying: ", proxy, port)
                 urllib.request.urlopen(host, timeout=3)
                 proxy_server = proxy
                 proxy_port = port
@@ -86,7 +92,7 @@ def main():
     pairs = pd.read_csv('./data/inverse_pairs.csv')
 
     # Wait for the internet connection
-    while not check_internet():
+    while not check_internet_with_proxy():
         print("No internet connection. Waiting 5 minutes to check again.")
         time.sleep(300)
 
