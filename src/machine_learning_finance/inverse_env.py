@@ -56,7 +56,7 @@ def make_inverse_env_for(symbol,
     else:
         raise Exception("Implement me")
 
-    hist_df, inverse_df, test_df = split_train_test_and_align_inverse(df, end, hist_tail, inverse_df, start, tail)
+    hist_df, inverse_df, test_df = split_train_test_and_align_inverse(df, inverse_df, start=start, end=end, hist_tail=hist_tail, tail=tail)
 
     env = InverseEnv(symbol,
                      inverse_symbol,
