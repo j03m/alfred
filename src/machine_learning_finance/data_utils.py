@@ -302,7 +302,9 @@ def create_train_test_windows(df, start=None, end=None, hist_tail=None, tail=Non
         end = pd.to_datetime(end)
 
         # Use start and end to slice the dataframe
-        test_df = df.loc[start:end]
+        test_df = df.loc[start:end].copy()
+        print("wtf test min:", test_df.index.min())
+        print("wtf test max:", test_df.index.max())
 
         # Calculate historical tail based on start and end if not provided
         if hist_tail is None:
@@ -310,7 +312,7 @@ def create_train_test_windows(df, start=None, end=None, hist_tail=None, tail=Non
 
         # Get the historical dataframe
         hist_start = start - pd.Timedelta(days=hist_tail)
-        hist_df = df.loc[hist_start:start]
+        hist_df = df.loc[hist_start:start].copy()
     else:
         if hist_tail is None:
             hist_tail = tail * DEFAULT_HISTORICAL_MULT

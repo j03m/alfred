@@ -213,3 +213,7 @@ def test_close_short_win():
     assert (env.ledger.iloc[1]["Profit_Actual"] == 448.875)
     assert (env.ledger.iloc[1]["Price"] == prices[1])
     assert (env.ledger.iloc[1]["Value"] == env.cash)
+
+def test_range_util():
+    df = pd.read_csv("./fixtures/SPY-for-test.csv")
+    hist_df, test_df = create_train_test_windows(df, start="2018-12-28", end="")

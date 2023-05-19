@@ -56,11 +56,7 @@ def make_inverse_env_for(symbol,
     else:
         raise Exception("Implement me")
 
-    hist_df, test_df = create_train_test_windows(df, start=start, end=end, tail=tail, hist_tail=hist_tail)
-    start_date = test_df.index.min()
-    end_date = test_df.index.max()
-
-    inverse_df = inverse_df[(inverse_df.index >= start_date) & (inverse_df.index <= end_date)]
+    hist_df, inverse_df, test_df = split_train_test_and_align_inverse(df, end, hist_tail, inverse_df, start, tail)
 
     env = InverseEnv(symbol,
                      inverse_symbol,
@@ -72,6 +68,14 @@ def make_inverse_env_for(symbol,
                      prob_high,
                      prob_low)
     return env
+
+
+def split_train_test_and_align_inverse(df, inverse_df, start=None, end=None, hist_tail=None, tail=None):
+    hist_df, test_df = create_train_test_windows(df, start=start, end=end, tail=tail, hist_tail=hist_tail)
+    start_date = test_df.index.min()
+    end_date = test_df.index.max()
+    inverse_df = inverse_df[(inverse_df.index >= start_date) & (inverse_df.index <= end_date)]
+    return hist_df, inverse_df, test_df
 
 
 class InverseEnv(TraderEnv):
