@@ -20,14 +20,7 @@ Lets create a new env that overrides our position functions and instead:
   * Is there a way to measure the relationship between the amount of divergence in either direction and the profitability of the trade
     * As such we could look at the divergence and get a sense for which ETF to take a position in
     * In addition, are any additional signals we could take into account we which had a relationship to profitibility
-  * Build the ability to backtest different year periods
-    * Run a few scenarios
-      * covid
-      * 2008
-      * run up to and after trump
-      * 2008 recovery etc
-      * Running behind proxy?
-  
+
 
     
 

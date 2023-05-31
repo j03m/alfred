@@ -6,6 +6,8 @@ from scipy.stats import poisson
 
 from .plotly_utils import prob_chart, graph_pdf_bar, bar_chart
 
+pd.set_option('mode.chained_assignment', None)
+
 def calc_probabilties_without_lookahead(test, hist):
     # calculate the normal distribution on the historical period. This avoids look ahead bias when trying
     # to apply this to the test set.

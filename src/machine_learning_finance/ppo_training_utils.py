@@ -4,6 +4,7 @@ import pandas as pd
 from .trader_env import TraderEnv
 from .data_utils import model_path
 from sb3_contrib import RecurrentPPO
+from .curriculum_policy_support import CustomActorCriticPolicy
 from .defaults import DEFAULT_TEST_LENGTH, \
     DEFAULT_BOTTOM_PERCENT, \
     DEFAULT_TOP_PERCENT, \
