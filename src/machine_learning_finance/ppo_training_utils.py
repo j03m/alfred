@@ -98,7 +98,7 @@ def guided_training(env, create, steps=250000):
 def get_or_create_recurrent_ppo(create, env):
     if create:
         ppo_agent = RecurrentPPO(
-            "MlpLstmPolicy",
+            CustomActorCriticPolicy,
             env,
             ent_coef=0.1,
             clip_range=0.3,
