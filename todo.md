@@ -11,15 +11,22 @@ Lets create a new env that overrides our position functions and instead:
 
 # AI
 
-* Todo: kick off guided training vs curriculum two, let it run all day.
+* Fixed the curriculum training (I think)
+* Currently training over 250m steps
+* After this we need to test it to see if how we score on the very base curriculum. 
+
+* Could we:
+  * Train LSTMs to do price prediction on all stocks but use monthly granularity
+  * Review the entire market for predict increases in price and low MSE in the last N month (maybe weeks?)
+  * Examine the move upward or downward
+  * For downward moves scan the market for the strongest inverse?
+  * Take positions
+  * Train the PPO to think in this manner across all timeseries?
+  * Given what we know of prob + mean reversion can we make an LSTM more accurate than the base?
+  * Given what we know of prob + mean reversion can we validate, check, cross reference the LSTMs
 
 # Base Strategy
 
-* The "Let's study this data" plan:
-  * Still doesn't run behind proxy - yahoo fails
-  * Is there a way to measure the relationship between the amount of divergence in either direction and the profitability of the trade
-    * As such we could look at the divergence and get a sense for which ETF to take a position in
-    * In addition, are any additional signals we could take into account we which had a relationship to profitibility
 
 
     

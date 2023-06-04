@@ -17,7 +17,7 @@ parser.add_argument("-t", "--tail", type=int, default=2500, help="Tail size (def
 parser.add_argument("-g", "--guide", action="store_true", help="Enable guided training")
 parser.add_argument("-r", "--train", action="store_true", help="Enable partial training")
 parser.add_argument("-e", "--test", action="store_true", help="Enable partial testing")
-parser.add_argument("-p", "--steps", type=int, default=25000, help="Number of steps (default: 25000)")
+parser.add_argument("-p", "--steps", type=int, default=25000000, help="Number of steps (default: 25000000)")
 parser.add_argument("-c", "--create", action="store_true", help="Create new environment")
 parser.add_argument("-o", "--output-dir", default="./data", help="Output directory (default: ./data)")
 parser.add_argument("-rs", "--random-spys", type=int, default=None, help="Number of random stocks to select from SPY")
