@@ -1,3 +1,14 @@
+# Revisting basics
+
+* finish open ai tutorials
+* read cartpole v0 source
+* try to implement guided learning on a simpler problem (Reward shaping, Behavior Cloning)
+* Read the open AI five paper
+
+# Open AI Five
+
+https://openai.com/research/openai-five
+https://arxiv.org/pdf/1912.06680.pdf
 
 # Option Strategy
 
@@ -11,25 +22,37 @@ Lets create a new env that overrides our position functions and instead:
 
 # AI
 
-* Fixed the curriculum training (I think)
-* Currently training over 250m steps
-* After this we need to test it to see if how we score on the very base curriculum. 
+* Base Strat - PPO
+  * I trained the PPO for 2 days using a guide and it is kinda terrible :/ it always selects action 2 and runs out of money after a single pass through the data
+my thoughts are something is wrong.
+  * Starting over, reading docs.
+    * rl-tutorial-jnrr19/1_getting_started.ipynb <- going through these
+    * How is the cartpole env implemented? What can it tell us about our envs?
+  * May try to implement cart-pole. 
+  * Todos:
+    * change action space akin to guidance: https://stable-baselines3.readthedocs.io/en/master/guide/rl_tips.html
+    * Train on more than 1 time series
+    * Courses: 
+      * https://stable-baselines3.readthedocs.io/en/master/guide/rl.html
+        * https://sites.google.com/view/deep-rl-bootcamp/lectures
+        * https://spinningup.openai.com/en/latest/
 
-* Could we:
-  * Train LSTMs to do price prediction on all stocks but use monthly granularity
-  * Review the entire market for predict increases in price and low MSE in the last N month (maybe weeks?)
-  * Examine the move upward or downward
-  * For downward moves scan the market for the strongest inverse?
-  * Take positions
+* Full Market Strat -  ppo
   * Train the PPO to think in this manner across all timeseries?
   * Given what we know of prob + mean reversion can we make an LSTM more accurate than the base?
   * Given what we know of prob + mean reversion can we validate, check, cross reference the LSTMs
 
 # Base Strategy
+*done*
 
+# Full Market Strat
 
+  * Train LSTMs to do price prediction on all stocks but use monthly granularity
+  * Review the entire market for predict increases in price and low MSE in the last N month (maybe weeks?)
+  * Examine the move upward or downward
+  * For downward moves scan the market for the strongest inverse?
+  * Take positions
 
-    
 
 # Tracking
 

@@ -23,3 +23,9 @@ dcor
 seaborn
 kaleido
 cryptography
+imageio
+pathlib
+pyfiglet
+moviepy
+pygame
+swig

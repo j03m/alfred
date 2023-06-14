@@ -11,3 +11,4 @@ junk/*
 .DS_Store
 keys/*
 backtests/*
+videos/*
