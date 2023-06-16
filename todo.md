@@ -1,8 +1,11 @@
 # Revisting basics
 
-* finish open ai tutorials
+* ~finish open ai tutorials~
 * read cartpole v0 source
+  * Consider our action space and environment setup
+  * build a new env that doesn't use price or volume, just distance from mean and historical percent divergence
 * try to implement guided learning on a simpler problem (Reward shaping, Behavior Cloning)
+  * What would guided learning on cartpole look like?
 * Read the open AI five paper
 
 # Open AI Five
