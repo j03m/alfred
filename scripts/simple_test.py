@@ -16,7 +16,7 @@ df = pd.DataFrame(ticker_obj)
 hist_df, test_df = create_train_test_windows(df, None, 365 * 4, None, 365)
 env = SimpleEnv(test_df, hist_df)
 env = Monitor(env)
-save_path = "../models/ppo_mlp_policy_simple_env"
+save_path = "models/ppo_mlp_policy_simple_env"
 model = PPO.load(save_path)
 
 obs, info = env.reset()
