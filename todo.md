@@ -1,8 +1,16 @@
 # Revisting basics
 
-* finish open ai tutorials
-* read cartpole v0 source
+* ~finish open ai tutorials~
+* ~read cartpole v0 source~
+  * ~Consider our action space and environment setup~
+  * ~build a new env that doesn't use price or volume, just distance from mean and historical percent divergence~
+* Read: https://github.com/optuna/optuna
+  * In the hyper parameter tuning tutorial they show how different net_arch for the SAC agent have different
+  * results. Optuna is supposed to help
 * try to implement guided learning on a simpler problem (Reward shaping, Behavior Cloning)
+  * What would guided learning on cartpole look like?
+  * Read: https://github.com/HumanCompatibleAI/imitation
+    * This is what stable baselines recommends 
 * Read the open AI five paper
 
 # Open AI Five

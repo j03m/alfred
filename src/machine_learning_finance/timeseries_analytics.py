@@ -26,6 +26,7 @@ def calc_probabilties_without_lookahead(test, hist):
     test["prob_above_trend"] = 1 - norm.cdf(z_scores)
     test["weighted-volume"] = test["Close"] * test["Volume"]
     test["trend"] = test_result.trend
+    test["trend-diff"] = test["Close"] - test["trend"]
     return test
 
 def calc_durations_with_extremes(df_raw):

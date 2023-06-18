@@ -29,3 +29,5 @@ pyfiglet
 moviepy
 pygame
 swig
+gym
+pytest
