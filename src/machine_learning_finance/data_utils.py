@@ -23,6 +23,7 @@ KUCOIN_CANDLES = KUCOIN_REST_API + "/api/v1/market/candles"
 data_path = '/Users/jmordetsky/machine_learning_finance/data'
 model_path = "/Users/jmordetsky/machine_learning_finance/models"
 
+
 def connect(url, params):
     response = requests.get(url, params)
     response.raise_for_status()
@@ -34,6 +35,7 @@ def read_df_from_file(file):
     df["Date"] = pd.to_datetime(df["Date"])
     df = df.set_index("Date")
     return df
+
 
 def download_ticker_list(ticker_list, tail=-1, head=-1):
     bad_tickers = []
@@ -52,6 +54,8 @@ def download_ticker_list(ticker_list, tail=-1, head=-1):
             print("Failed to download:", ticker, " with ", e)
             bad_tickers.append(ticker)
     return ticker
+
+
 def get_all_products():
     if coin_base:
         return get_all_coinbase_products()
@@ -107,12 +111,14 @@ def sort_date(pric_df):
     pric_df = pric_df.sort_values(by=['Date'])
     return pric_df
 
+
 def slice_dataframe_to_range(df, start, end):
     if not is_datetime64_any_dtype(df.index):
         raise ValueError("DataFrame index must be a DatetimeIndex")
     start_date = pd.to_datetime(start)
     end_date = pd.to_datetime(end)
     return df[(df.index >= start_date) & (df.index <= end_date)]
+
 
 def get_all_product_timeseries(cutoff=-1, length=320, limit=-1, raise_error=False):
     df_products = get_all_products()
@@ -317,6 +323,7 @@ def create_train_test_windows(df, start=None, end=None, hist_tail=None, tail=Non
         hist_df = hist_df.tail(hist_tail)
         test_df = df.tail(tail)
     return hist_df, test_df
+
 
 def download_crypto():
     return get_all_product_timeseries(-1, 180, LENGTH_OF_STOCK_TRAINGING_DATA)

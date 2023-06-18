@@ -5,12 +5,17 @@ from .trader_env import TraderEnv
 from .data_utils import model_path
 from sb3_contrib import RecurrentPPO
 from .curriculum_policy_support import CustomActorCriticPolicy
+from stable_baselines3 import PPO
+from stable_baselines3.ppo.policies import MlpPolicy
+from stable_baselines3.common.monitor import Monitor
 from .defaults import DEFAULT_TEST_LENGTH, \
     DEFAULT_BOTTOM_PERCENT, \
     DEFAULT_TOP_PERCENT, \
     DEFAULT_CASH
 import os
 from .data_utils import get_coin_data_frames, create_train_test_windows
+
+ppo_model_name = "ppo_mlp_policy_trader_env"
 
 
 def make_env_for(symbol,
@@ -64,11 +69,17 @@ def partial_test(env):
         obs, reward, _, done, info_ = env.step(action)
 
 
-def partial_train(env, steps=500, create=False):
-    ppo_agent = get_or_create_recurrent_ppo(False, env)
-    ppo_agent.policy.custom_actions = None
-    ppo_agent.learn(total_timesteps=steps)
-    ppo_agent.save(os.path.join(model_path, "baseline-recurrent-ppo"))
+def partial_train(env, steps=500, create=False, model=1):
+    if model == 1:
+        ppo_agent = get_or_create_recurrent_ppo(create, env)
+        ppo_agent.policy.custom_actions = None
+        ppo_agent.learn(total_timesteps=steps)
+        ppo_agent.save(os.path.join(model_path, "baseline-recurrent-ppo"))
+    else:
+        print("temp: in the right branch")
+        ppo_agent = get_or_create_ppo(create, env)
+        ppo_agent.learn(total_timesteps=steps)
+        ppo_agent.save(os.path.join(model_path, ppo_model_name))
 
 
 def back_test_expert(env):
@@ -83,8 +94,8 @@ def back_test_expert(env):
         print("Reward:", reward, " for action: ", action, "on probability: ", state[3])
     return env
 
-def guided_training(env, create, steps=250000):
 
+def guided_training(env, create, steps=250000):
     ppo_agent = get_or_create_recurrent_ppo(create, env)
 
     state_action_data = env.expert_opinion()
@@ -95,14 +106,20 @@ def guided_training(env, create, steps=250000):
     return env
 
 
+def get_or_create_ppo(create, env):
+    if create:
+        env = Monitor(env)
+        model = PPO(MlpPolicy, env, verbose=1)
+    else:
+        model = PPO.load(os.path.join(model_path, ppo_model_name))
+    return model
+
+
 def get_or_create_recurrent_ppo(create, env):
     if create:
         ppo_agent = RecurrentPPO(
             CustomActorCriticPolicy,
-            env,
-            ent_coef=0.1,
-            clip_range=0.3,
-            verbose=1,
+            env
         )
     else:
         ppo_agent = RecurrentPPO.load(os.path.join(model_path, "baseline-recurrent-ppo"))

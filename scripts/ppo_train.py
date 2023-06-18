@@ -10,6 +10,9 @@ from machine_learning_finance import guided_training, make_env_for, partial_test
 # filter out UserWarning messages
 warnings.filterwarnings("ignore", category=UserWarning)
 
+MODEL_PPO = 0
+MODEL_RECURRENT = 1
+
 # Parse command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--symbols", help="Symbols to use (default: SPY), separated by comma")
@@ -25,12 +28,15 @@ parser.add_argument("-rt", "--random-tickers", type=int, default=None,
                     help="Number of random tickers to select from train_tickers files")
 parser.add_argument("-ft", "--file-tickers", action="store_true", default=False,
                     help="Load data from tickers.csv (use data cacher to seed data)")
-parser.add_argument("-uc", "--use-cache", action="store_true", default=True,
+parser.add_argument("-uc", "--use-cache", action="store_true", default=False,
                     help="Load data from tickers.csv (use data cacher to seed data)")
 parser.add_argument("-u", "--curriculum", type=int, choices=[1, 2, 3], default=2, help="Curriculum level (default: 2)")
+parser.add_argument("-m", "--model", type=int, choices=[0, 1], default=1, help="What model to use")
+
+
 
 args = parser.parse_args()
-
+print("args: ", args)
 
 def rando_tickers(num):
     dfs = [pd.read_csv(f"./data/training_tickers{i}.csv") for i in range(1, 4)]
@@ -88,7 +94,7 @@ if args.train:
         try:
             time.sleep(0.25)
             env = make_env_for(symbol, args.curriculum, args.tail, "file")
-            partial_train(env, args.steps, args.create)
+            partial_train(env, args.steps, args.create, args.model)
             env.ledger.to_csv(f"{args.output_dir}/env_{symbol}_train.csv")
         except Exception as e:
             print(e)

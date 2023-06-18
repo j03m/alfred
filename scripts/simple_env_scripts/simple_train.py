@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import gymnasium as gym
 import pandas as pd
 from stable_baselines3 import PPO
 from stable_baselines3.ppo.policies import MlpPolicy
