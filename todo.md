@@ -4,6 +4,9 @@
 * ~read cartpole v0 source~
   * ~Consider our action space and environment setup~
   * ~build a new env that doesn't use price or volume, just distance from mean and historical percent divergence~
+  * Test simple env against various timeseries and tickers
+    * Figure out how to integrate it into all the other scripts
+    * Consider changing inverse_env to be more like simple_env rather than trader_env 
 * Read: https://github.com/optuna/optuna
   * In the hyper parameter tuning tutorial they show how different net_arch for the SAC agent have different
   * results. Optuna is supposed to help

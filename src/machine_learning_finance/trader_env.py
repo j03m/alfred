@@ -37,24 +37,39 @@ class TraderEnv(gym.Env):
         self.last_action = None
         self.scaler = None
         self.benchmark_position_shares = None
-        close_min, close_max = 0, np.inf
-        volume_min, volume_max = 0, np.inf
-        trend_min, trend_max = 0, np.inf
-        percentile_min, percentile_max = 0, 1
 
         # Define the observation space
-        self.observation_space = spaces.Box(low=np.array([close_min, volume_min, trend_min, percentile_min]),
-                                            high=np.array([close_max, volume_max, trend_max, percentile_max]),
-                                            dtype=np.float32)
+        high = np.array(
+            [
+                1,  # max probability
+                np.finfo(np.float32).max,  # any possible value
+                np.finfo(np.float32).max,  # any possible value
+            ],
+            dtype=np.float32,
+        )
+
+        low = np.array(
+            [
+                0,  # min probability
+                0,  # min price is 0
+                -np.finfo(np.float32).max,  # any possible negative value
+            ],
+            dtype=np.float32,
+        )
+        self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
 
         # We have 3 actions, hold (0), long (1), short (2)
         self.action_space = spaces.Discrete(3)
 
         # Initialize environment state
-        test_period_df = self.expand(test_period_df.copy(), historical_period_df.copy())
+        self.timeseries = calc_probabilties_without_lookahead(test_period_df, historical_period_df)
 
+        # This is the dataframe the AI will see as our environment we scale numbers to avoid huge prices diffs
+        self.timeseries = self.scale(self.timeseries[['prob_above_trend', 'trend', 'trend-diff']])
+
+        # This is the dataframe we will use to calculate profits! (woo)
         self.orig_timeseries = test_period_df
-        self.timeseries = self.scale(test_period_df[["Close", "weighted-volume", "trend", "prob_above_trend"]])
+
         self._reset_vars()
 
         self.product = product
@@ -107,10 +122,6 @@ class TraderEnv(gym.Env):
         row = df.iloc[0, :]
         price = self.get_price_with_slippage(row["Close"])
         self.benchmark_position_shares = math.floor(self.cash / price)
-
-    def expand(self, test, hist):
-        test = calc_probabilties_without_lookahead(test, hist)
-        return test
 
     def scale(self, timeseries):
         self.scaler = MinMaxScaler()
