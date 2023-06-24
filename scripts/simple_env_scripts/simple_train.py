@@ -35,7 +35,6 @@ env = SimpleEnv(test_df, hist_df)
 env = Monitor(env)
 
 model = PPO(MlpPolicy, env, verbose=1)
-
 save_path = "models/ppo_mlp_policy_simple_env"
 callback = SaveOnInterval(check_freq=1000, save_path=save_path)
 

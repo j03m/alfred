@@ -1,6 +1,7 @@
 import yfinance as yf
 import datetime
 import pandas as pd
+import numpy as np
 from .trader_env import TraderEnv
 from .data_utils import model_path
 from sb3_contrib import RecurrentPPO
@@ -8,6 +9,7 @@ from .curriculum_policy_support import CustomActorCriticPolicy
 from stable_baselines3 import PPO
 from stable_baselines3.ppo.policies import MlpPolicy
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.callbacks import BaseCallback
 from .defaults import DEFAULT_TEST_LENGTH, \
     DEFAULT_BOTTOM_PERCENT, \
     DEFAULT_TOP_PERCENT, \
@@ -16,6 +18,23 @@ import os
 from .data_utils import get_coin_data_frames, create_train_test_windows
 
 ppo_model_name = "ppo_mlp_policy_trader_env"
+recurrent_ppo_model_name = "baseline-recurrent-ppo"
+MODEL_PPO = 0
+MODEL_RECURRENT = 1
+class SaveOnInterval(BaseCallback):
+    def __init__(self, check_freq: int, save_path: str, verbose=1):
+        super(SaveOnInterval, self).__init__(verbose)
+        self.check_freq = check_freq
+        self.save_path = save_path
+        self.steps = 0
+
+    def _on_step(self) -> bool:
+        if self.steps % self.check_freq == 0:
+            self.model.save(self.save_path)
+            if self.verbose > 0:
+                print(f"Saving model checkpoint to {self.save_path}")
+        self.steps += 1
+        return True
 
 
 def make_env_for(symbol,
@@ -69,18 +88,23 @@ def partial_test(env):
         obs, reward, _, done, info_ = env.step(action)
 
 
-def partial_train(env, steps=500, create=False, model=1):
-    if model == 1:
+def partial_train(env, steps=500, create=False, model=MODEL_RECURRENT):
+    if model == MODEL_RECURRENT:
         ppo_agent = get_or_create_recurrent_ppo(create, env)
         ppo_agent.policy.custom_actions = None
-        ppo_agent.learn(total_timesteps=steps)
-        ppo_agent.save(os.path.join(model_path, "baseline-recurrent-ppo"))
-    else:
-        print("temp: in the right branch")
+        save_path = os.path.join(model_path, recurrent_ppo_model_name)
+        callback = SaveOnInterval(check_freq=1000, save_path=save_path)
+        ppo_agent.learn(total_timesteps=steps, log_interval=100, callback=callback)
+        ppo_agent.save(save_path)
+    elif model == MODEL_PPO:
         ppo_agent = get_or_create_ppo(create, env)
         ppo_agent.learn(total_timesteps=steps)
-        ppo_agent.save(os.path.join(model_path, ppo_model_name))
-
+        save_path = os.path.join(model_path, ppo_model_name)
+        callback = SaveOnInterval(check_freq=1000, save_path=save_path)
+        ppo_agent.learn(total_timesteps=steps, log_interval=100, callback=callback)
+        ppo_agent.save(save_path)
+    else:
+        raise Exception(f"Unrecognized model: {model}")
 
 def back_test_expert(env):
     env.expert_opinion_df()
@@ -94,15 +118,41 @@ def back_test_expert(env):
         print("Reward:", reward, " for action: ", action, "on probability: ", state[3])
     return env
 
+def capture_exper_trajectories(env):
+    def wrap(input):
+        return np.array(input, dtype=np.float32)
+
+    env.expert_opinion_df()
+    first_obs, _ = env.reset()
+    action = first_obs[-1]
+    done = False
+    obs = [first_obs]
+    rews = []
+    terminal = []
+    infos = []
+    acts = []
+    while not done:
+        print("Action:", action)
+        state, reward, _, done, _ = env.step(int(action))
+        action = state[-1]
+        print("Reward:", reward, " for action: ", action, "on probability: ", state[3])
+        obs.append(state)
+        acts.append(action)
+        infos.append({})
+        rews.append(reward)
+        terminal.append(done)
+
+    return wrap(obs), wrap(acts), terminal, infos, wrap(rews)
+
 
 def guided_training(env, create, steps=250000):
+    raise Exception("Hold up Joe, you wanted to rethink if this was actually effective!")
     ppo_agent = get_or_create_recurrent_ppo(create, env)
-
     state_action_data = env.expert_opinion()
     custom_actions = [action for _, action in state_action_data]
     ppo_agent.policy.custom_actions = custom_actions
     ppo_agent.learn(total_timesteps=steps)
-    ppo_agent.save(os.path.join(model_path, "baseline-recurrent-ppo"))
+    ppo_agent.save(os.path.join(model_path, recurrent_ppo_model_name))
     return env
 
 
@@ -122,6 +172,6 @@ def get_or_create_recurrent_ppo(create, env):
             env
         )
     else:
-        ppo_agent = RecurrentPPO.load(os.path.join(model_path, "baseline-recurrent-ppo"))
+        ppo_agent = RecurrentPPO.load(os.path.join(model_path, recurrent_ppo_model_name))
         ppo_agent.set_env(env)
     return ppo_agent

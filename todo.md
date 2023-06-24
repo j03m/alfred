@@ -1,12 +1,18 @@
 # Revisting basics
 
-* ~finish open ai tutorials~
-* ~read cartpole v0 source~
-  * ~Consider our action space and environment setup~
-  * ~build a new env that doesn't use price or volume, just distance from mean and historical percent divergence~
-  * Test simple env against various timeseries and tickers
-    * Figure out how to integrate it into all the other scripts
-    * Consider changing inverse_env to be more like simple_env rather than trader_env 
+* ~~finish open ai tutorials~~
+* ~~read cartpole v0 source~~
+  * ~~Consider our action space and environment setup~~
+  * ~~build a new env that doesn't use price or volume, just distance from mean and historical percent divergence~~
+  * ~~Test simple env against various timeseries and tickers~~
+    * ~~Figure out how to integrate it into all the other scripts~~
+    * ~~Consider changing inverse_env to be more like simple_env rather than trader_env~~
+* Probability: 
+  * What do when the historical probabilities change and you discover you might not want to be in a position?
+* Implement human advisor with: 
+  * https://stable-baselines.readthedocs.io/en/master/guide/pretrain.html
+  * https://colab.research.google.com/github/Stable-Baselines-Team/rl-colab-notebooks/blob/sb3/pretraining.ipynb#scrollTo=lIdT-zMV8aot
+* How to predict the amount of time training is going to take in advance?
 * Read: https://github.com/optuna/optuna
   * In the hyper parameter tuning tutorial they show how different net_arch for the SAC agent have different
   * results. Optuna is supposed to help

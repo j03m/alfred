@@ -302,7 +302,7 @@ def download_stocks(total):
 LENGTH_OF_STOCK_TRAINGING_DATA = 145  # I might need to fix this, but the model is tied to the number of symbols we trained on
 
 
-def create_train_test_windows(df, start=None, end=None, hist_tail=None, tail=None):
+def create_train_test_windows(df, start=None, end=None, hist_tail=None, tail=365, hist_cutoff=None):
     if start is not None and end is not None:
         start = pd.to_datetime(start)
         end = pd.to_datetime(end)
@@ -315,11 +315,15 @@ def create_train_test_windows(df, start=None, end=None, hist_tail=None, tail=Non
 
         hist_start = start - pd.Timedelta(days=hist_tail)
         hist_df = df.loc[hist_start:start].copy()
+
     else:
         if hist_tail is None:
             hist_tail = tail * DEFAULT_HISTORICAL_MULT
-
-        hist_df = df.head(len(df) - tail)
+            hist_df = df.head(len(df) - tail)
+        elif hist_cutoff is not None:
+            date = pd.to_datetime(hist_cutoff)
+            hist_df = df.loc[:date]
+        
         hist_df = hist_df.tail(hist_tail)
         test_df = df.tail(tail)
     return hist_df, test_df

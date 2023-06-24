@@ -8,26 +8,33 @@ from .plotly_utils import prob_chart, graph_pdf_bar, bar_chart
 
 pd.set_option('mode.chained_assignment', None)
 
-def calc_probabilties_without_lookahead(test, hist):
-    # calculate the normal distribution on the historical period. This avoids look ahead bias when trying
+
+def calc_probabilties_without_lookahead(test, hist, window_size=30):
+    # Calculate the normal distribution on the historical period. This avoids look ahead bias when trying
     # to apply this to the test set.
     result = seasonal_decompose(hist['Close'], model='additive', period=90, extrapolate_trend='freq')
     residuals = result.resid
     percentage_deviations = residuals / result.trend * 100
     mu, std = norm.fit(percentage_deviations)
 
-    # calculate the deviation for the test set, but apply to it the historical percentages
-    test_result = seasonal_decompose(test['Close'], model='additive', period=90, extrapolate_trend='freq')
-    test_residuals = test_result.resid
-    test_percentage_deviations = test_residuals / test_result.trend * 100
+    # Calculate the trailing moving average (as a stand-in for trend) for the test set,
+    # avoiding look-ahead bias
+    test['trend'] = test['Close'].rolling(window=window_size).mean()
+
+    # handle missing values in 'trend' due to the rolling window calculation
+    test['trend'].fillna(method='bfill', inplace=True)
+
+    # calculate the deviation for the test set
+    test_residuals = test['Close'] - test['trend']
+    test_percentage_deviations = test_residuals / test['trend'] * 100
     z_scores = test_percentage_deviations / std
 
     # Calculate the probability of a value being above the trend line for each point in the time series
     test["prob_above_trend"] = 1 - norm.cdf(z_scores)
     test["weighted-volume"] = test["Close"] * test["Volume"]
-    test["trend"] = test_result.trend
-    test["trend-diff"] = test["Close"] - test["trend"]
+    test["trend-diff"] = test_residuals
     return test
+
 
 def calc_durations_with_extremes(df_raw):
     # get last index

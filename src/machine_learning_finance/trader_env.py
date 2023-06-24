@@ -202,12 +202,12 @@ class TraderEnv(gym.Env):
             self._apply_action(action)
 
         if self._is_episode_ended():
-            reward = self.get_reward()
+            reward = self.get_reward(action)
             info("final reward:", reward)
             return self._get_next_state(), reward, False, True, {}
             # return self._get_next_state(), reward, True, {}
         else:
-            reward = self.get_reward()
+            reward = self.get_reward(action)
             info("current reward:", reward)
             self.current_index += 1
             return self._get_next_state(), reward, False, False, {}
@@ -454,90 +454,20 @@ class TraderEnv(gym.Env):
     def get_current_close(self, df, index):
         row = df.iloc[index, :]
         return row["Close"]
-    def get_reward(self):
-        current_portfolio_value = self.total_value()
-        percentage_change = ((current_portfolio_value - self.benchmark_value) / self.benchmark_value) * 100
-        info(
-            f"portfolio value at reward calculation: {current_portfolio_value} vs bench: {self.benchmark_value} ratio: {percentage_change}")
-        if self.curriculum_code == 1:
-            return self._get_reward_curriculum_1_trade_setups()
-        elif self.curriculum_code == 2:
-            return self._get_reward_curriculum_2_profitable_actions()
-        elif self.curriculum_code == 3:
-            return self._get_reward_curriculum_3_vs_benchmark()
+    def get_reward(self, action):
+        row = self.timeseries.iloc[self.current_index]
+        prob_above_trend = row["prob_above_trend"]
 
-    def _get_reward_curriculum_1_trade_setups(self):
-        '''
-        This function just rewards the agent for making what we would consider a probably set up.
-        '''
-        component1 = self.is_probable_set_up()
-        return component1
+        reward = 0
+        if action == 1 and prob_above_trend >= self.prob_high:
+            reward = 1
+        elif action == 2 and prob_above_trend <= self.prob_low:
+            reward = 1
 
-    def _get_reward_curriculum_2_profitable_actions(self):
-        df = self.orig_timeseries
-        row = df.iloc[self.current_index, :]
-        prob = row["prob_above_trend"]
-        action = self.last_action
-        # continue to reward for high probability setups, but now start to introduce the idea of
-        # profitable rewards, so it learns to avoid losing money?
-        score = 0
-        if action == 1 and prob >= self.prob_high:
-            score += 0.5  # reward a highly probable long
-        elif action == 2 and prob <= self.prob_low:
-            score += 0.5  # reward a highly probable short
-        elif action == 0 and (self.prob_low > prob or prob < self.prob_high):
-            score += 0.01  # reward holding when probability is moderate
-
-        score += self.calculate_close_bonus()
-
-        return score
-
-    def calculate_close_bonus(self):
         if self.last_profit > 0:
-            return self.last_profit
-        if self.last_profit < 0:
-            return self.last_profit * -10
-        else:
-            return 0
+            reward += 2
 
-    def is_probable_set_up(self):
-        df = self.orig_timeseries
-        row = df.iloc[self.current_index, :]
-        prob = row["prob_above_trend"]
-        action = self.last_action
-
-        print("action:", action, " prob:", prob)
-        if action == 1 and prob >= self.prob_high:
-            return 100  # reward a highly probable long
-        elif action == 2 and prob <= self.prob_low:
-            return 100  # reward a highly probable short
-        elif action == 0 and (self.prob_low > prob or prob < self.prob_high):
-            return 0.01  # reward holding when probability is moderate
-        else:
-            # raise Exception(f"WHY YOU WRONG? {self.current_index} {action} {prob}")
-            return -10  # penalize for taking actions against the criteria
-
-    def _get_reward_curriculum_3_vs_benchmark(self):
-        df = self.orig_timeseries
-        row = df.iloc[self.current_index, :]
-        current_portfolio_value = self.total_value()
-
-        # compare to a bench mark
-        percentage_change = ((current_portfolio_value - self.benchmark_value) / self.benchmark_value) * 100
-
-        verbose("reward states: ",
-                "\nposition value: ", self.position_value,
-                "\nlong shares: ", self.position_shares,
-                "\nshort shares: ", self.shares_owed,
-                "\nlong value:", row["Close"] * self.position_shares,
-                "\nshort debt:", row["Close"] * self.shares_owed,
-                "\ncash value:", self.cash,
-                "\ntoal value:", current_portfolio_value,
-                "\nbenchmark value:", self.benchmark_value,
-                "\nreal percentage_change: ", percentage_change
-                )
-
-        return percentage_change
+        return reward
 
     def total_value(self):
         self.update_position_value()
@@ -545,7 +475,6 @@ class TraderEnv(gym.Env):
 
     def env_block(self):
         start_index = self.current_index
-        end_index = self.current_index
         df = self.timeseries
         block = df.iloc[start_index].to_numpy()
         return block
