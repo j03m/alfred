@@ -9,13 +9,18 @@ from .plotly_utils import prob_chart, graph_pdf_bar, bar_chart
 pd.set_option('mode.chained_assignment', None)
 
 
-def calc_probabilties_without_lookahead(test, hist, window_size=30):
+def calc_probabilties_without_lookahead(test, hist, window_size=90):
     # Calculate the normal distribution on the historical period. This avoids look ahead bias when trying
     # to apply this to the test set.
-    result = seasonal_decompose(hist['Close'], model='additive', period=90, extrapolate_trend='freq')
-    residuals = result.resid
-    percentage_deviations = residuals / result.trend * 100
-    mu, std = norm.fit(percentage_deviations)
+    #result = seasonal_decompose(hist['Close'], model='additive', period=90, extrapolate_trend='freq')
+    #residuals = result.resid
+    #percentage_deviations = residuals / result.trend * 100
+    #mu, std = norm.fit(percentage_deviations)
+    hist['trend'] = hist['Close'].rolling(window=window_size).mean()
+    hist['trend'].fillna(method='bfill', inplace=True)
+    hist_residuals = hist['Close'] - hist['trend']
+    hist_percentage_deviations = hist_residuals / hist['trend'] * 100
+    mu, std = norm.fit(hist_percentage_deviations)
 
     # Calculate the trailing moving average (as a stand-in for trend) for the test set,
     # avoiding look-ahead bias

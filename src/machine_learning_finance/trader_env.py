@@ -37,7 +37,7 @@ class TraderEnv(gym.Env):
         self.last_action = None
         self.scaler = None
         self.benchmark_position_shares = None
-
+        self.env_version = "2"
         # Define the observation space
         high = np.array(
             [
