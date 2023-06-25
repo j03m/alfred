@@ -8,37 +8,50 @@ from .plotly_utils import prob_chart, graph_pdf_bar, bar_chart
 
 pd.set_option('mode.chained_assignment', None)
 
-
 def calc_probabilties_without_lookahead(test, hist, window_size=90):
-    # Calculate the normal distribution on the historical period. This avoids look ahead bias when trying
-    # to apply this to the test set.
-    #result = seasonal_decompose(hist['Close'], model='additive', period=90, extrapolate_trend='freq')
-    #residuals = result.resid
-    #percentage_deviations = residuals / result.trend * 100
-    #mu, std = norm.fit(percentage_deviations)
-    hist['trend'] = hist['Close'].rolling(window=window_size).mean()
-    hist['trend'].fillna(method='bfill', inplace=True)
-    hist_residuals = hist['Close'] - hist['trend']
-    hist_percentage_deviations = hist_residuals / hist['trend'] * 100
-    mu, std = norm.fit(hist_percentage_deviations)
+    # Initialize new columns in test
+    test['trend'] = None
+    test['sd_trend'] = None
+    test["prob_above_trend"] = None
+    test["weighted-volume"] = None
+    test["trend-diff"] = None
 
-    # Calculate the trailing moving average (as a stand-in for trend) for the test set,
-    # avoiding look-ahead bias
-    test['trend'] = test['Close'].rolling(window=window_size).mean()
+    # Iterate over test
+    for i in range(len(test)):
+        # Update hist with data up to current index in test
+        hist_updated = pd.concat([hist, test.iloc[:i]])
 
-    # handle missing values in 'trend' due to the rolling window calculation
-    test['trend'].fillna(method='bfill', inplace=True)
+        # Calculate the normal distribution on the updated historical period
+        # hist_updated['trend'] = hist_updated['Close'].ewm(span=180, adjust=False).mean()
+        # hist_updated['trend'].fillna(method='bfill', inplace=True)
+        # hist_residuals = hist_updated['Close'] - hist_updated['trend']
+        # hist_percentage_deviations = hist_residuals / hist_updated['trend'] * 100
+        # mu, std = norm.fit(hist_percentage_deviations)
 
-    # calculate the deviation for the test set
-    test_residuals = test['Close'] - test['trend']
-    test_percentage_deviations = test_residuals / test['trend'] * 100
-    z_scores = test_percentage_deviations / std
+        result = seasonal_decompose(hist_updated['Close'], period=90, extrapolate_trend='freq')
+        residuals = result.resid
+        percentage_deviations = residuals / result.trend * 100
+        mu, std = norm.fit(percentage_deviations)
 
-    # Calculate the probability of a value being above the trend line for each point in the time series
-    test["prob_above_trend"] = 1 - norm.cdf(z_scores)
-    test["weighted-volume"] = test["Close"] * test["Volume"]
-    test["trend-diff"] = test_residuals
+        # Calculate the trailing moving average for the current point in test
+        test['trend'].iloc[i] = test['Close'].iloc[:i+1].ewm(span=180, adjust=False).mean().iloc[-1]
+
+        # Calculate the deviation for the current point in test
+        test_residuals = test['Close'].iloc[i] - test['trend'].iloc[i]
+        test_percentage_deviations = test_residuals / test['trend'].iloc[i] * 100
+        z_scores = test_percentage_deviations / std
+
+        # Calculate the probability of the value being above the trend line for the current point in test
+        test["prob_above_trend"].iloc[i] = 1 - norm.cdf(z_scores)
+        test["weighted-volume"].iloc[i] = test["Close"].iloc[i] * test["Volume"].iloc[i]
+        test["trend-diff"].iloc[i] = test_residuals
+
+    # Calculate the seasonal decomposition trend for the current point in test
+    result = seasonal_decompose(test['Close'], model='additive', period=90, extrapolate_trend='freq')
+    test['sd_trend'] = result.trend
+
     return test
+
 
 
 def calc_durations_with_extremes(df_raw):

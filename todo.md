@@ -7,8 +7,20 @@
   * ~~Test simple env against various timeseries and tickers~~
     * ~~Figure out how to integrate it into all the other scripts~~
     * ~~Consider changing inverse_env to be more like simple_env rather than trader_env~~
-* Probability: 
-  * What do when the historical probabilities change and you discover you might not want to be in a position?
+* Probability tasks: 
+  * ~~What do when the historical probabilities change and you discover you might not want to be in a position?~~
+    * We had big bug around look ahead here, made significant changes, the strategy is now not nearly as good :(
+  * todo: The test moving average needs to be calculated using window_size + test period or you end up with a huge flat period in the test
+  * With our new found naivety, we need to consider:
+    * "patience" - when reaching a probability, should we go in right away or wait to see if there more to come?
+      * 
+    * "trend" - On April 29th QQQ we get an oversold indicator but the overall trend is egregiously downward - we need to consider this wait for trends to flatten
+      * Can we generate a linear regression through the 180 exponential moving average and generate buy/sell signal based on a positive/negative slope
+    * "different entry/exit moving averages"
+      * should we use two different moving average (time) to indicate long/short as shorts seem to be more risky (maybe, prove it)
+      * Consider the above, rather than long/short consider enter/exit, for example entry for long or short can use the 90 day probabilities but exit
+        * would be faster, using the 30 or 60 day probabilities
+      * Explore the relationship between the sensitivity of the probabilities thresholds vs the window/speed of the moving average
 * Implement human advisor with: 
   * https://stable-baselines.readthedocs.io/en/master/guide/pretrain.html
   * https://colab.research.google.com/github/Stable-Baselines-Team/rl-colab-notebooks/blob/sb3/pretraining.ipynb#scrollTo=lIdT-zMV8aot

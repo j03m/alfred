@@ -66,7 +66,8 @@ def plot_backtest_analysis(df, ledger, save_png=False, png_file=None, inverse=No
 
     # Add trace for the main time series plot to the first row of the subplot
     fig.add_trace(go.Scatter(x=df.index, y=df["Close"], mode="lines", name="Value"))
-    fig.add_trace(go.Scatter(x=line_index, y=df["trend"], mode="lines", name="Trend"))
+    fig.add_trace(go.Scatter(x=df.index, y=df["trend"], mode="lines", name="Trend"))
+
     fig.add_trace(go.Scatter(x=df.index, y=scaled_prob_above_trend, mode='lines', name='Prob Above Trend'))
 
     ledger['Date'] = pd.to_datetime(ledger['Date'])
