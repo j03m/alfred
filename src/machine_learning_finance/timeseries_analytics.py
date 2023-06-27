@@ -8,6 +8,14 @@ from .plotly_utils import prob_chart, graph_pdf_bar, bar_chart
 
 pd.set_option('mode.chained_assignment', None)
 
+
+def slopes_indicator(df, moving_average_window=180, linear_regression_window=30):
+    # run a exp moving average over the whole df
+    df['trend'] = df['Close'].ewm(span=moving_average_window, adjust=False).mean()
+
+
+
+# This is broken, doesn't work see git history for details
 def calc_probabilties_without_lookahead(test, hist, window_size=90):
     # Initialize new columns in test
     test['trend'] = None
@@ -34,7 +42,7 @@ def calc_probabilties_without_lookahead(test, hist, window_size=90):
         mu, std = norm.fit(percentage_deviations)
 
         # Calculate the trailing moving average for the current point in test
-        test['trend'].iloc[i] = test['Close'].iloc[:i+1].ewm(span=180, adjust=False).mean().iloc[-1]
+        test['trend'].iloc[i] = test['Close'].iloc[:i + 1].ewm(span=180, adjust=False).mean().iloc[-1]
 
         # Calculate the deviation for the current point in test
         test_residuals = test['Close'].iloc[i] - test['trend'].iloc[i]
@@ -51,7 +59,6 @@ def calc_probabilties_without_lookahead(test, hist, window_size=90):
     test['sd_trend'] = result.trend
 
     return test
-
 
 
 def calc_durations_with_extremes(df_raw):
@@ -159,7 +166,6 @@ def calculate_and_graph_price_probabilities(percentage_differences):
     print("Current price diff:", percentage_differences[-1])
 
 
-
 def calculate_duration_probabilities(start_date, df_raw, df_durations):
     # seed 60 days from the start of when we want to predict when the
     # mean regression will happen
@@ -185,6 +191,7 @@ def calculate_duration_probabilities(start_date, df_raw, df_durations):
     df = df.set_index("date")
     return df
 
+
 def calculate_and_graph_duration_probabilities(start_date, df_raw, df_durations):
     df = calculate_duration_probabilities(start_date, df_raw, df_durations)
     bar_chart(df, False)
@@ -205,4 +212,3 @@ def calc_extreme_percentage_deviations(df_durations, trend):
         extreme_percentage_deviations.append(deviation_percentage)
 
     return extreme_percentage_deviations
-

@@ -10,12 +10,22 @@
 * Probability tasks: 
   * ~~What do when the historical probabilities change and you discover you might not want to be in a position?~~
     * We had big bug around look ahead here, made significant changes, the strategy is now not nearly as good :(
-  * todo: The test moving average needs to be calculated using window_size + test period or you end up with a huge flat period in the test
+  * ~~todo: The test moving average needs to be calculated using window_size + test period or you end up with a huge flat period in the test~~
   * With our new found naivety, we need to consider:
     * "patience" - when reaching a probability, should we go in right away or wait to see if there more to come?
-      * 
+    * 
     * "trend" - On April 29th QQQ we get an oversold indicator but the overall trend is egregiously downward - we need to consider this wait for trends to flatten
       * Can we generate a linear regression through the 180 exponential moving average and generate buy/sell signal based on a positive/negative slope
+        * This chats discusses using polynomial regression: https://chat.openai.com/share/f3318aaa-88ea-44e5-bca4-c3d272b96b3a
+        * 
+      * We discovered ruptures read these papers: 
+        * https://centre-borelli.github.io/ruptures-docs/
+        * http://www.laurentoudre.fr/publis/TOG-SP-19.pdf
+        * https://charles.doffy.net/files/sp-review-2020.pdf
+        * https://techrando.com/2019/08/14/a-brief-introduction-to-change-point-detection-using-python/
+          * Multiple papers to algo's linked
+        * Rupture code: https://github.com/kperry2215/change_point_detection
+    
     * "different entry/exit moving averages"
       * should we use two different moving average (time) to indicate long/short as shorts seem to be more risky (maybe, prove it)
       * Consider the above, rather than long/short consider enter/exit, for example entry for long or short can use the 90 day probabilities but exit
