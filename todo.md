@@ -13,11 +13,10 @@
   * ~~todo: The test moving average needs to be calculated using window_size + test period or you end up with a huge flat period in the test~~
   * With our new found naivety, we need to consider:
     * "patience" - when reaching a probability, should we go in right away or wait to see if there more to come?
-    * 
     * "trend" - On April 29th QQQ we get an oversold indicator but the overall trend is egregiously downward - we need to consider this wait for trends to flatten
-      * Can we generate a linear regression through the 180 exponential moving average and generate buy/sell signal based on a positive/negative slope
-        * This chats discusses using polynomial regression: https://chat.openai.com/share/f3318aaa-88ea-44e5-bca4-c3d272b96b3a
-        * 
+      * ~~This chats discusses using polynomial regression: https://chat.openai.com/share/81a21673-5ecf-42f9-b5aa-8efca7048d0b~~
+        * ~~We can use a derivative on the polynomial to get slope/trend~~  
+        * polynomial is kinda useless, let's go back to change detection!
       * We discovered ruptures read these papers: 
         * https://centre-borelli.github.io/ruptures-docs/
         * http://www.laurentoudre.fr/publis/TOG-SP-19.pdf

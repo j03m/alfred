@@ -60,12 +60,9 @@ def plot_backtest_analysis(df, ledger, save_png=False, png_file=None, inverse=No
 
     fig = go.Figure()
 
-    trend = df.dropna()
-
-    line_index = trend.index
-
     # Add trace for the main time series plot to the first row of the subplot
     fig.add_trace(go.Scatter(x=df.index, y=df["Close"], mode="lines", name="Value"))
+
     fig.add_trace(go.Scatter(x=df.index, y=df["trend"], mode="lines", name="Trend"))
 
     fig.add_trace(go.Scatter(x=df.index, y=scaled_prob_above_trend, mode='lines', name='Prob Above Trend'))
@@ -110,7 +107,9 @@ def plot_backtest_analysis(df, ledger, save_png=False, png_file=None, inverse=No
         pio.write_image(fig, png_file)
     else:
         fig.update_layout(title='Backtest Analysis', xaxis_title='Date', height=800)
-        fig.show()
+
+    return fig
+
 
 
 def plot_full_analysis(df, trend, prob_above_trend, prob_below_trend, model, df_durations, ledger=None):

@@ -3,16 +3,36 @@ import numpy as np
 from scipy.stats import norm
 from statsmodels.tsa.seasonal import seasonal_decompose
 from scipy.stats import poisson
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+
 
 from .plotly_utils import prob_chart, graph_pdf_bar, bar_chart
 
 pd.set_option('mode.chained_assignment', None)
 
 
-def slopes_indicator(df, moving_average_window=180, linear_regression_window=30):
-    # run a exp moving average over the whole df
-    df['trend'] = df['Close'].ewm(span=moving_average_window, adjust=False).mean()
+def calculate_polynomial_regression(df):
+    # Assume x and y are your data
+    df['DateNumber'] = [i for i in range(len(df))]
 
+    # Prepare input features
+    x = df[['DateNumber']]
+    y = df['Close']
+
+    # Transform the x data into polynomial features
+    degree = 2
+    poly = PolynomialFeatures(degree)
+    x_poly = poly.fit_transform(x)
+
+    # Now fit a Linear Regression model on the transformed data
+    model = LinearRegression()
+    model.fit(x_poly, y)
+
+    # Now the model can predict a curve rather than a straight line
+    y_pred = model.predict(x_poly)
+
+    return y_pred
 
 
 # This is broken, doesn't work see git history for details
