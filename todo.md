@@ -24,12 +24,9 @@
         * https://techrando.com/2019/08/14/a-brief-introduction-to-change-point-detection-using-python/
           * Multiple papers to algo's linked
         * Rupture code: https://github.com/kperry2215/change_point_detection
-    
-    * "different entry/exit moving averages"
-      * should we use two different moving average (time) to indicate long/short as shorts seem to be more risky (maybe, prove it)
-      * Consider the above, rather than long/short consider enter/exit, for example entry for long or short can use the 90 day probabilities but exit
-        * would be faster, using the 30 or 60 day probabilities
-      * Explore the relationship between the sensitivity of the probabilities thresholds vs the window/speed of the moving average
+        * https://towardsdatascience.com/5-changepoint-detection-algorithms-every-data-scientist-should-know-e2ebb83d215f
+    * ~~"different entry/exit moving averages"~~
+      
 * Implement human advisor with: 
   * https://stable-baselines.readthedocs.io/en/master/guide/pretrain.html
   * https://colab.research.google.com/github/Stable-Baselines-Team/rl-colab-notebooks/blob/sb3/pretraining.ipynb#scrollTo=lIdT-zMV8aot
