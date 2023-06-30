@@ -109,4 +109,7 @@ class SimpleEnv(gym.Env):
     def reset(self):
         self.index = 0
         self.state = -1
+        self.price = 0
+        self.profit = 0
+
         return np.array(self.expanded_df.iloc[0].values, dtype=np.float32), {}

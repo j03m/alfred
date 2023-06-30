@@ -1,9 +1,36 @@
 # Revisting basics
 
-* ~finish open ai tutorials~
-* ~read cartpole v0 source~
-  * ~Consider our action space and environment setup~
-  * ~build a new env that doesn't use price or volume, just distance from mean and historical percent divergence~
+* ~~finish open ai tutorials~~
+* ~~read cartpole v0 source~~
+  * ~~Consider our action space and environment setup~~
+  * ~~build a new env that doesn't use price or volume, just distance from mean and historical percent divergence~~
+  * ~~Test simple env against various timeseries and tickers~~
+    * ~~Figure out how to integrate it into all the other scripts~~
+    * ~~Consider changing inverse_env to be more like simple_env rather than trader_env~~
+* Probability tasks: 
+  * ~~What do when the historical probabilities change and you discover you might not want to be in a position?~~
+    * We had big bug around look ahead here, made significant changes, the strategy is now not nearly as good :(
+  * ~~todo: The test moving average needs to be calculated using window_size + test period or you end up with a huge flat period in the test~~
+  * With our new found naivety, we need to consider:
+    * "patience" - when reaching a probability, should we go in right away or wait to see if there more to come?
+    * "trend" - On April 29th QQQ we get an oversold indicator but the overall trend is egregiously downward - we need to consider this wait for trends to flatten
+      * ~~This chats discusses using polynomial regression: https://chat.openai.com/share/81a21673-5ecf-42f9-b5aa-8efca7048d0b~~
+        * ~~We can use a derivative on the polynomial to get slope/trend~~  
+        * polynomial is kinda useless, let's go back to change detection!
+      * We discovered ruptures read these papers: 
+        * https://centre-borelli.github.io/ruptures-docs/
+        * http://www.laurentoudre.fr/publis/TOG-SP-19.pdf
+        * https://charles.doffy.net/files/sp-review-2020.pdf
+        * https://techrando.com/2019/08/14/a-brief-introduction-to-change-point-detection-using-python/
+          * Multiple papers to algo's linked
+        * Rupture code: https://github.com/kperry2215/change_point_detection
+        * https://towardsdatascience.com/5-changepoint-detection-algorithms-every-data-scientist-should-know-e2ebb83d215f
+    * ~~"different entry/exit moving averages"~~
+      
+* Implement human advisor with: 
+  * https://stable-baselines.readthedocs.io/en/master/guide/pretrain.html
+  * https://colab.research.google.com/github/Stable-Baselines-Team/rl-colab-notebooks/blob/sb3/pretraining.ipynb#scrollTo=lIdT-zMV8aot
+* How to predict the amount of time training is going to take in advance?
 * Read: https://github.com/optuna/optuna
   * In the hyper parameter tuning tutorial they show how different net_arch for the SAC agent have different
   * results. Optuna is supposed to help

@@ -13,3 +13,5 @@ keys/*
 backtests/*
 videos/*
 tests/__pycache__/
+scripts/examples/__pycache__/
+

@@ -3,11 +3,39 @@ import numpy as np
 from scipy.stats import norm
 from statsmodels.tsa.seasonal import seasonal_decompose
 from scipy.stats import poisson
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+
 
 from .plotly_utils import prob_chart, graph_pdf_bar, bar_chart
 
 pd.set_option('mode.chained_assignment', None)
 
+
+def calculate_polynomial_regression(df):
+    # Assume x and y are your data
+    df['DateNumber'] = [i for i in range(len(df))]
+
+    # Prepare input features
+    x = df[['DateNumber']]
+    y = df['Close']
+
+    # Transform the x data into polynomial features
+    degree = 2
+    poly = PolynomialFeatures(degree)
+    x_poly = poly.fit_transform(x)
+
+    # Now fit a Linear Regression model on the transformed data
+    model = LinearRegression()
+    model.fit(x_poly, y)
+
+    # Now the model can predict a curve rather than a straight line
+    y_pred = model.predict(x_poly)
+
+    return y_pred
+
+
+# This is broken, doesn't work see git history for details
 def calc_probabilties_without_lookahead(test, hist):
     # calculate the normal distribution on the historical period. This avoids look ahead bias when trying
     # to apply this to the test set.
@@ -28,6 +56,7 @@ def calc_probabilties_without_lookahead(test, hist):
     test["trend"] = test_result.trend
     test["trend-diff"] = test["Close"] - test["trend"]
     return test
+
 
 def calc_durations_with_extremes(df_raw):
     # get last index
@@ -134,7 +163,6 @@ def calculate_and_graph_price_probabilities(percentage_differences):
     print("Current price diff:", percentage_differences[-1])
 
 
-
 def calculate_duration_probabilities(start_date, df_raw, df_durations):
     # seed 60 days from the start of when we want to predict when the
     # mean regression will happen
@@ -160,6 +188,7 @@ def calculate_duration_probabilities(start_date, df_raw, df_durations):
     df = df.set_index("date")
     return df
 
+
 def calculate_and_graph_duration_probabilities(start_date, df_raw, df_durations):
     df = calculate_duration_probabilities(start_date, df_raw, df_durations)
     bar_chart(df, False)
@@ -180,4 +209,3 @@ def calc_extreme_percentage_deviations(df_durations, trend):
         extreme_percentage_deviations.append(deviation_percentage)
 
     return extreme_percentage_deviations
-
