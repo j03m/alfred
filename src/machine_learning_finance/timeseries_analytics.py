@@ -3,13 +3,57 @@ import numpy as np
 from scipy.stats import norm
 from statsmodels.tsa.seasonal import seasonal_decompose
 from scipy.stats import poisson
-from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
-
-
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.pipeline import make_pipeline
+import bocd
 from .plotly_utils import prob_chart, graph_pdf_bar, bar_chart
 
 pd.set_option('mode.chained_assignment', None)
+
+
+def make_change_point_column_name(prefix):
+    return f"{prefix}_change_point"
+
+
+def detect_change_points(df, period=30, hazard=30, mu=0, kappa=1, alpha=1, beta=1, moving_avg = None):
+    if moving_avg is None:
+        moving_avg = df["Close"].rolling(period).mean()
+    data = moving_avg.dropna().values
+    bc = bocd.BayesianOnlineChangePointDetection(bocd.ConstantHazard(hazard),
+                                                 bocd.StudentT(mu=mu, kappa=kappa, alpha=alpha, beta=beta))
+    rt_mle = np.empty(data.shape)
+    for i, d in enumerate(data):
+        bc.update(d)
+        rt_mle[i] = bc.rt
+    rt_mle_padded = np.insert(rt_mle, 0, np.full(len(df) - len(rt_mle) + 1, 0))
+    column = "moving_avg_{period}"
+    df[make_change_point_column_name(column)] = np.where(np.diff(rt_mle_padded) < 0, True, False)
+    return df, column
+
+
+def compute_derivatives_between_change_points(df, prefix):
+    # Compute change points and prepend a dummy change point at the start
+    change_points = [df.index[0]] + list(df.loc[df[make_change_point_column_name(prefix)]].index)
+
+    derivatives = pd.Series(index=df.index)
+
+    # Loop through pairs of change points
+    for i in range(len(change_points) - 1):
+        # Extract data between change points
+        segment = df.loc[change_points[i]:change_points[i + 1]]
+
+        y_pred, model, x, y = calculate_polynomial_regression(segment)
+
+        ridge = model.named_steps['linearregression']
+        deriv = np.polyder(ridge.coef_[::-1])
+        yd_plot = np.polyval(deriv, x)
+
+        # Assign all values of yd_plot to corresponding positions in derivatives
+        derivatives[segment.index] = yd_plot
+
+    df["polynomial_derivative"] = derivatives
+    return df
 
 
 def calculate_polynomial_regression(df):
@@ -21,18 +65,10 @@ def calculate_polynomial_regression(df):
     y = df['Close']
 
     # Transform the x data into polynomial features
-    degree = 2
-    poly = PolynomialFeatures(degree)
-    x_poly = poly.fit_transform(x)
-
-    # Now fit a Linear Regression model on the transformed data
-    model = LinearRegression()
-    model.fit(x_poly, y)
-
-    # Now the model can predict a curve rather than a straight line
-    y_pred = model.predict(x_poly)
-
-    return y_pred
+    model = make_pipeline(PolynomialFeatures(2), LinearRegression())
+    model.fit(x, y)
+    y_pred = model.predict(x)
+    return y_pred, model, x, y
 
 
 # This is broken, doesn't work see git history for details
@@ -209,3 +245,50 @@ def calc_extreme_percentage_deviations(df_durations, trend):
         extreme_percentage_deviations.append(deviation_percentage)
 
     return extreme_percentage_deviations
+
+
+def calculate_profit_and_drawdown(price_series, start_index, window):
+    if start_index + window > len(price_series):
+        return None, None, None, None
+
+    window_prices = price_series[start_index: start_index + window]
+    max_price = max(window_prices)
+    min_price = min(window_prices)
+
+    long_profit = window_prices[-1] - window_prices[0]
+    long_drawdown = window_prices[0] - min_price
+    short_profit = window_prices[0] - window_prices[-1]
+    short_drawdown = max_price - window_prices[0]
+
+    return long_profit, long_drawdown, short_profit, short_drawdown
+
+
+def generate_max_profit_actions(price_series,
+                                window_sizes,
+                                profit_threshold,
+                                drawdown_threshold):
+    actions = []
+    for i in range(len(price_series)):
+        max_long_profit = float('-inf')
+        max_short_profit = float('-inf')
+        corresponding_long_drawdown = 0
+        corresponding_short_drawdown = 0
+        for window in window_sizes:
+            long_profit, long_drawdown, short_profit, short_drawdown = calculate_profit_and_drawdown(price_series, i,
+                                                                                                     window)
+            if long_profit is None:
+                continue
+
+            if long_profit > max_long_profit:
+                max_long_profit = long_profit
+                corresponding_long_drawdown = long_drawdown
+            if short_profit > max_short_profit:
+                max_short_profit = short_profit
+                corresponding_short_drawdown = short_drawdown
+        if max_long_profit > profit_threshold and corresponding_long_drawdown < drawdown_threshold:
+            actions.append(1)  # go long
+        elif max_short_profit > profit_threshold and corresponding_short_drawdown < drawdown_threshold:
+            actions.append(-1)  # go short
+        else:
+            actions.append(0)  # hold the previous position
+    return actions
