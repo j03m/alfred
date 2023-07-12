@@ -16,7 +16,7 @@ def make_change_point_column_name(prefix):
     return f"{prefix}_change_point"
 
 
-def detect_change_points(df, period=30, hazard=30, mu=0, kappa=1, alpha=1, beta=1, moving_avg = None):
+def detect_change_points(df, period=30, hazard=30, mu=0, kappa=1, alpha=1, beta=1, moving_avg=None):
     if moving_avg is None:
         moving_avg = df["Close"].rolling(period).mean()
     data = moving_avg.dropna().values
@@ -27,14 +27,15 @@ def detect_change_points(df, period=30, hazard=30, mu=0, kappa=1, alpha=1, beta=
         bc.update(d)
         rt_mle[i] = bc.rt
     rt_mle_padded = np.insert(rt_mle, 0, np.full(len(df) - len(rt_mle) + 1, 0))
-    column = "moving_avg_{period}"
-    df[make_change_point_column_name(column)] = np.where(np.diff(rt_mle_padded) < 0, True, False)
+    column = f"moving_avg_{period}"
+    column = make_change_point_column_name(column)
+    df[column] = np.where(np.diff(rt_mle_padded) < 0, True, False)
     return df, column
 
 
-def compute_derivatives_between_change_points(df, prefix):
+def compute_derivatives_between_change_points(df, cp_column):
     # Compute change points and prepend a dummy change point at the start
-    change_points = [df.index[0]] + list(df.loc[df[make_change_point_column_name(prefix)]].index)
+    change_points = [df.index[0]] + list(df.loc[df[cp_column]].index)
 
     derivatives = pd.Series(index=df.index)
 
@@ -50,9 +51,10 @@ def compute_derivatives_between_change_points(df, prefix):
         yd_plot = np.polyval(deriv, x)
 
         # Assign all values of yd_plot to corresponding positions in derivatives
-        derivatives[segment.index] = yd_plot
+        derivatives.loc[segment.index] = yd_plot.flatten()
 
     df["polynomial_derivative"] = derivatives
+    df["polynomial_derivative"] = df["polynomial_derivative"].fillna(0)
     return df
 
 
@@ -252,6 +254,7 @@ def calculate_profit_and_drawdown(price_series, start_index, window):
         return None, None, None, None
 
     window_prices = price_series[start_index: start_index + window]
+
     max_price = max(window_prices)
     min_price = min(window_prices)
 

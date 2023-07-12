@@ -1,10 +1,9 @@
 # General:
    
 * Implement human advisor with: 
-  * We won';t use: https://github.com/HumanCompatibleAI/imitation until gym vs gymnasium is ironed out
-    * Instead, it looks like this is built into sb3: 
-    * https://stable-baselines.readthedocs.io/en/master/guide/pretrain.html
-    * https://colab.research.google.com/github/Stable-Baselines-Team/rl-colab-notebooks/blob/sb3/pretraining.ipynb#scrollTo=lIdT-zMV8aot
+  * Describes the state of https://github.com/DLR-RM/stable-baselines3/issues/27 imitation/guided learning in sb3
+    * this seems to be the example? https://colab.research.google.com/github/Stable-Baselines-Team/rl-colab-notebooks/blob/sb3/pretraining.ipynb
+    * it appears we're going to hit: https://github.com/DLR-RM/stable-baselines3/issues/543
 * How to predict the amount of time training is going to take in advance?
 * Read: https://github.com/optuna/optuna
   * In the hyper parameter tuning tutorial they show how different net_arch for the SAC agent have different

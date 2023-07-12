@@ -40,9 +40,11 @@ class TraderEnv(gym.Env):
         self.benchmark_position_shares = None
         self.env_version = "2"
         # Define the observation space
+        # "trend", chng_pt_column, "polynomial_derivative", "trend-diff"
         high = np.array(
             [
-                1,  # max probability
+                np.finfo(np.float32).max,  # any possible value
+                1,  # boolean change point
                 np.finfo(np.float32).max,  # any possible value
                 np.finfo(np.float32).max,  # any possible value
             ],
@@ -51,8 +53,9 @@ class TraderEnv(gym.Env):
 
         low = np.array(
             [
-                0,  # min probability
-                0,  # min price is 0
+                0,  # min value of trend is 0
+                0,  # boolean change point
+                -np.finfo(np.float32).max,  # any possible negative value
                 -np.finfo(np.float32).max,  # any possible negative value
             ],
             dtype=np.float32,
@@ -69,7 +72,7 @@ class TraderEnv(gym.Env):
             len(test_period_df))
 
         # get a trend diff
-        temp_df["trend-diff"] = temp_df("Close") - temp_df["trend"]
+        temp_df["trend-diff"] = temp_df["Close"] - temp_df["trend"]
 
         # detect change points
         df_change_points, chng_pt_column = detect_change_points(temp_df, moving_avg=temp_df["trend"])
@@ -82,10 +85,6 @@ class TraderEnv(gym.Env):
 
         # This is the dataframe we will use to calculate profits and generate curriculum guidance
         self.orig_timeseries = test_period_df
-
-        # we could apply other expert/proven strategies here? turtles etc
-        self.generate_expert_opinion()
-
         self._reset_vars()
 
         self.product = product
@@ -97,9 +96,12 @@ class TraderEnv(gym.Env):
         self.prob_low = prob_low
         self._expert_actions = []
 
+        # we could apply other expert/proven strategies here? turtles etc
+        self.generate_expert_opinion()
+
     def generate_expert_opinion(self):
         df = self.orig_timeseries
-        self._expert_actions = generate_max_profit_actions(df, [5, 15, 30, 60], 5, 10)
+        self._expert_actions = generate_max_profit_actions(df["Close"], [5, 15, 30, 60], 5, 10)
 
     def calculate_benchmark_metrics(self):
         df = self.orig_timeseries
@@ -176,7 +178,7 @@ class TraderEnv(gym.Env):
         verbose("step:", "index:", self.current_index, " of: ", self.final - 1, "action: ", int(action))
         self.update_position_value()
         if self.current_index >= self.final - 1 or self.should_stop():
-            error("********MARKING DONE", "index:", self.current_index, " of: ", self.final, " cash: ", self.cash,
+            info("********MARKING DONE", "index:", self.current_index, " of: ", self.final, " cash: ", self.cash,
                   " value: ", self.position_value)
             self.clear_trades()
             self._episode_ended = True
@@ -260,7 +262,8 @@ class TraderEnv(gym.Env):
 
     def _get_next_state(self):
         # Calculate and return the next state based on the current state and action taken
-        return self.env_block()
+        block = self.env_block()
+        return block
 
     def get_price_with_slippage(self, price):
         return price + (price * self.slippage)
@@ -440,19 +443,12 @@ class TraderEnv(gym.Env):
         return row["Close"]
 
     def get_reward(self, action):
-        row = self.timeseries.iloc[self.current_index]
-        prob_above_trend = row["prob_above_trend"]
-
-        reward = 0
-        if action == 1 and prob_above_trend >= self.prob_high:
-            reward = 1
-        elif action == 2 and prob_above_trend <= self.prob_low:
-            reward = 1
-
-        if self.last_profit > 0:
-            reward += 2
-
-        return reward
+        index = self.current_index
+        correct_action = self._expert_actions[index]
+        if action == correct_action:
+            return 1
+        else:
+            return 0
 
     def total_value(self):
         self.update_position_value()
