@@ -1,10 +1,10 @@
 # General:
-   
 * Implement human advisor with: 
   * Describes the state of https://github.com/DLR-RM/stable-baselines3/issues/27 imitation/guided learning in sb3
     * this seems to be the example? https://colab.research.google.com/github/Stable-Baselines-Team/rl-colab-notebooks/blob/sb3/pretraining.ipynb
     * it appears we're going to hit: https://github.com/DLR-RM/stable-baselines3/issues/543
-* How to predict the amount of time training is going to take in advance?
+* ~~How to predict the amount of time training is going to take in advance?~~
+  * Can we also intermittently run a benchmark so we can see progress? A realtime graph would be sick
 * Read: https://github.com/optuna/optuna
   * In the hyper parameter tuning tutorial they show how different net_arch for the SAC agent have different
   * results. Optuna is supposed to help

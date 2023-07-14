@@ -4,6 +4,8 @@ from gymnasium import logger, spaces
 from .logger import info, debug, error, verbose
 from .timeseries_analytics import detect_change_points, compute_derivatives_between_change_points, \
     generate_max_profit_actions
+from .actions import BUY, HOLD, SHORT
+
 from sklearn.preprocessing import MinMaxScaler
 import math
 
@@ -11,7 +13,6 @@ import pandas as pd
 from .defaults import DEFAULT_CASH, \
     DEFAULT_TOP_PERCENT, \
     DEFAULT_BOTTOM_PERCENT
-
 
 class TraderEnv(gym.Env):
 
@@ -43,20 +44,20 @@ class TraderEnv(gym.Env):
         # "trend", chng_pt_column, "polynomial_derivative", "trend-diff"
         high = np.array(
             [
-                np.finfo(np.float32).max,  # any possible value
-                1,  # boolean change point
-                np.finfo(np.float32).max,  # any possible value
-                np.finfo(np.float32).max,  # any possible value
+                np.finfo(np.float32).max,  # trend - max number
+                1,  # possible change point boolean
+                np.finfo(np.float32).max,  # derivative - indicates directionality max number
+                np.finfo(np.float32).max,  # the difference between the price and trend
             ],
             dtype=np.float32,
         )
 
         low = np.array(
             [
-                0,  # min value of trend is 0
+                0,  # min possible moving average
                 0,  # boolean change point
-                -np.finfo(np.float32).max,  # any possible negative value
-                -np.finfo(np.float32).max,  # any possible negative value
+                -np.finfo(np.float32).max,  # max negative value
+                -np.finfo(np.float32).max,  # max negative value
             ],
             dtype=np.float32,
         )
@@ -221,42 +222,44 @@ class TraderEnv(gym.Env):
     def _apply_action(self, action):
 
         # AI says hold
-        if action == 0:
-            info("holding action = 0.")
+        if action == HOLD:
+            info("holding action = HOLD.")
 
         # AI says long but we're already in a position
-        elif action == 1 and self.in_long:
+        elif action == BUY and self.in_long:
             info("holding long.")
 
         # AI says long, we're not in a position, so buy
-        elif action == 1 and not self.in_position:
+        elif action == BUY and not self.in_position:
             info("opening long.")
             self.open_position()
 
         # AI says long, but we're short. Close the short, open a long.
-        elif action == 1 and self.in_short:
+        elif action == BUY and self.in_short:
             info("closing short to open long.")
 
             self.close_short()
             self.open_position()
         # AI says short, but we're already short
-        elif action == 2 and self.in_short:
+        elif action == SHORT and self.in_short:
             info("holding short.")
 
         # AI says short, we're not in a position so exit
-        elif action == 2 and not self.in_position:
+        elif action == SHORT and not self.in_position:
             info("opening short.")
             self.open_short()
 
         # AI says short but we're long, close it
-        elif action == 2 and self.in_long:
+        elif action == SHORT and self.in_long:
             info("closing long to open short")
             self.close_position()
             info("opening short.")
             self.open_short()
 
         else:  # assume hold
-            error("unknown state! holding:", action, self.in_position, self.in_long, self.in_short)
+            msg = f"unknown action! Someone needs to see what went wrong! {action}, {self.in_position}, {self.in_long}, {self.in_short}"
+            error(msg)
+            raise Exception(msg)
 
         self.update_position_value()
 

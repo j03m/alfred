@@ -53,7 +53,6 @@ def download_ticker_list(ticker_list, tail=-1, head=-1):
         except Exception as e:
             print("Failed to download:", ticker, " with ", e)
             bad_tickers.append(ticker)
-    return ticker
 
 
 def get_all_products():

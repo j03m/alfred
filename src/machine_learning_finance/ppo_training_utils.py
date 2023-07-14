@@ -4,8 +4,6 @@ import pandas as pd
 import numpy as np
 from .trader_env import TraderEnv
 from .data_utils import model_path
-from sb3_contrib import RecurrentPPO
-from .curriculum_policy_support import CustomActorCriticPolicy
 from stable_baselines3 import PPO
 from stable_baselines3.ppo.policies import MlpPolicy
 from stable_baselines3.common.monitor import Monitor
@@ -17,10 +15,8 @@ from .defaults import DEFAULT_TEST_LENGTH, \
 import os
 from .data_utils import get_coin_data_frames, create_train_test_windows
 
-ppo_model_name = "ppo_mlp_policy_trader_env"
-recurrent_ppo_model_name = "baseline-recurrent-ppo"
-MODEL_PPO = 0
-MODEL_RECURRENT = 1
+ppo_model_name = "models/ppo_mlp_policy_simple_env"
+
 class SaveOnInterval(BaseCallback):
     def __init__(self, check_freq: int, save_path: str, verbose=1):
         super(SaveOnInterval, self).__init__(verbose)
@@ -77,7 +73,7 @@ def timestr():
 
 
 def partial_test(env):
-    ppo_agent = get_or_create_recurrent_ppo(False, env)
+    ppo_agent = get_or_create_ppo(env)
     ppo_agent.policy.custom_actions = None
     obs = env.reset_test()
     done = False
@@ -88,35 +84,30 @@ def partial_test(env):
         obs, reward, _, done, info_ = env.step(action)
 
 
-def partial_train(env, steps=500, create=False, model=MODEL_RECURRENT):
-    if model == MODEL_RECURRENT:
-        ppo_agent = get_or_create_recurrent_ppo(create, env)
-        ppo_agent.policy.custom_actions = None
-        save_path = os.path.join(model_path, recurrent_ppo_model_name)
-        callback = SaveOnInterval(check_freq=1000, save_path=save_path)
-        ppo_agent.learn(total_timesteps=steps, log_interval=100, callback=callback)
-        ppo_agent.save(save_path)
-    elif model == MODEL_PPO:
-        ppo_agent = get_or_create_ppo(create, env)
-        ppo_agent.learn(total_timesteps=steps)
-        save_path = os.path.join(model_path, ppo_model_name)
-        callback = SaveOnInterval(check_freq=1000, save_path=save_path)
-        ppo_agent.learn(total_timesteps=steps, log_interval=100, callback=callback)
-        ppo_agent.save(save_path)
-    else:
-        raise Exception(f"Unrecognized model: {model}")
+def partial_train(env, steps=500, create=False):
+    ppo_agent = get_or_create_ppo(env)
+    ppo_agent.learn(total_timesteps=steps)
+    save_path = os.path.join(model_path, ppo_model_name)
+    callback = SaveOnInterval(check_freq=1000, save_path=save_path)
+    ppo_agent.learn(total_timesteps=steps, log_interval=100, callback=callback)
+    ppo_agent.save(save_path)
+
+
 
 def back_test_expert(env):
-    env.expert_opinion_df()
     obs, _ = env.reset()
-    action = obs[-1]
+    count = 0
+    action = env._expert_actions[count]
     done = False
     while not done:
         print("Action:", action)
         state, reward, _, done, _ = env.step(int(action))
-        action = state[-1]
-        print("Reward:", reward, " for action: ", action, "on probability: ", state[3])
+        print("Reward:", reward, " for action: ", action)
+        if not done:
+            count += 1
+            action = env._expert_actions[count]
     return env
+
 
 def capture_exper_trajectories(env):
     def wrap(input):
@@ -145,33 +136,5 @@ def capture_exper_trajectories(env):
     return wrap(obs), wrap(acts), terminal, infos, wrap(rews)
 
 
-def guided_training(env, create, steps=250000):
-    raise Exception("Hold up Joe, you wanted to rethink if this was actually effective!")
-    ppo_agent = get_or_create_recurrent_ppo(create, env)
-    state_action_data = env.expert_opinion()
-    custom_actions = [action for _, action in state_action_data]
-    ppo_agent.policy.custom_actions = custom_actions
-    ppo_agent.learn(total_timesteps=steps)
-    ppo_agent.save(os.path.join(model_path, recurrent_ppo_model_name))
-    return env
-
-
-def get_or_create_ppo(create, env):
-    if create:
-        env = Monitor(env)
-        model = PPO(MlpPolicy, env, verbose=1)
-    else:
-        model = PPO.load(os.path.join(model_path, ppo_model_name))
-    return model
-
-
-def get_or_create_recurrent_ppo(create, env):
-    if create:
-        ppo_agent = RecurrentPPO(
-            CustomActorCriticPolicy,
-            env
-        )
-    else:
-        ppo_agent = RecurrentPPO.load(os.path.join(model_path, recurrent_ppo_model_name))
-        ppo_agent.set_env(env)
-    return ppo_agent
+def get_or_create_ppo(env):
+    return PPO(MlpPolicy, env, verbose=1) if not os.path.isfile(ppo_model_name + ".zip") else PPO.load(ppo_model_name, env=env)

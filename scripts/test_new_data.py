@@ -47,6 +47,9 @@ def convert_seconds_to_time(estimated_time):
 
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--symbol', type=str, default="SPY")
+parser.add_argument('--eval-train', action="store_true", default=False)
+parser.add_argument('--test', action="store_true", default=False)
 parser.add_argument('--benchmark-intervals', type=int, default=100)
 parser.add_argument('--training-intervals', type=int, default=1000)
 parser.add_argument('--saving-intervals', type=int, default=1000)
@@ -58,29 +61,42 @@ ticker_obj = yf.download(tickers="SPY", interval="1d")
 df = pd.DataFrame(ticker_obj)
 hist_df, test_df = create_train_test_windows(df, None, 365 * 4, None, 365)
 
-env = TraderEnv("SPY", test_df, hist_df)
+env = TraderEnv(args.symbol, test_df, hist_df)
 env = Monitor(env)
 
 save_path = args.model_name
 model = PPO(MlpPolicy, env, verbose=1) if not os.path.isfile(save_path + ".zip") else PPO.load(save_path, env=env)
 
-if args.estimate is not None:
-    time_per_episode = estimate_time(100, model, env)  # Time for 100 episodes
-    estimated_time = time_per_episode * args.estimate
-    print(f"Estimated time for {args.estimate} episodes: {convert_seconds_to_time(estimated_time)}")
+if args.test:
+    obs, data = env.reset()
+    done = False
+    state = None
+    while not done:
+        action, state = model.predict(obs, state, episode_start=False)
+        # take the action and observe the next state and reward
+        obs, reward, _, done, info_ = env.step(action)
+    env.ledger.to_csv(f"./backtests/{args.symbol}-model-back-test.csv")
+
+elif args.eval_test:
+    if args.estimate is not None:
+        time_per_episode = estimate_time(100, model, env)  # Time for 100 episodes
+        estimated_time = time_per_episode * args.estimate
+        print(f"Estimated time for {args.estimate} episodes: {convert_seconds_to_time(estimated_time)}")
+    else:
+        callback = SaveOnInterval(check_freq=args.saving_intervals, save_path=save_path)
+
+        print("Agent status, before training")
+        mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=args.benchmark_intervals)
+        print(f"(pre train) mean_reward:{mean_reward:.2f} +/- {std_reward:.2f}")
+        print(f"(pre train profit) {env}")
+
+        print("Train the agent for N steps")
+        model.learn(total_timesteps=args.training_intervals, log_interval=100, callback=callback)
+
+        mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=args.benchmark_intervals)
+        print(f"(post train) mean_reward:{mean_reward:.2f} +/- {std_reward:.2f}")
+        print(f"(post train profit) {env}")
+
+        model.save(save_path)  # final save
 else:
-    callback = SaveOnInterval(check_freq=args.saving_intervals, save_path=save_path)
-
-    print("Agent status, before training")
-    mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=args.benchmark_intervals)
-    print(f"(pre train) mean_reward:{mean_reward:.2f} +/- {std_reward:.2f}")
-    print(f"(pre train profit) {env}")
-
-    print("Train the agent for N steps")
-    model.learn(total_timesteps=args.training_intervals, log_interval=100, callback=callback)
-
-    mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=args.benchmark_intervals)
-    print(f"(post train) mean_reward:{mean_reward:.2f} +/- {std_reward:.2f}")
-    print(f"(post train profit) {env}")
-
-    model.save(save_path)  # final save
+    raise Exception("Supply --test or --eval-train")

@@ -8,6 +8,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 import bocd
 from .plotly_utils import prob_chart, graph_pdf_bar, bar_chart
+from .actions import BUY, HOLD, SHORT
 
 pd.set_option('mode.chained_assignment', None)
 
@@ -289,9 +290,9 @@ def generate_max_profit_actions(price_series,
                 max_short_profit = short_profit
                 corresponding_short_drawdown = short_drawdown
         if max_long_profit > profit_threshold and corresponding_long_drawdown < drawdown_threshold:
-            actions.append(1)  # go long
+            actions.append(BUY)  # go long
         elif max_short_profit > profit_threshold and corresponding_short_drawdown < drawdown_threshold:
-            actions.append(-1)  # go short
+            actions.append(SHORT)  # go short
         else:
-            actions.append(0)  # hold the previous position
+            actions.append(HOLD)  # hold the previous position
     return actions
