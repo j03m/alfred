@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 import time
 import argparse
@@ -49,6 +50,7 @@ def convert_seconds_to_time(estimated_time):
 parser = argparse.ArgumentParser()
 parser.add_argument('--symbol', type=str, default="SPY")
 parser.add_argument('--eval-train', action="store_true", default=False)
+parser.add_argument('--eval-only', action="store_true", default=False)
 parser.add_argument('--test', action="store_true", default=False)
 parser.add_argument('--benchmark-intervals', type=int, default=100)
 parser.add_argument('--training-intervals', type=int, default=1000)
@@ -77,7 +79,7 @@ if args.test:
         obs, reward, _, done, info_ = env.step(action)
     env.ledger.to_csv(f"./backtests/{args.symbol}-model-back-test.csv")
 
-elif args.eval_test:
+elif args.eval_train:
     if args.estimate is not None:
         time_per_episode = estimate_time(100, model, env)  # Time for 100 episodes
         estimated_time = time_per_episode * args.estimate
@@ -98,5 +100,10 @@ elif args.eval_test:
         print(f"(post train profit) {env}")
 
         model.save(save_path)  # final save
+elif args.eval_only:
+    print("Agent status, no training")
+    mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=args.benchmark_intervals)
+    print(f"(pre train) mean_reward:{mean_reward:.2f} +/- {std_reward:.2f}")
+    print(f"(pre train profit) {env}")
 else:
     raise Exception("Supply --test or --eval-train")

@@ -1,4 +1,4 @@
-logging_level = 1
+logging_level = 0
 
 
 def error(*args):

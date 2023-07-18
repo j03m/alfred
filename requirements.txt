@@ -32,6 +32,5 @@ pygame
 swig
 gym
 pytest
-imitation
 bocd
 
