@@ -1,10 +1,12 @@
 # General:
-* Replace your current Save callback with EvalCallback (built in) and try out tensorboard
-  * https://stable-baselines3.readthedocs.io/en/master/guide/tensorboard.html
-  * https://stable-baselines3.readthedocs.io/en/master/guide/callbacks.html#event-callback
-    * One thing I didn't see above was how to supply a tensorboard path when loading a model
-    * Check the docs quick
-  * Once successful, migrate all of this learning into ppo_train.py
+  * Next step - lets make our data better and retain
+    * change points on the moving average look weird. Fix or fix how they render
+    * multiple moving averages + cps? 30, 60, 90
+    * Dervitives (graphing) apear to be on price, maybe add a moving average derivative column
+    * Retrain, and check out obtuna
+  * How do we not only compare to bench but compare to the absolute trading policy?
+    * We should do a study of the optimal vs bench
+  * We need to retest this against inverse?
 * Read: https://github.com/optuna/optuna
   * In the hyper parameter tuning tutorial they show how different net_arch for the SAC agent have different
   * results. Optuna is supposed to help

@@ -71,6 +71,7 @@ def plot_backtest_analysis(df, ledger, save_png=False, png_file=None, inverse=No
 
     # Filter ledger DataFrame to get long_entry and long_exit dates
     if inverse is None:
+
         long_entry_dates = ledger.loc[(ledger['Action'] == 'enter') & (ledger['Side'] == 'long'), 'Date']
         long_exit_dates = ledger.loc[(ledger['Action'] == 'exit') & (ledger['Side'] == 'long'), 'Date']
         short_entry_dates = ledger.loc[(ledger['Action'] == 'enter') & (ledger['Side'] == 'short'), 'Date']

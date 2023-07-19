@@ -47,7 +47,7 @@ parser.add_argument('--learning-runs', type=int, default=3)
 args = parser.parse_args()
 
 model_path = f"./models/{args.model_name}"
-ticker_obj = yf.download(tickers="SPY", interval="1d")
+ticker_obj = yf.download(tickers=args.symbol, interval="1d")
 df = pd.DataFrame(ticker_obj)
 hist_df, test_df = create_train_test_windows(df, None, 365 * 4, None, 365)
 
@@ -70,6 +70,7 @@ if args.test:
         # take the action and observe the next state and reward
         obs, reward, _, done, info_ = env.step(action)
     env.ledger.to_csv(f"./backtests/{args.symbol}-model-back-test.csv")
+    print(f"(post test profit) {env}")
 
 elif args.eval_train:
     print("Agent status, before training")
