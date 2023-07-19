@@ -14,4 +14,4 @@ backtests/*
 videos/*
 tests/__pycache__/
 scripts/examples/__pycache__/
-
+tensorboard-logs
