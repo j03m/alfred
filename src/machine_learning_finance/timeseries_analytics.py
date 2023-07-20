@@ -17,10 +17,8 @@ def make_change_point_column_name(prefix):
     return f"{prefix}_change_point"
 
 
-def detect_change_points(df, period=30, hazard=30, mu=0, kappa=1, alpha=1, beta=1, moving_avg=None):
-    if moving_avg is None:
-        moving_avg = df["Close"].rolling(period).mean()
-    data = moving_avg.dropna().values
+def detect_change_points(df, data_column, period=30, hazard=30, mu=0, kappa=1, alpha=1, beta=1):
+    data = df[data_column].dropna().values
     bc = bocd.BayesianOnlineChangePointDetection(bocd.ConstantHazard(hazard),
                                                  bocd.StudentT(mu=mu, kappa=kappa, alpha=alpha, beta=beta))
     rt_mle = np.empty(data.shape)
@@ -28,13 +26,40 @@ def detect_change_points(df, period=30, hazard=30, mu=0, kappa=1, alpha=1, beta=
         bc.update(d)
         rt_mle[i] = bc.rt
     rt_mle_padded = np.insert(rt_mle, 0, np.full(len(df) - len(rt_mle) + 1, 0))
-    column = f"moving_avg_{period}"
+    column = f"{data_column}-cp-{period}"
     column = make_change_point_column_name(column)
     df[column] = np.where(np.diff(rt_mle_padded) < 0, True, False)
     return df, column
 
 
-def compute_derivatives_between_change_points(df, cp_column):
+def calculate_trend_metrics_for_ai(full_series_df, test_period_df):
+    # Get a moving average for the whole series, but tail it just to our test period and call it trend
+    periods = [30, 60, 90]
+    column_list = []
+    for period in periods:
+        # window of trends
+        trend_col = f"trend{period}"
+        test_period_df[trend_col] = full_series_df["Close"].rolling(period).mean().tail(len(test_period_df))
+        column_list.append(trend_col)
+
+        # get a trend diff
+        diff = f"trend-diff{period}"
+        test_period_df[diff] = test_period_df["Close"] - test_period_df[trend_col]
+        column_list.append(diff)
+
+        # detect change points
+        # detect cp on each period
+        df_change_points, chng_pt_column = detect_change_points(test_period_df, data_column=trend_col)
+        column_list.append(chng_pt_column)
+
+        # detect the derivative of a polynomial between the points, this should indicate trend direction
+        poly = f"polynomial_derivative{period}"
+        test_period_df[poly] = compute_derivatives_between_change_points(df_change_points, chng_pt_column, trend_col)
+        column_list.append(poly)
+    return test_period_df, column_list
+
+
+def compute_derivatives_between_change_points(df, cp_column, data_column):
     # Compute change points and prepend a dummy change point at the start
     change_points = [df.index[0]] + list(df.loc[df[cp_column]].index)
 
@@ -45,7 +70,7 @@ def compute_derivatives_between_change_points(df, cp_column):
         # Extract data between change points
         segment = df.loc[change_points[i]:change_points[i + 1]]
 
-        y_pred, model, x, y = calculate_polynomial_regression(segment)
+        model, x, y = calculate_polynomial_regression(segment, data_column)
 
         ridge = model.named_steps['linearregression']
         deriv = np.polyder(ridge.coef_[::-1])
@@ -54,24 +79,21 @@ def compute_derivatives_between_change_points(df, cp_column):
         # Assign all values of yd_plot to corresponding positions in derivatives
         derivatives.loc[segment.index] = yd_plot.flatten()
 
-    df["polynomial_derivative"] = derivatives
-    df["polynomial_derivative"] = df["polynomial_derivative"].fillna(0)
-    return df
+    return derivatives.fillna(0)
 
 
-def calculate_polynomial_regression(df):
+def calculate_polynomial_regression(df, column):
     # Assume x and y are your data
     df['DateNumber'] = [i for i in range(len(df))]
 
     # Prepare input features
     x = df[['DateNumber']]
-    y = df['Close']
+    y = df[column]
 
     # Transform the x data into polynomial features
     model = make_pipeline(PolynomialFeatures(2), LinearRegression())
     model.fit(x, y)
-    y_pred = model.predict(x)
-    return y_pred, model, x, y
+    return model, x, y
 
 
 # This is broken, doesn't work see git history for details

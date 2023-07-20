@@ -2,7 +2,7 @@
   * Next step - lets make our data better and retain
     * change points on the moving average look weird. Fix or fix how they render
     * multiple moving averages + cps? 30, 60, 90
-    * Dervitives (graphing) apear to be on price, maybe add a moving average derivative column
+    * Derivatives (graphing) appear to be on price, maybe add a moving average derivative column
     * Retrain, and check out obtuna
   * How do we not only compare to bench but compare to the absolute trading policy?
     * We should do a study of the optimal vs bench

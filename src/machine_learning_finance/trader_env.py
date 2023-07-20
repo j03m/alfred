@@ -2,8 +2,8 @@ import numpy as np
 import gymnasium as gym
 from gymnasium import logger, spaces
 from .logger import info, debug, error, verbose
-from .timeseries_analytics import detect_change_points, compute_derivatives_between_change_points, \
-    generate_max_profit_actions
+from .timeseries_analytics import (detect_change_points, compute_derivatives_between_change_points,
+                                   generate_max_profit_actions, calculate_trend_metrics_for_ai)
 from .actions import BUY, HOLD, SHORT
 
 from sklearn.preprocessing import MinMaxScaler
@@ -13,6 +13,7 @@ import pandas as pd
 from .defaults import DEFAULT_CASH, \
     DEFAULT_TOP_PERCENT, \
     DEFAULT_BOTTOM_PERCENT
+
 
 class TraderEnv(gym.Env):
 
@@ -68,21 +69,14 @@ class TraderEnv(gym.Env):
 
         temp_df = test_period_df.copy()
 
-        # Get a moving average for the whole series, but tail it just to our test period and call it trend
-        temp_df["trend"] = pd.concat([historical_period_df, temp_df])["Close"].rolling(30).mean().tail(
-            len(test_period_df))
+        concat_df = pd.concat([historical_period_df, temp_df])
 
-        # get a trend diff
-        temp_df["trend-diff"] = temp_df["Close"] - temp_df["trend"]
-
-        # detect change points
-        df_change_points, chng_pt_column = detect_change_points(temp_df, moving_avg=temp_df["trend"])
-
-        # detect the derivative of a polynomial between the points, this should indicate trend direction
-        self.timeseries = compute_derivatives_between_change_points(df_change_points, chng_pt_column)
+        base_ai_df, column_list = calculate_trend_metrics_for_ai(concat_df, temp_df)
 
         # This is the dataframe the AI will see as our environment we scale numbers to avoid huge prices diffs
-        self.timeseries = self.scale(self.timeseries[["trend", chng_pt_column, "polynomial_derivative", "trend-diff"]])
+        self.timeseries = self.scale(base_ai_df[column_list])
+
+        self.orig_timeseries_with_analytics = base_ai_df
 
         # This is the dataframe we will use to calculate profits and generate curriculum guidance
         self.orig_timeseries = test_period_df
@@ -180,7 +174,7 @@ class TraderEnv(gym.Env):
         self.update_position_value()
         if self.current_index >= self.final - 1 or self.should_stop():
             info("********MARKING DONE", "index:", self.current_index, " of: ", self.final, " cash: ", self.cash,
-                  " value: ", self.position_value)
+                 " value: ", self.position_value)
             self.clear_trades()
             self._episode_ended = True
         else:

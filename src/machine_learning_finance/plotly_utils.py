@@ -56,22 +56,16 @@ def plot_expert(df):
 
 def plot_backtest_analysis(df, ledger, save_png=False, png_file=None, inverse=None):
     # Scale probabilities to the same range as the original time series
-    scaled_prob_above_trend = pd.Series(scale_to_price(df["prob_above_trend"], df))
 
     fig = go.Figure()
 
     # Add trace for the main time series plot to the first row of the subplot
     fig.add_trace(go.Scatter(x=df.index, y=df["Close"], mode="lines", name="Value"))
 
-    fig.add_trace(go.Scatter(x=df.index, y=df["trend"], mode="lines", name="Trend"))
-
-    fig.add_trace(go.Scatter(x=df.index, y=scaled_prob_above_trend, mode='lines', name='Prob Above Trend'))
-
     ledger['Date'] = pd.to_datetime(ledger['Date'])
 
     # Filter ledger DataFrame to get long_entry and long_exit dates
     if inverse is None:
-
         long_entry_dates = ledger.loc[(ledger['Action'] == 'enter') & (ledger['Side'] == 'long'), 'Date']
         long_exit_dates = ledger.loc[(ledger['Action'] == 'exit') & (ledger['Side'] == 'long'), 'Date']
         short_entry_dates = ledger.loc[(ledger['Action'] == 'enter') & (ledger['Side'] == 'short'), 'Date']
