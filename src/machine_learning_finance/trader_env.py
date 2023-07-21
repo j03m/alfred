@@ -41,37 +41,47 @@ class TraderEnv(gym.Env):
         self.scaler = None
         self.benchmark_position_shares = None
         self.env_version = "2"
+
+        temp_df = test_period_df.copy()
+
+        concat_df = pd.concat([historical_period_df, temp_df])
+
+        periods = [30, 60, 90]
+        base_ai_df, column_list = calculate_trend_metrics_for_ai(concat_df, temp_df, periods=periods)
+
         # Define the observation space
-        # "trend", chng_pt_column, "polynomial_derivative", "trend-diff"
+        # Note this shape is intimately tied to the column list supplied by calculate_trend_metrics_for_ai
+        # The default periods for that function are 30, 60 and 90 and it will return trend, trend-diff, change-point,
+        # and polynomial-derivative for each period. Making a total of 12 analytics columns. We define the shape of the
+        # quad and multiply it by the length of periods to repeat it len(periods times)
+        # notably, we need to be carful here because the order that columns are added to column_list could break us :/
+        high_shapes = [
+                          np.finfo(np.float32).max,  # trend - max number
+                          1,  # possible change point boolean
+                          np.finfo(np.float32).max,  # derivative - indicates directionality max number
+                          np.finfo(np.float32).max,  # the difference between the price and trend
+                      ] * len(periods)
+
         high = np.array(
-            [
-                np.finfo(np.float32).max,  # trend - max number
-                1,  # possible change point boolean
-                np.finfo(np.float32).max,  # derivative - indicates directionality max number
-                np.finfo(np.float32).max,  # the difference between the price and trend
-            ],
+            high_shapes,
             dtype=np.float32,
         )
 
+        low_shapes = [
+                         0,  # min possible moving average
+                         0,  # boolean change point
+                         -np.finfo(np.float32).max,  # max negative value
+                         -np.finfo(np.float32).max,  # max negative value
+                     ] * len(periods)
+
         low = np.array(
-            [
-                0,  # min possible moving average
-                0,  # boolean change point
-                -np.finfo(np.float32).max,  # max negative value
-                -np.finfo(np.float32).max,  # max negative value
-            ],
+            low_shapes,
             dtype=np.float32,
         )
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
 
         # We have 3 actions, hold (0), long (1), short (2)
         self.action_space = spaces.Discrete(3)
-
-        temp_df = test_period_df.copy()
-
-        concat_df = pd.concat([historical_period_df, temp_df])
-
-        base_ai_df, column_list = calculate_trend_metrics_for_ai(concat_df, temp_df)
 
         # This is the dataframe the AI will see as our environment we scale numbers to avoid huge prices diffs
         self.timeseries = self.scale(base_ai_df[column_list])
