@@ -17,7 +17,7 @@ def make_change_point_column_name(prefix):
     return f"{prefix}_change_point"
 
 
-def detect_change_points(df, data_column, period=30, hazard=30, mu=0, kappa=1, alpha=1, beta=1):
+def detect_change_points(df, data_column, hazard=30, mu=0, kappa=1, alpha=1, beta=1):
     data = df[data_column].dropna().values
     bc = bocd.BayesianOnlineChangePointDetection(bocd.ConstantHazard(hazard),
                                                  bocd.StudentT(mu=mu, kappa=kappa, alpha=alpha, beta=beta))
@@ -26,35 +26,36 @@ def detect_change_points(df, data_column, period=30, hazard=30, mu=0, kappa=1, a
         bc.update(d)
         rt_mle[i] = bc.rt
     rt_mle_padded = np.insert(rt_mle, 0, np.full(len(df) - len(rt_mle) + 1, 0))
-    column = f"{data_column}-cp-{period}"
-    column = make_change_point_column_name(column)
-    df[column] = np.where(np.diff(rt_mle_padded) < 0, True, False)
-    return df, column
+    return np.where(np.diff(rt_mle_padded) < 0, True, False)
 
 
-def calculate_trend_metrics_for_ai(full_series_df, test_period_df):
+def make_price_marker_from_boolean(df, bool_col, price_col, final_col):
+    df[final_col] = np.where(df[bool_col], df[price_col], np.nan)
+    return df
+
+def calculate_trend_metrics_for_ai(full_series_df, test_period_df, periods=[30, 60, 90]):
     # Get a moving average for the whole series, but tail it just to our test period and call it trend
-    periods = [30, 60, 90]
     column_list = []
     for period in periods:
         # window of trends
-        trend_col = f"trend{period}"
+        trend_col = f"trend-{period}"
         test_period_df[trend_col] = full_series_df["Close"].rolling(period).mean().tail(len(test_period_df))
         column_list.append(trend_col)
 
         # get a trend diff
-        diff = f"trend-diff{period}"
+        diff = f"trend-diff-{period}"
         test_period_df[diff] = test_period_df["Close"] - test_period_df[trend_col]
         column_list.append(diff)
 
         # detect change points
         # detect cp on each period
-        df_change_points, chng_pt_column = detect_change_points(test_period_df, data_column=trend_col)
-        column_list.append(chng_pt_column)
+        cp = f"change-point-{period}"
+        test_period_df[cp] = detect_change_points(test_period_df, data_column=trend_col, hazard=period)
+        column_list.append(cp)
 
         # detect the derivative of a polynomial between the points, this should indicate trend direction
-        poly = f"polynomial_derivative{period}"
-        test_period_df[poly] = compute_derivatives_between_change_points(df_change_points, chng_pt_column, trend_col)
+        poly = f"polynomial_derivative-{period}"
+        test_period_df[poly] = compute_derivatives_between_change_points(test_period_df, cp, trend_col)
         column_list.append(poly)
     return test_period_df, column_list
 

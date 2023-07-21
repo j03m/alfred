@@ -4,6 +4,7 @@ from plotly.subplots import make_subplots
 import pandas as pd
 import numpy as np
 
+
 def scale_to_price(series, df):
     price_range = [df['Close'].min(), df['Close'].max()]
     scaled_series = (series - series.min()) / (series.max() - series.min()) * (price_range[1] - price_range[0]) + \
@@ -48,10 +49,19 @@ def plot_expert(df):
 
     fig.add_trace(go.Scatter(x=df.index, y=df['short_entry'], mode='markers', name='Long Exit',
                              marker=dict(symbol='triangle-down', size=8, color='red')))
-    
+
     fig.update_layout(title='Expert opinions', xaxis_title='Date',
                       height=800)
     fig.show()
+
+
+def add_marker(fig, df, col, name, mark_type, size, color):
+    fig.add_trace(go.Scatter(x=df.index, y=df[col], mode='markers', name=name,
+                             marker=dict(symbol=mark_type, size=size, color=color)))
+
+
+def add_line(fig, df, col, name, color):
+    fig.add_trace(go.Scatter(x=df.index, y=df[col], mode="lines", name=name, line=dict(color=color)))
 
 
 def plot_backtest_analysis(df, ledger, save_png=False, png_file=None, inverse=None):
@@ -104,7 +114,6 @@ def plot_backtest_analysis(df, ledger, save_png=False, png_file=None, inverse=No
         fig.update_layout(title='Backtest Analysis', xaxis_title='Date', height=800)
 
     return fig
-
 
 
 def plot_full_analysis(df, trend, prob_above_trend, prob_below_trend, model, df_durations, ledger=None):
