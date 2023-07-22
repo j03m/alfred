@@ -55,5 +55,10 @@ final_symbols = set(symbols) - set(bad_symbols)
 # Create a pandas DataFrame with symbols as data and "Symbols" as column name
 df = pd.DataFrame({'Symbols': list(final_symbols)})
 
+for symbol in symbols:
+    ticker_obj = yf.download(tickers=symbol, interval="1d")
+    symbol_df = pd.DataFrame(ticker_obj)
+    symbol_df.to_csv(f"./data/{symbol}.csv")
+
 # Save the DataFrame to a CSV file named "symbols.csv"
 df.to_csv('./data/symbols.csv', index=False)
