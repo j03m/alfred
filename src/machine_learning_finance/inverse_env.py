@@ -2,11 +2,7 @@ import yfinance as yf
 from .logger import info, debug, error, verbose
 import pandas as pd
 from .trader_env import TraderEnv
-from .defaults import DEFAULT_TEST_LENGTH, \
-    DEFAULT_HISTORICAL_MULT, \
-    DEFAULT_CASH, \
-    DEFAULT_TOP_PERCENT, \
-    DEFAULT_BOTTOM_PERCENT
+from .defaults import DEFAULT_TEST_LENGTH, DEFAULT_CASH
 from .data_utils import get_coin_data_frames, create_train_test_windows
 
 
@@ -24,10 +20,7 @@ def make_inverse_env_for(symbol,
                          data_source="yahoo",
                          paths=[None, None],
                          cash=DEFAULT_CASH,
-                         prob_high=DEFAULT_TOP_PERCENT,
-                         prob_low=DEFAULT_BOTTOM_PERCENT,
                          hist_tail=None,
-                         crypto=False,
                          start=None,
                          end=None,
                          proxy=None,
@@ -64,9 +57,7 @@ def make_inverse_env_for(symbol,
                      hist_df,
                      inverse_df,
                      code,
-                     cash,
-                     prob_high,
-                     prob_low)
+                     cash)
     return env
 
 
@@ -80,9 +71,8 @@ def split_train_test_and_align_inverse(df, inverse_df, start=None, end=None, his
 
 class InverseEnv(TraderEnv):
 
-    def __init__(self, product, inverse_product, test_df, hist_df, inverse_df, code, cash=5000,
-                 prob_high=0.8, prob_low=0.2):
-        super(InverseEnv, self).__init__(product, test_df, hist_df, code, cash, prob_high, prob_low)
+    def __init__(self, product, inverse_product, test_df, hist_df, inverse_df, code, cash=5000):
+        super(InverseEnv, self).__init__(product, test_df, hist_df, code, cash)
         self.inverse_product = inverse_product
         self.inverse_df = inverse_df
         self.status = 0  # 1 long 0 none 2 short

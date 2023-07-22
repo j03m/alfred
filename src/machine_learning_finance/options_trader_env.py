@@ -11,13 +11,13 @@ from machine_learning_finance import generate_probability, attach_markers, calcu
     calc_durations_with_extremes
 from .trader_env import TraderEnv
 
+
 # TODO FINISH ME
 
 class OptionTraderEnv(TraderEnv):
 
-    def __init__(self, product, test_period_df, historical_period_df, curriculum_code=1, cash=5000,
-                 prob_high=0.8, prob_low=0.2):
-        super(OptionTraderEnv, self).__init__(product, test_period_df, historical_period_df, curriculum_code, cash, prob_high, prob_low)
+    def __init__(self, product, test_period_df, historical_period_df, curriculum_code=1, cash=5000):
+        super(OptionTraderEnv, self).__init__(product, test_period_df, historical_period_df, curriculum_code, cash)
 
     def expand(self, test_period_df, historical_period_df):
         # todo: never really finished or tested this fix and test me
@@ -31,13 +31,13 @@ class OptionTraderEnv(TraderEnv):
             df_raw[f"revert_prob_{i}"] = np.nan
 
         for index, row in df.iterrows():
-            df_top_prob = calculate_duration_probabilities(index, df_raw, df_durations)\
+            df_top_prob = calculate_duration_probabilities(index, df_raw, df_durations) \
                 .sort_values('probability', ascending=False).head(5)
             values = df_top_prob['probability'].tolist()
             dates = df_top_prob.index.tolist()
             for i in range(1, 6):
-                df_raw.loc[index, f"revert_date_{i}"] = dates[i-1]
-                df_raw.loc[index, f"revert_prob_{i}"] = values[i-1]
+                df_raw.loc[index, f"revert_date_{i}"] = dates[i - 1]
+                df_raw.loc[index, f"revert_prob_{i}"] = values[i - 1]
         return df_raw
 
     def _apply_action(self, action):
@@ -65,19 +65,17 @@ class OptionTraderEnv(TraderEnv):
             pass
         self.update_position_value()
 
-
     def make_ledger_row(self):
         pass
 
     def open_position(self):
-      pass
-
+        pass
 
     def open_short(self):
-       pass
+        pass
 
     def close_position(self):
-       pass
+        pass
 
     def close_short(self):
         pass
@@ -86,5 +84,4 @@ class OptionTraderEnv(TraderEnv):
         pass
 
     def total_value(self):
-      pass
-
+        pass

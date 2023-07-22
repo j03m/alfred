@@ -1,15 +1,23 @@
-# General:
-  * Next step - lets make our data better and retain
-    * change points on the moving average look weird. Fix or fix how they render
-    * multiple moving averages + cps? 30, 60, 90
-    * Derivatives (graphing) appear to be on price, maybe add a moving average derivative column
-    * Retrain, and check out obtuna
+# Now:
+  * Make separate scripts:
+    * Bulk trainer - trains multiple symbols based on list uses offline cached data
+    * Simple training - trains agains a single symbol online
+    * test/evaluator - Uses stablebaselines reward evaluation and also prints backtest results
+    * cacher - caches timeseries data
+
+# Next:
+  * Learn how to train the agent on multiple environments at the sample time
+  * check out obtuna
   * How do we not only compare to bench but compare to the absolute trading policy?
-    * We should do a study of the optimal vs bench
+      * We should do a study of the optimal vs bench
   * We need to retest this against inverse?
 * Read: https://github.com/optuna/optuna
   * In the hyper parameter tuning tutorial they show how different net_arch for the SAC agent have different
   * results. Optuna is supposed to help
+
+# Icebox
+
+* Kill all old notebooks - archive the tensorflow stuff
 
 # Reading List
 

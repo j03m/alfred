@@ -10,9 +10,7 @@ from sklearn.preprocessing import MinMaxScaler
 import math
 
 import pandas as pd
-from .defaults import DEFAULT_CASH, \
-    DEFAULT_TOP_PERCENT, \
-    DEFAULT_BOTTOM_PERCENT
+from .defaults import DEFAULT_CASH
 
 
 class TraderEnv(gym.Env):
@@ -22,9 +20,7 @@ class TraderEnv(gym.Env):
                  test_period_df,
                  historical_period_df,
                  curriculum_code=1,
-                 cash=DEFAULT_CASH,
-                 prob_high=DEFAULT_TOP_PERCENT,
-                 prob_low=DEFAULT_BOTTOM_PERCENT):
+                 cash=DEFAULT_CASH):
 
         self.max_cash = cash
         self.benchmark_value = None
@@ -97,8 +93,6 @@ class TraderEnv(gym.Env):
 
         self.curriculum_code = curriculum_code
         self.rolling_score = 0
-        self.prob_high = prob_high
-        self.prob_low = prob_low
         self._expert_actions = []
 
         # we could apply other expert/proven strategies here? turtles etc

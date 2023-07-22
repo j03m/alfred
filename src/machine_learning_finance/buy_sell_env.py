@@ -11,10 +11,8 @@ class BuySellEnv(TraderEnv):
                  test_period_df,
                  historical_period_df,
                  code=1,
-                 cash=5000,
-                 prob_high=0.8,
-                 prob_low=0.2):
-        super(BuySellEnv, self).__init__(product, test_period_df, historical_period_df, code, cash, prob_high, prob_low)
+                 cash=5000):
+        super(BuySellEnv, self).__init__(product, test_period_df, historical_period_df, code, cash)
         self.status = 0  # 1 long 0 none 2 short
 
     def _apply_action(self, action):
