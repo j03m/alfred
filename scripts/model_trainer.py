@@ -1,31 +1,15 @@
 #!/usr/bin/env python3
 import os.path
-import time
 import argparse
 import pandas as pd
-from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import EvalCallback
 import yfinance as yf
-import datetime
+from datetime import datetime, timedelta
 
-from machine_learning_finance import TraderEnv, create_train_test_windows, get_or_create_model
+from machine_learning_finance import TraderEnv, get_or_create_model, RangeTrainingWindowUtil
 
 # handles UserWarning: Evaluation environment is not wrapped with a ``Monitor`` wrapper.
 from stable_baselines3.common.monitor import Monitor
-
-
-def estimate_time(_model: PPO):
-    start_time = time.time()
-    _model.learn(total_timesteps=100)
-    end_time = time.time()
-    _time_per_episode = (end_time - start_time) * 100
-    return _time_per_episode
-
-
-def convert_seconds_to_time(estimated_time: int):
-    # Get a timedelta object representing the duration
-    timedelta = datetime.timedelta(seconds=estimated_time)
-    return str(timedelta)
 
 
 def download_symbol(symbol):
@@ -34,9 +18,10 @@ def download_symbol(symbol):
 
 
 def train_model(symbol, df, args):
-    # todo replace with TrainingWindowUtil
-    hist_df, test_df = create_train_test_windows(df, None, 365 * 4, None, 365)
-    env = TraderEnv(symbol, test_df, hist_df)
+
+    training_window = RangeTrainingWindowUtil(df, args.start, args.end)
+
+    env = TraderEnv(symbol, training_window.test_df, training_window.hist_df)
 
     env = Monitor(env)
 
@@ -52,6 +37,11 @@ def train_model(symbol, df, args):
 
 
 def main():
+    now = datetime.now()
+    start_default = now - timedelta(days=365)
+    start_default_str = start_default.strftime('%Y-%m-%d')
+    end_default_str = now.strftime('%Y-%m-%d')
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--symbol', type=str, default=None)
     parser.add_argument('--bulk', type=str, default=None)
@@ -63,6 +53,8 @@ def main():
     parser.add_argument('--model-name', type=str, default="ppo_mlp_policy_simple_env")
     parser.add_argument('--learning-run-prefix', type=str, default="run_number")
     parser.add_argument('--learning-runs', type=int, default=3)
+    parser.add_argument('--start', type=str, default=start_default_str)
+    parser.add_argument('--end', type=str, default=end_default_str)
 
     args = parser.parse_args()
 

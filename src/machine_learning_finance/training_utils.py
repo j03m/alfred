@@ -1,13 +1,6 @@
-import yfinance as yf
-import pandas as pd
-from .trader_env import TraderEnv
 from stable_baselines3 import PPO
 from stable_baselines3.ppo.policies import MlpPolicy
-
-from .defaults import DEFAULT_TEST_LENGTH, \
-    DEFAULT_CASH
 import os
-from .data_utils import get_coin_data_frames, create_train_test_windows
 
 
 def back_test_expert(env):
