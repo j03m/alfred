@@ -46,7 +46,6 @@ def main():
     parser.add_argument('--symbol', type=str, default=None)
     parser.add_argument('--bulk', type=str, default=None)
     parser.add_argument('--data-path', type=str, default="./data/")
-    parser.add_argument('--benchmark-intervals', type=int, default=100)
     parser.add_argument('--training-intervals', type=int, default=1000)
     parser.add_argument('--tensorboard-log-path', type=str, default="./tensorboard-logs")
     parser.add_argument('--saving-intervals', type=int, default=1000)

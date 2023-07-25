@@ -6,7 +6,7 @@ import os
 def back_test_expert(env):
     obs, _ = env.reset()
     count = 0
-    action = env._expert_actions[count]
+    action = env.expert_actions[count]
     done = False
     while not done:
         print("Action:", action)
@@ -14,7 +14,7 @@ def back_test_expert(env):
         print("Reward:", reward, " for action: ", action)
         if not done:
             count += 1
-            action = env._expert_actions[count]
+            action = env.expert_actions[count]
     return env
 
 

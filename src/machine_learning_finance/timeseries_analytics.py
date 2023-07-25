@@ -8,7 +8,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 import bocd
 from .plotly_utils import prob_chart, graph_pdf_bar, bar_chart
-from .actions import BUY, HOLD, SHORT
+from .actions import BUY, SHORT
 
 pd.set_option('mode.chained_assignment', None)
 
@@ -32,6 +32,7 @@ def detect_change_points(df, data_column, hazard=30, mu=0, kappa=1, alpha=1, bet
 def make_price_marker_from_boolean(df, bool_col, price_col, final_col):
     df[final_col] = np.where(df[bool_col], df[price_col], np.nan)
     return df
+
 
 def calculate_trend_metrics_for_ai(full_series_df, test_period_df, periods=[30, 60, 90]):
     # Get a moving average for the whole series, but tail it just to our test period and call it trend
@@ -317,5 +318,5 @@ def generate_max_profit_actions(price_series,
         elif max_short_profit > profit_threshold and corresponding_short_drawdown < drawdown_threshold:
             actions.append(SHORT)  # go short
         else:
-            actions.append(HOLD)  # hold the previous position
+            actions.append(actions[-1])  # hold the previous action
     return actions

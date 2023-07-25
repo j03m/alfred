@@ -4,7 +4,7 @@ from gymnasium import logger, spaces
 from .logger import info, debug, error, verbose
 from .timeseries_analytics import (detect_change_points, compute_derivatives_between_change_points,
                                    generate_max_profit_actions, calculate_trend_metrics_for_ai)
-from .actions import BUY, HOLD, SHORT
+from .actions import BUY, SHORT
 
 from sklearn.preprocessing import MinMaxScaler
 import math
@@ -76,8 +76,8 @@ class TraderEnv(gym.Env):
         )
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
 
-        # We have 3 actions, hold (0), long (1), short (2)
-        self.action_space = spaces.Discrete(3)
+        # We have 2 actions, long (0), short (1)
+        self.action_space = spaces.Discrete(2)
 
         # This is the dataframe the AI will see as our environment we scale numbers to avoid huge prices diffs
         self.timeseries = self.scale(base_ai_df[column_list])
@@ -93,14 +93,14 @@ class TraderEnv(gym.Env):
 
         self.curriculum_code = curriculum_code
         self.rolling_score = 0
-        self._expert_actions = []
+        self.expert_actions = []
 
         # we could apply other expert/proven strategies here? turtles etc
         self.generate_expert_opinion()
 
     def generate_expert_opinion(self):
         df = self.orig_timeseries
-        self._expert_actions = generate_max_profit_actions(df["Close"], [5, 15, 30, 60], 5, 10)
+        self.expert_actions = generate_max_profit_actions(df["Close"], [5, 15, 30, 60], 5, 10)
 
     def calculate_benchmark_metrics(self):
         df = self.orig_timeseries
@@ -162,9 +162,9 @@ class TraderEnv(gym.Env):
 
         action = int(action)
 
-        if len(self._expert_actions) > 0:
+        if len(self.expert_actions) > 0:
             info("_step:", self.current_index, " action: ", action, " expert action is: ",
-                 self._expert_actions[self.current_index])
+                 self.expert_actions[self.current_index])
         else:
             info("_step:", self.current_index, " action: ", action)
 
@@ -219,12 +219,8 @@ class TraderEnv(gym.Env):
 
     def _apply_action(self, action):
 
-        # AI says hold
-        if action == HOLD:
-            info("holding action = HOLD.")
-
         # AI says long but we're already in a position
-        elif action == BUY and self.in_long:
+        if action == BUY and self.in_long:
             info("holding long.")
 
         # AI says long, we're not in a position, so buy
@@ -254,7 +250,7 @@ class TraderEnv(gym.Env):
             info("opening short.")
             self.open_short()
 
-        else:  # assume hold
+        else:
             msg = f"unknown action! Someone needs to see what went wrong! {action}, {self.in_position}, {self.in_long}, {self.in_short}"
             error(msg)
             raise Exception(msg)
@@ -445,7 +441,7 @@ class TraderEnv(gym.Env):
 
     def get_reward(self, action):
         index = self.current_index
-        correct_action = self._expert_actions[index]
+        correct_action = self.expert_actions[index]
         if action == correct_action:
             return 1
         else:
