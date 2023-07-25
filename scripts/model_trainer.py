@@ -32,7 +32,7 @@ def train_model(symbol, df, args):
 
     print("Train the agent for N steps")
     for i in range(0, args.learning_runs):
-        model.learn(total_timesteps=args.training_intervals, tb_log_name=f"{args.learning_run_prefix}_{i}",
+        model.learn(total_timesteps=args.training_intervals, tb_log_name=f"{args.learning_run_prefix}_{symbol}_{i}",
                     callback=eval_callback, reset_num_timesteps=True if i == 0 else False)
 
 
@@ -51,7 +51,7 @@ def main():
     parser.add_argument('--tensorboard-log-path', type=str, default="./tensorboard-logs")
     parser.add_argument('--saving-intervals', type=int, default=1000)
     parser.add_argument('--model-name', type=str, default="ppo_mlp_policy_simple_env")
-    parser.add_argument('--learning-run-prefix', type=str, default="run_number")
+    parser.add_argument('--learning-run-prefix', type=str, default="run_")
     parser.add_argument('--learning-runs', type=int, default=3)
     parser.add_argument('--start', type=str, default=start_default_str)
     parser.add_argument('--end', type=str, default=end_default_str)
@@ -68,6 +68,8 @@ def main():
                 symbol_file = os.path.join(args.data_path, f"{symbol}.csv")
                 try:
                     data_df = pd.read_csv(symbol_file)
+                    data_df['Date'] = pd.to_datetime(data_df['Date'])
+                    data_df.set_index('Date', inplace=True)
                 except FileNotFoundError:
                     print(f"The file {symbol_file} was not found. Continuing")
                 except pd.errors.ParserError:

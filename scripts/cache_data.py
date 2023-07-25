@@ -50,7 +50,10 @@ if args.random_tickers is not None:
 symbols = list(set(symbols))
 bad_symbols = download_ticker_list(symbols)
 
-final_symbols = set(symbols) - set(bad_symbols)
+if bad_symbols is None:
+    final_symbols = set(symbols)
+else:
+    final_symbols = set(symbols) - set(bad_symbols)
 
 # Create a pandas DataFrame with symbols as data and "Symbols" as column name
 df = pd.DataFrame({'Symbols': list(final_symbols)})
