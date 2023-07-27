@@ -9,7 +9,6 @@ from machine_learning_finance import download_ticker_list
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--symbols", help="Symbols to use (default: SPY), separated by comma")
-parser.add_argument("-t", "--tail", type=int, default=2500, help="Tail size (default: 2500)")
 parser.add_argument("-o", "--output-dir", default="./data", help="Output directory (default: ./data)")
 parser.add_argument("-rs", "--random-spys", type=int, default=None, help="Number of random stocks to select from SPY")
 parser.add_argument("-rt", "--random-tickers", type=int, default=None,

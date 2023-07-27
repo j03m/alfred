@@ -12,14 +12,16 @@ import math
 import pandas as pd
 from .defaults import DEFAULT_CASH
 
+CURRICULUM_GUIDE = 0
+CURRICULUM_BACK_TEST = 1
 
 class TraderEnv(gym.Env):
 
     def __init__(self,
                  product,
-                 test_period_df,
-                 historical_period_df,
-                 curriculum_code=1,
+                 test_df,
+                 full_df,
+                 curriculum_code=CURRICULUM_GUIDE,
                  cash=DEFAULT_CASH):
 
         self.max_cash = cash
@@ -38,12 +40,10 @@ class TraderEnv(gym.Env):
         self.benchmark_position_shares = None
         self.env_version = "2"
 
-        temp_df = test_period_df.copy()
-
-        concat_df = pd.concat([historical_period_df, temp_df])
+        original_df = test_df.copy()
 
         periods = [30, 60, 90]
-        base_ai_df, column_list = calculate_trend_metrics_for_ai(concat_df, temp_df, periods=periods)
+        base_ai_df, column_list = calculate_trend_metrics_for_ai(full_df, test_df, periods=periods)
 
         # Define the observation space
         # Note this shape is intimately tied to the column list supplied by calculate_trend_metrics_for_ai
@@ -85,11 +85,11 @@ class TraderEnv(gym.Env):
         self.orig_timeseries_with_analytics = base_ai_df
 
         # This is the dataframe we will use to calculate profits and generate curriculum guidance
-        self.orig_timeseries = test_period_df
+        self.orig_timeseries = original_df
         self._reset_vars()
 
         self.product = product
-        self.final = len(test_period_df)
+        self.final = len(original_df)
 
         self.curriculum_code = curriculum_code
         self.rolling_score = 0
@@ -120,8 +120,10 @@ class TraderEnv(gym.Env):
 
     @cash.setter
     def cash(self, value):
-        assert (value >= 0)
-        self._cash = value
+        if value <= 0:
+            self._cash = 0  # bankrupt
+        else:
+            self._cash = value
 
     def _reset_vars(self):
         self._episode_ended = False
@@ -175,7 +177,11 @@ class TraderEnv(gym.Env):
 
         # Advance the environment by one time step and return the observation, reward, and done flag
         verbose("step:", "index:", self.current_index, " of: ", self.final - 1, "action: ", int(action))
-        self.update_position_value()
+
+        # If back testing, update our position value
+        if self.curriculum_code == CURRICULUM_BACK_TEST:
+            self.update_position_value()
+
         if self.current_index >= self.final - 1 or self.should_stop():
             info("********MARKING DONE", "index:", self.current_index, " of: ", self.final, " cash: ", self.cash,
                  " value: ", self.position_value)
@@ -183,8 +189,9 @@ class TraderEnv(gym.Env):
             self._episode_ended = True
         else:
             self._episode_ended = False
-            # Apply the action and update the environment state
-            self._apply_action(action)
+            # If back testing, Apply the action and update the environment state
+            if self.curriculum_code == CURRICULUM_BACK_TEST:
+                self._apply_action(action)
 
         if self._is_episode_ended():
             reward = self.get_reward(action)

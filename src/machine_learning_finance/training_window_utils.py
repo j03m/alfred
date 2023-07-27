@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from pandas.tseries.offsets import MonthEnd
 
 '''
 GPT4 generated this for us (with some guidance)
@@ -34,7 +35,7 @@ class BaseTrainingWindowUtil:
         return self._df
 
     @property
-    def hist_df(self):
+    def full_hist_df(self):
         raise NotImplementedError()
 
     @property
@@ -43,25 +44,25 @@ class BaseTrainingWindowUtil:
 
 
 class TailTrainingWindowUtil(BaseTrainingWindowUtil):
-    def __init__(self, df, test_size, hist_size):
+    def __init__(self, df, test_size):
         super().__init__(df)
-        assert test_size + hist_size <= len(df), "Test size + historical size is larger than the dataframe."
+        assert test_size <= len(df), "Test size + historical size is larger than the dataframe."
         self._test_size = test_size
-        self._hist_size = hist_size
-        self._hist_df = self.df.tail(test_size + hist_size).head(hist_size)
+        self._full_hist_size = len(df)
+        self._full_hist_df = df
         self._test_df = self.df.tail(test_size)
 
     @property
-    def hist_size(self):
-        return self._hist_size
+    def full_hist_size(self):
+        return self._full_hist_size
 
     @property
     def test_size(self):
         return self._test_size
 
     @property
-    def hist_df(self):
-        return self._hist_df
+    def full_hist_df(self):
+        return self._full_hist_df
 
     @property
     def test_df(self):
@@ -69,14 +70,12 @@ class TailTrainingWindowUtil(BaseTrainingWindowUtil):
 
 
 class RangeTrainingWindowUtil(BaseTrainingWindowUtil):
-    def __init__(self, df, start, end, multiplier=4):
+    def __init__(self, df, start, end):
         super().__init__(df)
         self._start = pd.to_datetime(start)
         self._end = pd.to_datetime(end)
-        self._multiplier = multiplier
         assert self._start < self._end, "Start date should be before end date."
-        self._hist_start = self._start - (self._end - self._start) * self._multiplier
-        self._hist_df = self.df.loc[self._hist_start:self._start]
+        self._full_hist_df = df
         self._test_df = self.df.loc[self._start:self._end]
 
     @property
@@ -92,8 +91,8 @@ class RangeTrainingWindowUtil(BaseTrainingWindowUtil):
         return self._multiplier
 
     @property
-    def hist_df(self):
-        return self._hist_df
+    def full_hist_df(self):
+        return self._full_hist_df
 
     @property
     def test_df(self):
@@ -101,15 +100,12 @@ class RangeTrainingWindowUtil(BaseTrainingWindowUtil):
 
 
 class RandomTrainingWindowUtil(BaseTrainingWindowUtil):
-    def __init__(self, df, test_size, multiplier=1):
+    def __init__(self, df, test_size):
         super().__init__(df)
         self._test_size = test_size
-        self._multiplier = multiplier
-        assert self._test_size * self._multiplier <= len(df), "Test size * multiplier is larger than the dataframe."
         self._random_start = np.random.randint(0, len(df) - test_size)
-        self._hist_df = self.df.iloc[self._random_start:self._random_start + test_size * multiplier]
-        self._test_df = self.df.iloc[
-                        self._random_start + test_size * multiplier:self._random_start + test_size * (multiplier + 1)]
+        self._full_hist_df = self.df.iloc[0:self._random_start]
+        self._test_df = self.df.iloc[self._random_start:self._random_start + test_size]
 
     @property
     def test_size(self):
@@ -120,8 +116,8 @@ class RandomTrainingWindowUtil(BaseTrainingWindowUtil):
         return self._multiplier
 
     @property
-    def hist_df(self):
-        return self._hist_df
+    def full_hist_df(self):
+        return self._full_hist_df
 
     @property
     def test_df(self):

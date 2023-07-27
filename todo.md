@@ -1,13 +1,8 @@
-# Now:
-  * Make separate scripts:
-    * Bulk trainer - trains multiple symbols based on list uses offline cached data
-    * Simple training - trains agains a single symbol online
-    * test/evaluator - Uses stablebaselines reward evaluation and also prints backtest results
-    * cacher - caches timeseries data
+# Now
+  * Should we add volume as expressed by value diffed from the moving average?
 
 
 # Next:
-  * Add to the model the value per share determined by a DCF model - the current price - might be interesting?
   * Learn how to train the agent on multiple environments at the sample time
   * check out obtuna
   * How do we not only compare to bench but compare to the absolute trading policy?

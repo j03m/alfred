@@ -318,5 +318,9 @@ def generate_max_profit_actions(price_series,
         elif max_short_profit > profit_threshold and corresponding_short_drawdown < drawdown_threshold:
             actions.append(SHORT)  # go short
         else:
-            actions.append(actions[-1])  # hold the previous action
+            if len(actions) != 0:
+                actions.append(actions[-1])  # hold the previous action
+            else:
+                actions.append(BUY)  # assume long (can happen)
+
     return actions

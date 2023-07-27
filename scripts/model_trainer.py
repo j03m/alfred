@@ -5,8 +5,12 @@ import pandas as pd
 from stable_baselines3.common.callbacks import EvalCallback
 import yfinance as yf
 from datetime import datetime, timedelta
+import warnings
 
-from machine_learning_finance import TraderEnv, get_or_create_model, RangeTrainingWindowUtil
+warnings.filterwarnings('ignore', category=RuntimeWarning)
+
+
+from machine_learning_finance import TraderEnv, get_or_create_model, RangeTrainingWindowUtil, TailTrainingWindowUtil
 
 # handles UserWarning: Evaluation environment is not wrapped with a ``Monitor`` wrapper.
 from stable_baselines3.common.monitor import Monitor
@@ -18,10 +22,12 @@ def download_symbol(symbol):
 
 
 def train_model(symbol, df, args):
+    if args.tail is not None:
+        training_window = TailTrainingWindowUtil(df, args.tail)
+    else:
+        training_window = RangeTrainingWindowUtil(df, args.start, args.end)
 
-    training_window = RangeTrainingWindowUtil(df, args.start, args.end)
-
-    env = TraderEnv(symbol, training_window.test_df, training_window.hist_df)
+    env = TraderEnv(symbol, training_window.test_df, training_window.full_hist_df)
 
     env = Monitor(env)
 
@@ -54,25 +60,23 @@ def main():
     parser.add_argument('--learning-runs', type=int, default=3)
     parser.add_argument('--start', type=str, default=start_default_str)
     parser.add_argument('--end', type=str, default=end_default_str)
+    parser.add_argument('--tail', type=int, default=None)
+    parser.add_argument('--file', action="store_true")
+
 
     args = parser.parse_args()
 
     if args.symbol is not None:
-        df = download_symbol(args.symbol)
+        if not args.file:
+            df = download_symbol(args.symbol)
+        else:
+            df = read_symbol_file(args, args.symbol, fail_on_missing=True)
         train_model(args.symbol, df, args)
     elif args.bulk is not None:
         if os.path.isfile(args.bulk):
             symbols_df = pd.read_csv(args.bulk)
             for symbol in symbols_df["Symbols"].values:
-                symbol_file = os.path.join(args.data_path, f"{symbol}.csv")
-                try:
-                    data_df = pd.read_csv(symbol_file)
-                    data_df['Date'] = pd.to_datetime(data_df['Date'])
-                    data_df.set_index('Date', inplace=True)
-                except FileNotFoundError:
-                    print(f"The file {symbol_file} was not found. Continuing")
-                except pd.errors.ParserError:
-                    print(f"The file {symbol_file} could not be parsed as a CSV. Continuing")
+                data_df = read_symbol_file(args, symbol)
 
                 train_model(symbol, data_df, args)
         else:
@@ -80,6 +84,23 @@ def main():
     else:
         print("--symbol or --bulk must be supplied!")
         return -1
+
+
+def read_symbol_file(args, symbol, fail_on_missing=False):
+    symbol_file = os.path.join(args.data_path, f"{symbol}.csv")
+    try:
+        data_df = pd.read_csv(symbol_file)
+        data_df['Date'] = pd.to_datetime(data_df['Date'])
+        data_df.set_index('Date', inplace=True)
+    except FileNotFoundError as fnfe:
+        print(f"The file {symbol_file} was not found.")
+        if fail_on_missing:
+            raise fnfe
+    except pd.errors.ParserError as pe:
+        print(f"The file {symbol_file} could not be parsed as a CSV. Continuing")
+        if fail_on_missing:
+            raise pe
+    return data_df
 
 
 if __name__ == "__main__":

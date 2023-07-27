@@ -5,7 +5,7 @@ import pandas as pd
 from stable_baselines3.common.evaluation import evaluate_policy
 import yfinance as yf
 from datetime import datetime, timedelta
-from machine_learning_finance import TraderEnv, get_or_create_model, RangeTrainingWindowUtil
+from machine_learning_finance import TraderEnv, get_or_create_model, RangeTrainingWindowUtil, TailTrainingWindowUtil
 # handles UserWarning: Evaluation environment is not wrapped with a ``Monitor`` wrapper.
 from stable_baselines3.common.monitor import Monitor
 
@@ -29,19 +29,23 @@ def main():
     parser.add_argument('--end', type=str, default=end_default_str)
     parser.add_argument('--eval', action="store_true", default=False)
     parser.add_argument('--test', action="store_true", default=False)
+    parser.add_argument('--tail', type=int, default=None)
 
     args = parser.parse_args()
 
-    training_window = RangeTrainingWindowUtil(download_symbol(args.symbol), args.start, args.end)
-    env = TraderEnv(args.symbol, training_window.test_df, training_window.hist_df)
+    if args.tail is not None:
+        training_window = TailTrainingWindowUtil(download_symbol(args.symbol), args.tail)
+    else:
+        training_window = RangeTrainingWindowUtil(download_symbol(args.symbol), args.start, args.end)
+
+    env = TraderEnv(args.symbol, training_window.test_df, training_window.full_hist_df)
     env = Monitor(env)
     model, model_path, save_path = get_or_create_model(args.model_name, env, args.tensorboard_log_path)
 
     if args.eval:
-        print("Agent status, before training")
+        print("Agent status:")
         mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=args.benchmark_intervals)
-        print(f"(pre train) mean_reward:{mean_reward:.2f} +/- {std_reward:.2f}")
-        print(f"(pre train profit) {env}")
+        print(f"mean_reward:{mean_reward:.2f} +/- {std_reward:.2f}")
     elif args.test:
         obs, data = env.reset()
         done = False
