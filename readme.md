@@ -8,9 +8,11 @@ The central idea driving this project is that with the right data and indicators
 
 The methodology can be broken down into the following steps:
 
+The AI system does not directly receive any price data. Instead, it works with a series of moving averages (30, 60, 90 days) that are processed using [Bayesian Online Changepoint Detection](https://github.com/y-bar/bocd). This method allows for the detection of changes in the moving averages without lookahead bias, a common issue in other change detection algorithms. Polynomial regressions are then calculated between different change points, and the derivatives of these polynomials are used as indicators of direction. 
+
 ![](images/img.png)
 
-The AI system does not directly receive any price data. Instead, it works with a series of moving averages (30, 60, 90 days) that are processed using [Bayesian Online Changepoint Detection](https://github.com/y-bar/bocd). This method allows for the detection of changes in the moving averages without lookahead bias, a common issue in other change detection algorithms. Polynomial regressions are then calculated between different change points, and the derivatives of these polynomials are used as indicators of direction. 
+![](images/img_der.png)
 
 To guide the AI's trading decisions, we also analyze the "best action" at each time slice in the time series. This is determined based on the maximum profit over 30, 60, and 90 day periods. While this method does incorporate lookahead bias, it is only used for establishing the AI's reward system.
 
