@@ -1,9 +1,8 @@
 import numpy as np
 import gymnasium as gym
-from gymnasium import logger, spaces
-from .logger import info, debug, error, verbose
-from .timeseries_analytics import (detect_change_points, compute_derivatives_between_change_points,
-                                   generate_max_profit_actions, calculate_trend_metrics_for_ai)
+from gymnasium import spaces
+from .logger import info, error, verbose
+from .timeseries_analytics import (generate_max_profit_actions, calculate_trend_metrics_for_ai)
 from .actions import BUY, SHORT
 
 from sklearn.preprocessing import MinMaxScaler
@@ -14,6 +13,7 @@ from .defaults import DEFAULT_CASH
 
 CURRICULUM_GUIDE = 0
 CURRICULUM_BACK_TEST = 1
+
 
 class TraderEnv(gym.Env):
 

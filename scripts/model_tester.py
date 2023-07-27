@@ -9,6 +9,7 @@ from machine_learning_finance import TraderEnv, get_or_create_model, RangeTraini
 # handles UserWarning: Evaluation environment is not wrapped with a ``Monitor`` wrapper.
 from stable_baselines3.common.monitor import Monitor
 
+
 def download_symbol(symbol):
     ticker_obj = yf.download(tickers=symbol, interval="1d")
     return pd.DataFrame(ticker_obj)

@@ -304,6 +304,10 @@ def download_crypto():
     return get_all_product_timeseries(-1, 180, LENGTH_OF_STOCK_TRAINGING_DATA)
 
 
+def download_symbol(symbol):
+    ticker_obj = yf.download(tickers=symbol, interval="1d")
+    return pd.DataFrame(ticker_obj)
+
 def get_data_for_training(num):
     from_disk = False
     use_crypto = False
