@@ -1,5 +1,6 @@
 # Now
-  * Should we add volume as expressed by value diffed from the moving average?
+  * Consider the cart pole experiment - change the environment parameters significantly and try to generalize the agent with ratios
+  * Add fundamental data
 
 
 # Next:

@@ -40,7 +40,8 @@ def calculate_trend_metrics_for_ai(full_series_df, test_period_df, periods=[30, 
     for period in periods:
         # window of trends
         trend_col = f"trend-{period}"
-        test_period_df[trend_col] = full_series_df["Close"].rolling(period).mean().tail(len(test_period_df))
+        concat_df = pd.concat([full_series_df, test_period_df])
+        test_period_df[trend_col] = concat_df["Close"].rolling(period).mean().tail(len(test_period_df))
         column_list.append(trend_col)
 
         # get a trend diff

@@ -41,6 +41,7 @@ def main():
 
     env = TraderEnv(args.symbol, training_window.test_df, training_window.full_hist_df)
     env = Monitor(env)
+    obs = env.reset()
     model, model_path, save_path = get_or_create_model(args.model_name, env, args.tensorboard_log_path)
 
     if args.eval:

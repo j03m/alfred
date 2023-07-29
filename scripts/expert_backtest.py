@@ -36,7 +36,6 @@ def main():
 
     print(args)
 
-
     if args.tail is not None:
         training_window = TailTrainingWindowUtil(download_symbol(args.symbol), args.tail)
     else:
@@ -90,6 +89,7 @@ def main():
     #     env.ledger.to_csv(f"./backtests/backtest_buy_sell_{gen_file_id(args)}.csv")
     # if args.env_type == "options":
     #     raise Exception("Implement me")
+
 
 if __name__ == "__main__":
     main()

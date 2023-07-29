@@ -11,7 +11,6 @@ junk/*
 .DS_Store
 keys/*
 backtests/*
-videos/*
-tests/__pycache__/
-scripts/examples/__pycache__/
+*videos*
+*__pycache__*
 tensorboard-logs

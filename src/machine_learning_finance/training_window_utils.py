@@ -49,8 +49,10 @@ class TailTrainingWindowUtil(BaseTrainingWindowUtil):
         assert test_size <= len(df), "Test size + historical size is larger than the dataframe."
         self._test_size = test_size
         self._full_hist_size = len(df)
-        self._full_hist_df = df
         self._test_df = self.df.tail(test_size)
+        historical_end = self._test_df.index[0] - pd.Timedelta(days=1)
+        self._full_hist_df = df.loc[:historical_end]
+
 
     @property
     def full_hist_size(self):
@@ -74,8 +76,9 @@ class RangeTrainingWindowUtil(BaseTrainingWindowUtil):
         super().__init__(df)
         self._start = pd.to_datetime(start)
         self._end = pd.to_datetime(end)
+        historical_end = self._start - pd.Timedelta(days=1)
         assert self._start < self._end, "Start date should be before end date."
-        self._full_hist_df = df
+        self._full_hist_df = self.df.loc[:historical_end]
         self._test_df = self.df.loc[self._start:self._end]
 
     @property
@@ -104,7 +107,8 @@ class RandomTrainingWindowUtil(BaseTrainingWindowUtil):
         super().__init__(df)
         self._test_size = test_size
         self._random_start = np.random.randint(0, len(df) - test_size)
-        self._full_hist_df = self.df.iloc[0:self._random_start]
+        historical_end = self._start - pd.Timedelta(days=1)
+        self._full_hist_df = self.df.iloc[0:historical_end]
         self._test_df = self.df.iloc[self._random_start:self._random_start + test_size]
 
     @property
