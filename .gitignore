@@ -1,5 +1,4 @@
 build/*
-data/*
 venv/*
 dist/*
 src/machine_learning_finance/__pycache__/

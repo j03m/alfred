@@ -5,6 +5,7 @@
 
 # Next:
   * Learn how to train the agent on multiple environments at the sample time
+    * this looks cool, SubprocVecEnv, give source a read
   * check out obtuna
   * How do we not only compare to bench but compare to the absolute trading policy?
       * We should do a study of the optimal vs bench
