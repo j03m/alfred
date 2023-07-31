@@ -1,4 +1,6 @@
 # Now
+  * Bug report and PR to SB3 for /Users/jmordetsky/machine_learning_finance/venv/lib/python3.11/site-packages/stable_baselines3/common/evaluation.py:67
+    * If we supply a monitor, we wrap it in a vecenv and then we have a vecenv wrapped by a vecenv and we get reset signature issues
   * Consider the cart pole experiment - change the environment parameters significantly and try to generalize the agent with ratios
   * Add fundamental data
 
