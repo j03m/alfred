@@ -12,10 +12,8 @@ parser.add_argument("-s", "--symbols", help="Symbols to use (default: SPY), sepa
 parser.add_argument("-f", "--symbol-file", help="Load symbols from a file")
 parser.add_argument("-o", "--output-dir", default="./data", help="Output directory (default: ./data)")
 parser.add_argument("-rs", "--random-spys", type=int, default=None, help="Number of random stocks to select from SPY")
-parser.add_argument("-sgl", "--save-good-list", action="store_true", help="Save the symbol list")
 
 args = parser.parse_args()
-
 
 def rando_spys(num):
     sp_assets = pd.read_html(
@@ -59,4 +57,4 @@ for symbol in symbols:
     symbol_df.to_csv(f"./data/{symbol}.csv")
 
 # Save the DataFrame to a CSV file named "symbols.csv"
-df.to_csv('./data/symbols.csv', index=False)
+df.to_csv('./lists/symbols.csv', index=False)

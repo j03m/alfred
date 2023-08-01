@@ -89,7 +89,7 @@ def send_email_with_attachments(to, subject, files):
 
 def main():
     # Read the CSV file with the symbols
-    pairs = pd.read_csv('./data/inverse_pairs.csv')
+    pairs = pd.read_csv('./lists/inverse_pairs.csv')
 
     # Wait for the internet connection
     while not check_internet_with_proxy():
