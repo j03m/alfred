@@ -108,7 +108,7 @@ def make_env(symbol, df, args):
 
 def get_environment_factory(symbol: str, df: pd.DataFrame, args: any) -> Callable[[], TraderEnv]:
     def generate_environment() -> TraderEnv:
-        return make_env()
+        return make_env(symbol, df, args)
 
     return generate_environment
 

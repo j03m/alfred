@@ -13,3 +13,4 @@ backtests/*
 *videos*
 *__pycache__*
 tensorboard-logs
+data/*.csv
