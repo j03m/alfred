@@ -30,10 +30,9 @@ def main():
     parser.add_argument('--data-path', type=str, default="./data/")
     parser.add_argument('--training-intervals', type=int, default=1000)
     parser.add_argument('--tensorboard-log-path', type=str, default="./tensorboard-logs")
-    parser.add_argument('--eval-frequency', type=int, default=1000)
+    parser.add_argument('--eval-frequency', type=int, default=500)
     parser.add_argument('--model-name', type=str, default="ppo_mlp_policy_simple_env")
     parser.add_argument('--learning-run-prefix', type=str, default="run_")
-    parser.add_argument('--learning-runs', type=int, default=3)
     parser.add_argument('--start', type=str, default=start_default_str)
     parser.add_argument('--end', type=str, default=end_default_str)
     parser.add_argument('--tail', type=int, default=None)
@@ -46,7 +45,10 @@ def main():
             df = download_symbol(args.symbol)
         else:
             df = read_symbol_file(args, args.symbol, fail_on_missing=True)
-        train_model(args.symbol, df, args)
+
+        env = make_env(args.symbol, df, args)
+        train_model(env, env, args)
+
     elif args.train_set is not None:
         if os.path.isfile(args.train_set):
             # training vector env
@@ -96,14 +98,17 @@ def download_symbol(symbol):
     return pd.DataFrame(ticker_obj)
 
 
+def make_env(symbol, df, args):
+    if args.tail is not None:
+        training_window = TailTrainingWindowUtil(df, args.tail)
+    else:
+        training_window = RangeTrainingWindowUtil(df, args.start, args.end)
+    return TraderEnv(symbol, training_window.test_df, training_window.full_hist_df)
+
+
 def get_environment_factory(symbol: str, df: pd.DataFrame, args: any) -> Callable[[], TraderEnv]:
     def generate_environment() -> TraderEnv:
-        if args.tail is not None:
-            training_window = TailTrainingWindowUtil(df, args.tail)
-        else:
-            training_window = RangeTrainingWindowUtil(df, args.start, args.end)
-
-        return TraderEnv(symbol, training_window.test_df, training_window.full_hist_df)
+        return make_env()
 
     return generate_environment
 
@@ -123,8 +128,8 @@ def get_vector_env(symbols: [str], args: any) -> DummyVecEnv:
 
 
 def train_model(train_env: DummyVecEnv, eval_env: DummyVecEnv, args: any):
-    #train_env = Monitor(train_env)
-    #eval_env = Monitor(eval_env)
+    # train_env = Monitor(train_env)
+    # eval_env = Monitor(eval_env)
 
     model, model_path, save_path = get_or_create_model(args.model_name, train_env, args.tensorboard_log_path)
 

@@ -5,7 +5,7 @@ import pandas as pd
 from stable_baselines3.common.evaluation import evaluate_policy
 import yfinance as yf
 from datetime import datetime, timedelta
-from machine_learning_finance import TraderEnv, get_or_create_model, RangeTrainingWindowUtil, TailTrainingWindowUtil
+from machine_learning_finance import (TraderEnv, get_or_create_model, RangeTrainingWindowUtil, TailTrainingWindowUtil, CURRICULUM_GUIDE, CURRICULUM_BACK_TEST)
 # handles UserWarning: Evaluation environment is not wrapped with a ``Monitor`` wrapper.
 from stable_baselines3.common.monitor import Monitor
 
@@ -39,16 +39,26 @@ def main():
     else:
         training_window = RangeTrainingWindowUtil(download_symbol(args.symbol), args.start, args.end)
 
-    env = TraderEnv(args.symbol, training_window.test_df, training_window.full_hist_df)
+    curriculum_code = CURRICULUM_GUIDE
+    if args.eval:
+        curriculum_code = CURRICULUM_GUIDE
+    elif args.test:
+        curriculum_code = CURRICULUM_BACK_TEST
+    else:
+        print("please supply --eval or --test")
+        return -1
+
+    env = TraderEnv(args.symbol, training_window.test_df, training_window.full_hist_df, curriculum_code=curriculum_code)
     env = Monitor(env)
-    obs = env.reset()
     model, model_path, save_path = get_or_create_model(args.model_name, env, args.tensorboard_log_path)
 
     if args.eval:
         print("Agent status:")
         mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=args.benchmark_intervals)
         print(f"mean_reward:{mean_reward:.2f} +/- {std_reward:.2f}")
+        env.ledger.to_csv(f"./backtests/{args.symbol}-model-eval.csv")
     elif args.test:
+        env.curriculum_code = CURRICULUM_BACK_TEST
         obs, data = env.reset()
         done = False
         state = None
@@ -58,8 +68,7 @@ def main():
             obs, reward, _, done, info_ = env.step(action)
         env.ledger.to_csv(f"./backtests/{args.symbol}-model-back-test.csv")
         print(f"(post test profit) {env}")
-    else:
-        print("please supply --eval or --test")
+
 
 
 if __name__ == "__main__":

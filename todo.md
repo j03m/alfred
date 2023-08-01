@@ -1,13 +1,15 @@
 # Now
+  * Why does a model with an empty ledger earn a reward for 125?
   * Bug report and PR to SB3 for /Users/jmordetsky/machine_learning_finance/venv/lib/python3.11/site-packages/stable_baselines3/common/evaluation.py:67
     * If we supply a monitor, we wrap it in a vecenv and then we have a vecenv wrapped by a vecenv and we get reset signature issues
-  * Consider the cart pole experiment - change the environment parameters significantly and try to generalize the agent with ratios
-  * Add fundamental data
-
+  * Do a talk on why or why not to convert to SubprocVecEnv. I suspect our environment doesn't have the complexity to benefit, but worth learning and writing about
+  * Add fundamental data, see if that correlates to trends and helps the model 
+    * eps
+    * analyst recommendations
+  * Can we subclass EvalCallback to benchmark gainst profit vs score? Do we want to do that or would it better to tie profit TO score
+    * Either way we might need to update our benchmark/eval script
 
 # Next:
-  * Learn how to train the agent on multiple environments at the sample time
-    * this looks cool, SubprocVecEnv, give source a read
   * check out obtuna
   * How do we not only compare to bench but compare to the absolute trading policy?
       * We should do a study of the optimal vs bench
