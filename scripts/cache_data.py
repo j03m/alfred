@@ -10,10 +10,13 @@ from machine_learning_finance import download_ticker_list
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--symbols", help="Symbols to use (default: SPY), separated by comma")
 parser.add_argument("-f", "--symbol-file", help="Load symbols from a file")
+parser.add_argument("-fo", "--symbol-file-out", default="./lists/symbols.csv",
+                    help="Output file - all bad tickers trimmed")
 parser.add_argument("-o", "--output-dir", default="./data", help="Output directory (default: ./data)")
 parser.add_argument("-rs", "--random-spys", type=int, default=None, help="Number of random stocks to select from SPY")
 
 args = parser.parse_args()
+
 
 def rando_spys(num):
     sp_assets = pd.read_html(
@@ -41,7 +44,7 @@ if args.random_spys is not None:
     symbols += rando_spys(args.random_spys)
 
 symbols = list(set(symbols))
-bad_symbols = download_ticker_list(symbols)
+bad_symbols = download_ticker_list(symbols, args.output_dir)
 
 if bad_symbols is None:
     final_symbols = set(symbols)
@@ -51,10 +54,5 @@ else:
 # Create a pandas DataFrame with symbols as data and "Symbols" as column name
 df = pd.DataFrame({'Symbols': list(final_symbols)})
 
-for symbol in symbols:
-    ticker_obj = yf.download(tickers=symbol, interval="1d")
-    symbol_df = pd.DataFrame(ticker_obj)
-    symbol_df.to_csv(f"./data/{symbol}.csv")
-
 # Save the DataFrame to a CSV file named "symbols.csv"
-df.to_csv('./lists/symbols.csv', index=False)
+df.to_csv(args.symbol_file_out, index=False)
