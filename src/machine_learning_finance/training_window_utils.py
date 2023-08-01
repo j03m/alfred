@@ -80,6 +80,8 @@ class RangeTrainingWindowUtil(BaseTrainingWindowUtil):
         assert self._start < self._end, "Start date should be before end date."
         self._full_hist_df = self.df.loc[:historical_end]
         self._test_df = self.df.loc[self._start:self._end]
+        assert(len(self.full_hist_df) != 0)
+        assert (len(self._test_df) != 0)
 
     @property
     def start(self):

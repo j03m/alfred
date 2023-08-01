@@ -59,6 +59,7 @@ def main():
                     eval_env = symbols_to_vec_env(args.eval_set, args)
                 else:
                     print(f"Could not find file {args.train_set}.")
+                    return -2
             else:
                 eval_env = train_env
             train_model(train_env, eval_env, args)
@@ -98,7 +99,8 @@ def download_symbol(symbol):
     return pd.DataFrame(ticker_obj)
 
 
-def make_env(symbol, df, args):
+def make_env(symbol, args):
+    df = read_symbol_file(args, symbol)
     if args.tail is not None:
         training_window = TailTrainingWindowUtil(df, args.tail)
     else:
@@ -106,9 +108,9 @@ def make_env(symbol, df, args):
     return TraderEnv(symbol, training_window.test_df, training_window.full_hist_df)
 
 
-def get_environment_factory(symbol: str, df: pd.DataFrame, args: any) -> Callable[[], TraderEnv]:
+def get_environment_factory(symbol: str, args: any) -> Callable[[], TraderEnv]:
     def generate_environment() -> TraderEnv:
-        return make_env(symbol, df, args)
+        return make_env(symbol, args)
 
     return generate_environment
 
@@ -122,8 +124,7 @@ def generate_evaluation_vec_env(symbols: [str], args):
 def get_vector_env(symbols: [str], args: any) -> DummyVecEnv:
     environments = []
     for symbol in symbols:
-        data_df = read_symbol_file(args, symbol)
-        environments.append(get_environment_factory(symbol, data_df, args))
+        environments.append(get_environment_factory(symbol, args))
     return DummyVecEnv(environments)
 
 
