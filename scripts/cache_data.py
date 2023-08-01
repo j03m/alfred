@@ -16,6 +16,7 @@ parser.add_argument("-rt", "--random-tickers", type=int, default=None,
 
 args = parser.parse_args()
 
+
 def rando_tickers(num):
     dfs = [pd.read_csv(f"./data/training_tickers{i}.csv") for i in range(1, 4)]
     df = pd.concat(dfs)
@@ -26,8 +27,8 @@ def rando_tickers(num):
 
     return random_tickers
 
-def rando_spys(num):
 
+def rando_spys(num):
     sp_assets = pd.read_html(
         'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]
     assets = sp_assets['Symbol'].str.replace('.', '-').tolist()
@@ -36,6 +37,7 @@ def rando_spys(num):
     random_symbols = random.sample(assets, num)
 
     return random_symbols
+
 
 symbols = []
 if args.symbols is not None:
