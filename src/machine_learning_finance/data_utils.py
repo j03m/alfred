@@ -37,22 +37,23 @@ def read_df_from_file(file):
     return df
 
 
-def download_ticker_list(ticker_list, tail=-1, head=-1):
+def download_ticker_list(ticker_list, output_dir="./data/", tail=-1, head=-1):
     bad_tickers = []
     for ticker in ticker_list:
         time.sleep(0.25)
         print("ticker: ", ticker)
         try:
-            tickerObj = yf.download(tickers=ticker, interval="1d")
-            df = pd.DataFrame(tickerObj)
+            ticker_obj = yf.download(tickers=ticker, interval="1d")
+            df = pd.DataFrame(ticker_obj)
             if tail != -1:
                 df = df.tail(tail)
             if head != -1:
                 df = df.head(head)
-            df.to_csv(f"./data/{ticker}.csv")
+            df.to_csv(os.path.join(output_dir, f"{ticker}.csv"))
         except Exception as e:
             print("Failed to download:", ticker, " with ", e)
             bad_tickers.append(ticker)
+    return bad_tickers
 
 
 def get_all_products():
