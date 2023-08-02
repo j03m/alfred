@@ -18,10 +18,6 @@ from stable_baselines3.common.monitor import Monitor
 
 
 def main():
-    now = datetime.now()
-    start_default = now - timedelta(days=365)
-    start_default_str = start_default.strftime('%Y-%m-%d')
-    end_default_str = now.strftime('%Y-%m-%d')
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--symbol', type=str, default=None)
@@ -33,9 +29,9 @@ def main():
     parser.add_argument('--eval-frequency', type=int, default=500)
     parser.add_argument('--model-name', type=str, default="ppo_mlp_policy_simple_env")
     parser.add_argument('--learning-run-prefix', type=str, default="run_")
-    parser.add_argument('--start', type=str, default=start_default_str)
-    parser.add_argument('--end', type=str, default=end_default_str)
-    parser.add_argument('--tail', type=int, default=None)
+    parser.add_argument('--start', type=str, default=None)
+    parser.add_argument('--end', type=str, default=None)
+    parser.add_argument('--tail', type=int, default=730)
     parser.add_argument('--file', action="store_true")
 
     args = parser.parse_args()
