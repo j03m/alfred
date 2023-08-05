@@ -3,22 +3,24 @@ import os.path
 import argparse
 import pandas as pd
 from stable_baselines3.common.callbacks import EvalCallback
-from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 import yfinance as yf
 from datetime import datetime, timedelta
 from typing import Callable
 import warnings
+import time
 
 warnings.filterwarnings('ignore', category=RuntimeWarning)
 
-from machine_learning_finance import TraderEnv, get_or_create_model, RangeTrainingWindowUtil, TailTrainingWindowUtil
+from machine_learning_finance import (TraderEnv, get_or_create_model, RangeTrainingWindowUtil, TailTrainingWindowUtil,
+                                      mylogger)
+
 
 # handles UserWarning: Evaluation environment is not wrapped with a ``Monitor`` wrapper.
-from stable_baselines3.common.monitor import Monitor
+# from stable_baselines3.common.monitor import Monitor
 
 
 def main():
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--symbol', type=str, default=None)
     parser.add_argument('--train-set', type=str, default=None)
@@ -33,6 +35,8 @@ def main():
     parser.add_argument('--end', type=str, default=None)
     parser.add_argument('--tail', type=int, default=730)
     parser.add_argument('--file', action="store_true")
+    parser.add_argument('--time', action="store_true", default=False)
+    parser.add_argument('--multi-proc', action="store_true", default=False)
 
     args = parser.parse_args()
 
@@ -120,8 +124,18 @@ def generate_evaluation_vec_env(symbols: [str], args):
 def get_vector_env(symbols: [str], args: any) -> DummyVecEnv:
     environments = []
     for symbol in symbols:
+        mylogger.info("Generating factory for symbol: ", symbol)
         environments.append(get_environment_factory(symbol, args))
-    return DummyVecEnv(environments)
+    if args.multi_proc:
+        return SubprocVecEnv(environments)
+    else:
+        return DummyVecEnv(environments)
+
+
+def convert_seconds_to_time(estimated_time: int):
+    # Get a timedelta object representing the duration
+    delta = timedelta(seconds=estimated_time)
+    return str(delta)
 
 
 def train_model(train_env: DummyVecEnv, eval_env: DummyVecEnv, args: any):
@@ -134,8 +148,16 @@ def train_model(train_env: DummyVecEnv, eval_env: DummyVecEnv, args: any):
                                  log_path=model_path, eval_freq=args.eval_frequency)
 
     print("Train the agent for N steps")
+
+    start_time = time.time()
     model.learn(total_timesteps=args.training_intervals, tb_log_name=f"{args.learning_run_prefix}",
                 callback=eval_callback, reset_num_timesteps=True)
+    end_time = time.time()
+    if args.time:
+        final_time = end_time - start_time
+        time_per_episode = final_time / args.training_intervals
+        print(f"Estimated time for {args.training_intervals} episodes: {convert_seconds_to_time(final_time)}")
+        print(f"Time per episode: {convert_seconds_to_time(time_per_episode)}")
 
 
 if __name__ == "__main__":

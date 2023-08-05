@@ -42,6 +42,8 @@ class TraderEnv(gym.Env):
 
         original_df = test_df.copy()
 
+        info(f"Initializing info for: {product}")
+
         periods = [30, 60, 90]
         base_ai_df, column_list = calculate_trend_metrics_for_ai(full_df, test_df, periods=periods)
 
@@ -100,6 +102,7 @@ class TraderEnv(gym.Env):
 
     def generate_expert_opinion(self):
         df = self.orig_timeseries
+
         self.expert_actions = generate_max_profit_actions(df["Close"], [5, 15, 30, 60], 5, 10)
 
     def calculate_benchmark_metrics(self):
@@ -165,10 +168,10 @@ class TraderEnv(gym.Env):
         action = int(action)
 
         if len(self.expert_actions) > 0:
-            info("_step:", self.current_index, " action: ", action, " expert action is: ",
+            verbose("_step:", self.current_index, " action: ", action, " expert action is: ",
                  self.expert_actions[self.current_index])
         else:
-            info("_step:", self.current_index, " action: ", action)
+            verbose("_step:", self.current_index, " action: ", action)
 
         self.last_action = action
         if self._episode_ended:
@@ -183,7 +186,7 @@ class TraderEnv(gym.Env):
             self.update_position_value()
 
         if self.current_index >= self.final - 1 or self.should_stop():
-            info("********MARKING DONE", "index:", self.current_index, " of: ", self.final, " cash: ", self.cash,
+            verbose("********MARKING DONE", "index:", self.current_index, " of: ", self.final, " cash: ", self.cash,
                  " value: ", self.position_value)
             self.clear_trades()
             self._episode_ended = True
@@ -195,12 +198,12 @@ class TraderEnv(gym.Env):
 
         if self._is_episode_ended():
             reward = self.get_reward(action)
-            info("final reward:", reward)
+            verbose("final reward:", reward)
             return self._get_next_state(), reward, False, True, {}
             # return self._get_next_state(), reward, True, {}
         else:
             reward = self.get_reward(action)
-            info("current reward:", reward)
+            verbose("current reward:", reward)
             self.current_index += 1
             return self._get_next_state(), reward, False, False, {}
             # return self._get_next_state(), reward, False, {}
@@ -228,33 +231,33 @@ class TraderEnv(gym.Env):
 
         # AI says long but we're already in a position
         if action == BUY and self.in_long:
-            info("holding long.")
+            verbose("holding long.")
 
         # AI says long, we're not in a position, so buy
         elif action == BUY and not self.in_position:
-            info("opening long.")
+            verbose("opening long.")
             self.open_position()
 
         # AI says long, but we're short. Close the short, open a long.
         elif action == BUY and self.in_short:
-            info("closing short to open long.")
+            verbose("closing short to open long.")
 
             self.close_short()
             self.open_position()
         # AI says short, but we're already short
         elif action == SHORT and self.in_short:
-            info("holding short.")
+            verbose("holding short.")
 
         # AI says short, we're not in a position so exit
         elif action == SHORT and not self.in_position:
-            info("opening short.")
+            verbose("opening short.")
             self.open_short()
 
         # AI says short but we're long, close it
         elif action == SHORT and self.in_long:
-            info("closing long to open short")
+            verbose("closing long to open short")
             self.close_position()
-            info("opening short.")
+            verbose("opening short.")
             self.open_short()
 
         else:

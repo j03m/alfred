@@ -1,6 +1,6 @@
 from .curriculum_policy_support import *
 from .data_utils import download_symbol, download_ticker_list
-from .logger import *
+from . import logger as mylogger
 from .math_utils import *
 from .training_utils import *
 from .trader_env import TraderEnv, CURRICULUM_BACK_TEST, CURRICULUM_GUIDE

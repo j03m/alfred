@@ -5,7 +5,8 @@ import pandas as pd
 from stable_baselines3.common.evaluation import evaluate_policy
 import yfinance as yf
 from datetime import datetime, timedelta
-from machine_learning_finance import (TraderEnv, get_or_create_model, RangeTrainingWindowUtil, TailTrainingWindowUtil, CURRICULUM_GUIDE, CURRICULUM_BACK_TEST)
+from machine_learning_finance import (TraderEnv, get_or_create_model, RangeTrainingWindowUtil, TailTrainingWindowUtil,
+                                      RandomTrainingWindowUtil, CURRICULUM_GUIDE, CURRICULUM_BACK_TEST)
 # handles UserWarning: Evaluation environment is not wrapped with a ``Monitor`` wrapper.
 from stable_baselines3.common.monitor import Monitor
 
@@ -31,10 +32,12 @@ def main():
     parser.add_argument('--eval', action="store_true", default=False)
     parser.add_argument('--test', action="store_true", default=False)
     parser.add_argument('--tail', type=int, default=None)
-
+    parser.add_argument('--random', type=int, default=None)
     args = parser.parse_args()
 
-    if args.tail is not None:
+    if args.random is not None:
+        training_window = RandomTrainingWindowUtil(download_symbol(args.symbol), args.random)
+    elif args.tail is not None:
         training_window = TailTrainingWindowUtil(download_symbol(args.symbol), args.tail)
     else:
         training_window = RangeTrainingWindowUtil(download_symbol(args.symbol), args.start, args.end)
@@ -68,7 +71,6 @@ def main():
             obs, reward, _, done, info_ = env.step(action)
         env.ledger.to_csv(f"./backtests/{args.symbol}-model-back-test.csv")
         print(f"(post test profit) {env}")
-
 
 
 if __name__ == "__main__":

@@ -109,9 +109,9 @@ class RandomTrainingWindowUtil(BaseTrainingWindowUtil):
         super().__init__(df)
         self._test_size = test_size
         self._random_start = np.random.randint(0, len(df) - test_size)
-        historical_end = self._start - pd.Timedelta(days=1)
-        self._full_hist_df = self.df.iloc[0:historical_end]
-        self._test_df = self.df.iloc[self._random_start:self._random_start + test_size]
+        historical_end = self._random_start + test_size
+        self._full_hist_df = df
+        self._test_df = self.df.iloc[self._random_start:historical_end]
 
     @property
     def test_size(self):
