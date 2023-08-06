@@ -13,7 +13,7 @@ import time
 warnings.filterwarnings('ignore', category=RuntimeWarning)
 
 from machine_learning_finance import (TraderEnv, get_or_create_model, RandomTrainingWindowUtil, RangeTrainingWindowUtil,
-                                      TailTrainingWindowUtil, mylogger)
+                                      TailTrainingWindowUtil, mylogger, read_symbol_file)
 
 
 # handles UserWarning: Evaluation environment is not wrapped with a ``Monitor`` wrapper.
@@ -46,7 +46,7 @@ def main():
         if not args.file:
             df = download_symbol(args.symbol)
         else:
-            df = read_symbol_file(args, args.symbol, fail_on_missing=True)
+            df = read_symbol_file(args.data_path, args.symbol, fail_on_missing=True)
 
         env = make_env(args.symbol, df, args)
         train_model(env, env, args, 0)
@@ -76,22 +76,7 @@ def symbols_to_vec_env(file: str, args):
     return train_env
 
 
-def read_symbol_file(args, symbol, fail_on_missing=False):
-    symbol_file = os.path.join(args.data_path, f"{symbol}.csv")
-    data_df = None
-    try:
-        data_df = pd.read_csv(symbol_file)
-        data_df['Date'] = pd.to_datetime(data_df['Date'])
-        data_df.set_index('Date', inplace=True)
-    except FileNotFoundError as fnfe:
-        print(f"The file {symbol_file} was not found.")
-        if fail_on_missing:
-            raise fnfe
-    except pd.errors.ParserError as pe:
-        print(f"The file {symbol_file} could not be parsed as a CSV. Continuing")
-        if fail_on_missing:
-            raise pe
-    return data_df
+
 
 
 def download_symbol(symbol):
@@ -100,7 +85,7 @@ def download_symbol(symbol):
 
 
 def make_env(symbol, args):
-    df = read_symbol_file(args, symbol)
+    df = read_symbol_file(args.data_path, symbol)
     if args.random is not None:
         training_window = RandomTrainingWindowUtil(df, args.random)
     elif args.tail is not None:
@@ -115,13 +100,6 @@ def get_environment_factory(symbol: str, args: any) -> Callable[[], TraderEnv]:
         return make_env(symbol, args)
 
     return generate_environment
-
-
-def generate_evaluation_vec_env(symbols: [str], args):
-    for symbol in symbols:
-        data_df = read_symbol_file(args, symbol)
-        get_environment_factory(symbol, data_df, args)
-
 
 def get_vector_env(symbols: [str], args: any) -> DummyVecEnv:
     environments = []

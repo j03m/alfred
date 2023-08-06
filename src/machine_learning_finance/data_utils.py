@@ -30,12 +30,22 @@ def connect(url, params):
     return response
 
 
-def read_df_from_file(file):
-    df = pd.read_csv(file)
-    df["Date"] = pd.to_datetime(df["Date"])
-    df = df.set_index("Date")
-    return df
-
+def read_symbol_file(data_path_, symbol, fail_on_missing=False):
+    symbol_file = os.path.join(data_path_, f"{symbol}.csv")
+    data_df = None
+    try:
+        data_df = pd.read_csv(symbol_file)
+        data_df['Date'] = pd.to_datetime(data_df['Date'])
+        data_df.set_index('Date', inplace=True)
+    except FileNotFoundError as fnfe:
+        print(f"The file {symbol_file} was not found.")
+        if fail_on_missing:
+            raise fnfe
+    except pd.errors.ParserError as pe:
+        print(f"The file {symbol_file} could not be parsed as a CSV. Continuing")
+        if fail_on_missing:
+            raise pe
+    return data_df
 
 def download_ticker_list(ticker_list, output_dir="./data/", tail=-1, head=-1):
     bad_tickers = []

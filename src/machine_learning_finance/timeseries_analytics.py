@@ -34,6 +34,32 @@ def make_price_marker_from_boolean(df, bool_col, price_col, final_col):
     return df
 
 
+def calculate_trend_metrics_full(df, periods=[30, 60, 90]):
+    # Get a moving average for the whole series, but tail it just to our test period and call it trend
+    column_list = []
+    for period in periods:
+        # window of trends
+        trend_col = f"trend-{period}"
+        df[trend_col] = df["Close"].rolling(period).mean()
+        column_list.append(trend_col)
+
+        # get a trend diff
+        diff = f"trend-diff-{period}"
+        df[diff] = df["Close"] - df[trend_col]
+        column_list.append(diff)
+
+        # detect change points
+        # detect cp on each period
+        cp = f"change-point-{period}"
+        df[cp] = detect_change_points(df, data_column=trend_col, hazard=period)
+        column_list.append(cp)
+
+        # detect the derivative of a polynomial between the points, this should indicate trend direction
+        poly = f"polynomial_derivative-{period}"
+        df[poly] = compute_derivatives_between_change_points(df, cp, trend_col)
+        column_list.append(poly)
+    return df, column_list
+
 def calculate_trend_metrics_for_ai(full_series_df, test_period_df, periods=[30, 60, 90]):
     # Get a moving average for the whole series, but tail it just to our test period and call it trend
     column_list = []

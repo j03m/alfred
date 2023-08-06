@@ -1,5 +1,5 @@
 from .curriculum_policy_support import *
-from .data_utils import download_symbol, download_ticker_list
+from .data_utils import download_symbol, download_ticker_list, read_symbol_file
 from . import logger as mylogger
 from .math_utils import *
 from .training_utils import *
