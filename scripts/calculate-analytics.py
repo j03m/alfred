@@ -19,6 +19,7 @@ def main():
 
     symbols_df = pd.read_csv(args.train_set)
     for symbol in symbols_df["Symbols"].values:
+        print("pre-processing: ", symbol)
         df = read_symbol_file(args.data_path, symbol)
         df, columns = calculate_trend_metrics_full(df)
         df["actions"] = generate_max_profit_actions(df["Close"], [5, 15, 30, 60], 5, 10)

@@ -1,5 +1,5 @@
 # Now
-  * Continue with random window training idea, mix the data up. But to do this, we need to pre-cache all the optimal policy and analytics?
+  * Test model_training.py to see if the traderenv works on preprocessed data, then implement the random windows testing
   * Bug report and PR to SB3 for /Users/jmordetsky/machine_learning_finance/venv/lib/python3.11/site-packages/stable_baselines3/common/evaluation.py:67
     * If we supply a monitor, we wrap it in a vecenv and then we have a vecenv wrapped by a vecenv and we get reset signature issues
   * Add fundamental data, see if that correlates to trends and helps the model 

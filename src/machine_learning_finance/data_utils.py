@@ -30,8 +30,16 @@ def connect(url, params):
     return response
 
 
+def read_processed_file(data_path_, symbol, fail_on_missing=False):
+    return read_file(data_path_, f"{symbol}_processed.csv", fail_on_missing)
+
+
 def read_symbol_file(data_path_, symbol, fail_on_missing=False):
-    symbol_file = os.path.join(data_path_, f"{symbol}.csv")
+    return read_file(data_path_, f"{symbol}.csv", fail_on_missing)
+
+
+def read_file(data_path_, file, symbol, fail_on_missing=False):
+    symbol_file = os.path.join(data_path_, file)
     data_df = None
     try:
         data_df = pd.read_csv(symbol_file)
@@ -46,6 +54,7 @@ def read_symbol_file(data_path_, symbol, fail_on_missing=False):
         if fail_on_missing:
             raise pe
     return data_df
+
 
 def download_ticker_list(ticker_list, output_dir="./data/", tail=-1, head=-1):
     bad_tickers = []
@@ -314,6 +323,7 @@ def download_stocks(total):
 
 LENGTH_OF_STOCK_TRAINGING_DATA = 145  # I might need to fix this, but the model is tied to the number of symbols we trained on
 
+
 def download_crypto():
     return get_all_product_timeseries(-1, 180, LENGTH_OF_STOCK_TRAINGING_DATA)
 
@@ -321,6 +331,7 @@ def download_crypto():
 def download_symbol(symbol):
     ticker_obj = yf.download(tickers=symbol, interval="1d")
     return pd.DataFrame(ticker_obj)
+
 
 def get_data_for_training(num):
     from_disk = False

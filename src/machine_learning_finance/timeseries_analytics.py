@@ -41,6 +41,7 @@ def calculate_trend_metrics_full(df, periods=[30, 60, 90]):
         # window of trends
         trend_col = f"trend-{period}"
         df[trend_col] = df["Close"].rolling(period).mean()
+        df = df.dropna()
         column_list.append(trend_col)
 
         # get a trend diff
@@ -59,6 +60,7 @@ def calculate_trend_metrics_full(df, periods=[30, 60, 90]):
         df[poly] = compute_derivatives_between_change_points(df, cp, trend_col)
         column_list.append(poly)
     return df, column_list
+
 
 def calculate_trend_metrics_for_ai(full_series_df, test_period_df, periods=[30, 60, 90]):
     # Get a moving average for the whole series, but tail it just to our test period and call it trend

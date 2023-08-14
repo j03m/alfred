@@ -22,6 +22,7 @@ class TraderEnv(gym.Env):
                  test_df,
                  full_df,
                  curriculum_code=CURRICULUM_GUIDE,
+                 process_data=True,
                  cash=DEFAULT_CASH):
 
         self.max_cash = cash
@@ -42,10 +43,17 @@ class TraderEnv(gym.Env):
 
         original_df = test_df.copy()
 
-        info(f"Initializing info for: {product}")
-
-        periods = [30, 60, 90]
-        base_ai_df, column_list = calculate_trend_metrics_for_ai(full_df, test_df, periods=periods)
+        if process_data:
+            info(f"Initializing info for: {product}")
+            periods = [30, 60, 90]
+            base_ai_df, column_list = calculate_trend_metrics_for_ai(full_df, test_df, periods=periods)
+            self.expert_actions = []
+            # we could apply other expert/proven strategies here? turtles etc
+            self.generate_expert_opinion()
+        else:
+            info(f"Assuming {product} is pre-processed, full_df is ignored")
+            base_ai_df = test_df
+            self.expert_actions = base_ai_df["actions"].values
 
         # Define the observation space
         # Note this shape is intimately tied to the column list supplied by calculate_trend_metrics_for_ai
@@ -95,10 +103,7 @@ class TraderEnv(gym.Env):
 
         self.curriculum_code = curriculum_code
         self.rolling_score = 0
-        self.expert_actions = []
 
-        # we could apply other expert/proven strategies here? turtles etc
-        self.generate_expert_opinion()
 
     def generate_expert_opinion(self):
         df = self.orig_timeseries

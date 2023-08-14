@@ -13,7 +13,7 @@ import time
 warnings.filterwarnings('ignore', category=RuntimeWarning)
 
 from machine_learning_finance import (TraderEnv, get_or_create_model, RandomTrainingWindowUtil, RangeTrainingWindowUtil,
-                                      TailTrainingWindowUtil, mylogger, read_symbol_file)
+                                      TailTrainingWindowUtil, mylogger, read_symbol_file, read_processed_file)
 
 
 # handles UserWarning: Evaluation environment is not wrapped with a ``Monitor`` wrapper.
@@ -85,14 +85,15 @@ def download_symbol(symbol):
 
 
 def make_env(symbol, args):
-    df = read_symbol_file(args.data_path, symbol)
+    df = read_processed_file(args.data_path, symbol)
     if args.random is not None:
         training_window = RandomTrainingWindowUtil(df, args.random)
     elif args.tail is not None:
         training_window = TailTrainingWindowUtil(df, args.tail)
     else:
         training_window = RangeTrainingWindowUtil(df, args.start, args.end)
-    return TraderEnv(symbol, training_window.test_df, training_window.full_hist_df)
+
+    return TraderEnv(symbol, training_window.test_df, training_window.test_df, process_data=False)
 
 
 def get_environment_factory(symbol: str, args: any) -> Callable[[], TraderEnv]:
