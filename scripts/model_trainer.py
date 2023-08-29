@@ -43,12 +43,7 @@ def main():
     args = parser.parse_args()
 
     if args.symbol is not None:
-        if not args.file:
-            df = download_symbol(args.symbol)
-        else:
-            df = read_symbol_file(args.data_path, args.symbol, fail_on_missing=True)
-
-        env = make_env(args.symbol, df, args)
+        env = make_env(args.symbol, args)
         train_model(env, env, args, 0)
 
     elif args.train_set is not None and args.eval_set is not None:
@@ -84,8 +79,23 @@ def download_symbol(symbol):
     return pd.DataFrame(ticker_obj)
 
 
-def make_env(symbol, args):
-    df = read_processed_file(args.data_path, symbol)
+def make_env(symbol, args, throw_on_process=False):
+
+    process_data = False
+    if args.file and not throw_on_process:
+        df = read_symbol_file(args.data_path, args.symbol, fail_on_missing=True)
+        process_data = True
+    elif os.path.isfile(os.path.join(args.data_path, f"{symbol}_processed.csv")):
+        df = read_processed_file(args.data_path, symbol)
+        process_data = False
+    elif os.path.isfile(os.path.join(args.data_path, f"{symbol}.csv")) and not throw_on_process:
+        df = read_symbol_file(args.data_path, symbol)
+        process_data = True
+    elif not throw_on_process:
+        df = download_symbol(symbol)
+    else:
+        raise Exception(f"{symbol} has not be preprocessed. ")
+
     if args.random is not None:
         training_window = RandomTrainingWindowUtil(df, args.random)
     elif args.tail is not None:
@@ -93,12 +103,15 @@ def make_env(symbol, args):
     else:
         training_window = RangeTrainingWindowUtil(df, args.start, args.end)
 
-    return TraderEnv(symbol, training_window.test_df, training_window.test_df, process_data=False)
+    if process_data:
+        return TraderEnv(symbol, training_window.test_df, training_window.full_hist_df, process_data=process_data)
+    else:
+        return TraderEnv(symbol, training_window.test_df, training_window.test_df, process_data=process_data)
 
 
 def get_environment_factory(symbol: str, args: any) -> Callable[[], TraderEnv]:
     def generate_environment() -> TraderEnv:
-        return make_env(symbol, args)
+        return make_env(symbol, args, throw_on_process=True)
 
     return generate_environment
 

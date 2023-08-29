@@ -62,6 +62,16 @@ def calculate_trend_metrics_full(df, periods=[30, 60, 90]):
     return df, column_list
 
 
+def generate_ai_columns(periods=[30, 60, 90]):
+    column_list = []
+    for period in periods:
+        column_list.append(f"trend-{period}")
+        column_list.append(f"trend-diff-{period}")
+        column_list.append(f"change-point-{period}")
+        column_list.append(f"polynomial_derivative-{period}")
+    return column_list
+
+
 def calculate_trend_metrics_for_ai(full_series_df, test_period_df, periods=[30, 60, 90]):
     # Get a moving average for the whole series, but tail it just to our test period and call it trend
     column_list = []

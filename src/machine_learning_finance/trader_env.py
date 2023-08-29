@@ -2,7 +2,7 @@ import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 from .logger import info, error, verbose
-from .timeseries_analytics import (generate_max_profit_actions, calculate_trend_metrics_for_ai)
+from .timeseries_analytics import (generate_max_profit_actions, calculate_trend_metrics_for_ai, generate_ai_columns)
 from .actions import BUY, SHORT
 
 from sklearn.preprocessing import MinMaxScaler
@@ -14,6 +14,8 @@ from .defaults import DEFAULT_CASH
 CURRICULUM_GUIDE = 0
 CURRICULUM_BACK_TEST = 1
 
+# run me
+# --eval-set ./lists/eval_list.csv --train-set ./lists/training_list.csv --tail 730 --training-intervals=10000 --time
 
 class TraderEnv(gym.Env):
 
@@ -42,18 +44,34 @@ class TraderEnv(gym.Env):
         self.env_version = "2"
 
         original_df = test_df.copy()
-
+        periods = [30, 60, 90]
         if process_data:
             info(f"Initializing info for: {product}")
-            periods = [30, 60, 90]
             base_ai_df, column_list = calculate_trend_metrics_for_ai(full_df, test_df, periods=periods)
             self.expert_actions = []
+
+            # This is the dataframe the AI will see as our environment we scale numbers to avoid huge prices diffs
+            self.timeseries = self.scale(base_ai_df[column_list])
+
+            # This is the dataframe we will use to calculate profits and generate curriculum guidance
+            self.orig_timeseries = original_df
+
             # we could apply other expert/proven strategies here? turtles etc
             self.generate_expert_opinion()
         else:
             info(f"Assuming {product} is pre-processed, full_df is ignored")
+
             base_ai_df = test_df
+
             self.expert_actions = base_ai_df["actions"].values
+
+            column_list = generate_ai_columns()
+
+            # This is the dataframe the AI will see as our environment we scale numbers to avoid huge prices diffs
+            self.timeseries = self.scale(base_ai_df[column_list])
+
+            # This is the dataframe we will use to calculate profits and generate curriculum guidance
+            self.orig_timeseries = original_df
 
         # Define the observation space
         # Note this shape is intimately tied to the column list supplied by calculate_trend_metrics_for_ai
@@ -89,13 +107,6 @@ class TraderEnv(gym.Env):
         # We have 2 actions, long (0), short (1)
         self.action_space = spaces.Discrete(2)
 
-        # This is the dataframe the AI will see as our environment we scale numbers to avoid huge prices diffs
-        self.timeseries = self.scale(base_ai_df[column_list])
-
-        self.orig_timeseries_with_analytics = base_ai_df
-
-        # This is the dataframe we will use to calculate profits and generate curriculum guidance
-        self.orig_timeseries = original_df
         self._reset_vars()
 
         self.product = product
