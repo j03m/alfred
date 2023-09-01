@@ -101,6 +101,12 @@ def calculate_trend_metrics_for_ai(full_series_df, test_period_df, periods=[30, 
 
 
 def compute_derivatives_between_change_points(df, cp_column, data_column):
+    raise Exception("Fix me, I have lookahead bias")
+
+    # Todo, you have to change this such that you are
+    # graphing from the last change point you've seen to the
+    # end of data, not change point to change point
+
     # Compute change points and prepend a dummy change point at the start
     change_points = [df.index[0]] + list(df.loc[df[cp_column]].index)
 

@@ -60,6 +60,7 @@ def main():
         mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=args.benchmark_intervals)
         print(f"mean_reward:{mean_reward:.2f} +/- {std_reward:.2f}")
         env.ledger.to_csv(f"./backtests/{args.symbol}-model-eval.csv")
+        env.visualization_timeseries.to_csv(f"./backtests/{args.symbol}-model-differences.csv")
     elif args.test:
         env.curriculum_code = CURRICULUM_BACK_TEST
         obs, data = env.reset()
@@ -70,6 +71,7 @@ def main():
             # take the action and observe the next state and reward
             obs, reward, _, done, info_ = env.step(action)
         env.ledger.to_csv(f"./backtests/{args.symbol}-model-back-test.csv")
+        env.visualization_timeseries.to_csv(f"./backtests/{args.symbol}-model-differences.csv")
         print(f"(post test profit) {env}")
 
 

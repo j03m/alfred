@@ -64,6 +64,19 @@ def add_line(fig, df, col, name, color):
     fig.add_trace(go.Scatter(x=df.index, y=df[col], mode="lines", name=name, line=dict(color=color)))
 
 
+def plot_backtest_differences(df):
+    fig = go.Figure()
+
+    # Add trace for the main time series plot to the first row of the subplot
+    fig.add_trace(go.Scatter(x=df.index, y=df["Close"], mode="lines", name="Value"))
+
+    df["differences"] = np.where(df["expert"] == df["model sentiment"], df["Close"], np.nan)
+
+    add_marker(fig, df, "differences", "differences", "triangle-up", 8, "springgreen")
+
+    return fig
+
+
 def plot_backtest_analysis(df, ledger, save_png=False, png_file=None, inverse=None):
     # Scale probabilities to the same range as the original time series
 

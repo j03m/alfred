@@ -1,13 +1,20 @@
 # Now
-  * Test model_training.py to see if the traderenv works on preprocessed data, then implement the random windows testing
-  * Bug report and PR to SB3 for /Users/jmordetsky/machine_learning_finance/venv/lib/python3.11/site-packages/stable_baselines3/common/evaluation.py:67
-    * If we supply a monitor, we wrap it in a vecenv and then we have a vecenv wrapped by a vecenv and we get reset signature issues
-  * Add fundamental data, see if that correlates to trends and helps the model 
+  * Smarter:
+    * Give it a really long training time
+    * Understand why we plateau - we seems to get to 2/3rds accuracy
+    * Understand is 2/3 accuracy profitable?
+    * Add fundamental data, see if that correlates to trends and helps the model 
     * eps
     * analyst recommendations
-  * Can we subclass EvalCallback to benchmark gainst profit vs score? Do we want to do that or would it better to tie profit TO score
+  * Training:
+    * We can give it more data using multiple random windows per time series :)
+  * Bug report and PR to SB3 for /Users/jmordetsky/machine_learning_finance/venv/lib/python3.11/site-packages/stable_baselines3/common/evaluation.py:67
+    * If we supply a monitor, we wrap it in a vecenv and then we have a vecenv wrapped by a vecenv and we get reset signature issues
+  * Can we subclass EvalCallback to benchmark against profit vs score? Do we want to do that or would it better to tie profit TO score
     * Either way we might need to update our benchmark/eval script
-
+  * Can we modify multi proc to use pools? Probably not effectively since we only have 1 gpu
+  * Out of left field:
+    * Add LSTM prediction to processed data?
 # Next:
   * check out obtuna
   * How do we not only compare to bench but compare to the absolute trading policy?

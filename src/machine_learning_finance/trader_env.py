@@ -45,6 +45,7 @@ class TraderEnv(gym.Env):
 
         original_df = test_df.copy()
         periods = [30, 60, 90]
+        self.model_sentiment = []
         if process_data:
             info(f"Initializing info for: {product}")
             base_ai_df, column_list = calculate_trend_metrics_for_ai(full_df, test_df, periods=periods)
@@ -72,6 +73,8 @@ class TraderEnv(gym.Env):
 
             # This is the dataframe we will use to calculate profits and generate curriculum guidance
             self.orig_timeseries = original_df
+
+        self.visualization_timeseries = self.orig_timeseries.join(base_ai_df[column_list])
 
         # Define the observation space
         # Note this shape is intimately tied to the column list supplied by calculate_trend_metrics_for_ai
@@ -182,7 +185,7 @@ class TraderEnv(gym.Env):
     def step(self, action):
 
         action = int(action)
-
+        self.model_sentiment.append(action)
         if len(self.expert_actions) > 0:
             verbose("_step:", self.current_index, " action: ", action, " expert action is: ",
                  self.expert_actions[self.current_index])
@@ -215,6 +218,8 @@ class TraderEnv(gym.Env):
         if self._is_episode_ended():
             reward = self.get_reward(action)
             verbose("final reward:", reward)
+            self.visualization_timeseries["model sentiment"] = self.model_sentiment
+            self.visualization_timeseries["expert"] = self.expert_actions
             return self._get_next_state(), reward, False, True, {}
             # return self._get_next_state(), reward, True, {}
         else:
