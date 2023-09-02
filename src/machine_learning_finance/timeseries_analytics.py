@@ -101,30 +101,36 @@ def calculate_trend_metrics_for_ai(full_series_df, test_period_df, periods=[30, 
 
 
 def compute_derivatives_between_change_points(df, cp_column, data_column):
-    raise Exception("Fix me, I have lookahead bias")
-
-    # Todo, you have to change this such that you are
-    # graphing from the last change point you've seen to the
-    # end of data, not change point to change point
-
-    # Compute change points and prepend a dummy change point at the start
-    change_points = [df.index[0]] + list(df.loc[df[cp_column]].index)
-
+    # Initialize an empty Series to store derivatives
     derivatives = pd.Series(index=df.index)
 
-    # Loop through pairs of change points
-    for i in range(len(change_points) - 1):
-        # Extract data between change points
-        segment = df.loc[change_points[i]:change_points[i + 1]]
+    # Set the first "change point" as the first data point in the series
+    # We assume here that we don't now prior change points, so the initial set
+    # of trend indicators will be from 0
+    first_cp = df.index[0]
+    last_cp = first_cp
 
+    for idx, row in df.iterrows():
+        # Extract segment from first change point to current point
+        segment = df.loc[last_cp:idx]
+
+        # Calculate polynomial regression
         model, x, y = calculate_polynomial_regression(segment, data_column)
 
+        # Get polynomial coefficients
         ridge = model.named_steps['linearregression']
-        deriv = np.polyder(ridge.coef_[::-1])
-        yd_plot = np.polyval(deriv, x)
+        coef = ridge.coef_[::-1]
 
-        # Assign all values of yd_plot to corresponding positions in derivatives
-        derivatives.loc[segment.index] = yd_plot.flatten()
+        # Calculate derivative
+        deriv = np.polyder(coef)
+        yd_plot = np.polyval(deriv, x.iloc[-1]['DateNumber'])  # Calculate only for the last point
+
+        # Store the derivative
+        derivatives.loc[idx] = yd_plot
+
+        # Update last change point if one exists
+        if row[cp_column]:
+            last_cp = idx
 
     return derivatives.fillna(0)
 
