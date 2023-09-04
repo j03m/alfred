@@ -59,6 +59,9 @@ class TraderEnv(gym.Env):
 
             # we could apply other expert/proven strategies here? turtles etc
             self.generate_expert_opinion()
+
+            self.visualization_timeseries = self.orig_timeseries.join(base_ai_df[column_list])
+
         else:
             info(f"Assuming {product} is pre-processed, full_df is ignored")
 
@@ -74,7 +77,7 @@ class TraderEnv(gym.Env):
             # This is the dataframe we will use to calculate profits and generate curriculum guidance
             self.orig_timeseries = original_df
 
-        self.visualization_timeseries = self.orig_timeseries.join(base_ai_df[column_list])
+            self.visualization_timeseries = base_ai_df
 
         # Define the observation space
         # Note this shape is intimately tied to the column list supplied by calculate_trend_metrics_for_ai
