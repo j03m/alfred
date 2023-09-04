@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-import yfinance as yf
-import time
 import pandas as pd
-import pandas_datareader.data as web
 import random
 import argparse
 from machine_learning_finance import download_ticker_list
@@ -16,7 +13,6 @@ parser.add_argument("-o", "--output-dir", default="./data", help="Output directo
 parser.add_argument("-rs", "--random-spys", type=int, default=None, help="Number of random stocks to select from SPY")
 
 args = parser.parse_args()
-
 
 def rando_spys(num):
     sp_assets = pd.read_html(
