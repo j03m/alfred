@@ -173,6 +173,7 @@ class TraderEnv(gym.Env):
         self.last_action = None
         self.last_profit = 0
         self.last_percent_gain_loss = 0
+        self.model_sentiment = []
         self.calculate_benchmark_metrics()
 
     def reset(self):

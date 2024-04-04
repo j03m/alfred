@@ -7,22 +7,17 @@
     * eps
     * analyst recommendations
   * Training:
+    * Can we make a YahooFinance pytorch datasource? Get a lot for free
+    * What does multi-core CPU testing look like on a really beefy linux box?
+    * What does BDSP give us?
     * We can give it more data using multiple random windows per time series :)
-  * Bug report and PR to SB3 for /Users/jmordetsky/machine_learning_finance/venv/lib/python3.11/site-packages/stable_baselines3/common/evaluation.py:67
-    * If we supply a monitor, we wrap it in a vecenv and then we have a vecenv wrapped by a vecenv and we get reset signature issues
-  * Can we subclass EvalCallback to benchmark against profit vs score? Do we want to do that or would it better to tie profit TO score
-    * Either way we might need to update our benchmark/eval script
-  * Can we modify multi proc to use pools? Probably not effectively since we only have 1 gpu
-  * Out of left field:
-    * Add LSTM prediction to processed data?
-# Next:
-  * check out obtuna
-  * How do we not only compare to bench but compare to the absolute trading policy?
-      * We should do a study of the optimal vs bench
-  * We need to retest this against inverse?
-* Read: https://github.com/optuna/optuna
-  * In the hyper parameter tuning tutorial they show how different net_arch for the SAC agent have different
-  * results. Optuna is supposed to help
+    * Lets drop stable baselines, so we're much closer to the metal and can understand the LSTM better
+    * The reinforcement learning can be working off of lstm predictions?
+    * What does granularity changes do to lstm predictions, like is it more or less accurate given daily vs weekly data?
+    * Given what we know about lstm and gru memory now, is there a way to remember less granular data (monthly) while processing daily?
+      * Maybe training against the same bar repeatedly where each day feeds into the current month bar
+    * confidence?
+    * Rendering?
 
 # Icebox
 

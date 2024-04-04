@@ -108,6 +108,8 @@ class RandomTrainingWindowUtil(BaseTrainingWindowUtil):
     def __init__(self, df, test_size):
         super().__init__(df)
         self._test_size = test_size
+        if len(df) - test_size < 0:
+            assert(f"Invalid length: {len(df) - test_size}")
         self._random_start = np.random.randint(0, len(df) - test_size)
         historical_end = self._random_start + test_size
         self._full_hist_df = df

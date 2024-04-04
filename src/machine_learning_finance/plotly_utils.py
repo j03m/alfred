@@ -28,6 +28,11 @@ def histogram(df):
     # Show the plot
     fig.show()
 
+def plot(data):
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=data.index, y=data, mode="lines", name="Value"))
+    fig.show()
+
 
 def plot_expert(df):
     scaled_prob_above_trend = pd.Series(scale_to_price(df["prob_above_trend"], df))
