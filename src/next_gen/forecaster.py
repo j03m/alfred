@@ -7,10 +7,10 @@ import joblib
 import os
 import numpy as np
 import argparse
-import glob
-import json
 import random
 from torch.utils.tensorboard import SummaryWriter
+from devices import set_device
+from model_persistence import (get_latest_model, maybe_save_model)
 g_tensor_board_writer = None
 
 g_num_features = 11  # Number of input features
@@ -20,7 +20,7 @@ g_num_layers = 5  # Number of LSTM layers
 g_dropout = 0.2  # Dropout rate
 g_num_epochs = 2000  # Epochs
 g_update_interval = 10
-g_eval_save_interval = 10
+g_eval_save_interval = 100
 
 
 class Forecaster(nn.Module):
@@ -31,22 +31,40 @@ class Forecaster(nn.Module):
         self.output_dim = output_dim
         self.num_layers = num_layers
 
-        # LSTM Layer
-        self.lstm = nn.LSTM(num_features, hidden_dim, num_layers, batch_first=True, dropout=dropout)
+        self.lstm1 = nn.LSTM(num_features, hidden_dim, batch_first=True)
+        self.dropout1 = nn.Dropout(dropout)
+        self.batchnorm1 = nn.BatchNorm1d(hidden_dim)
 
-        # Attention Layer: Implement a simple attention mechanism
-        self.attention = nn.Linear(hidden_dim, 1)
+        self.lstm2 = nn.LSTM(hidden_dim, hidden_dim, batch_first=True)
+        self.dropout2 = nn.Dropout(dropout)
+        self.batchnorm2 = nn.BatchNorm1d(hidden_dim)
 
-        # Output Layer
-        self.fc = nn.Linear(hidden_dim, output_dim)
+        self.lstm3 = nn.LSTM(hidden_dim, hidden_dim, batch_first=True)
+
+        self.output = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x):
-        lstm_out, _ = self.lstm(x)
-        attn_weights = torch.softmax(self.attention(lstm_out), dim=1)
-        attn_applied = torch.sum(attn_weights * lstm_out, dim=1)
-        output = self.fc(attn_applied)
+        x, _ = self.lstm1(x)
+        x = self.dropout1(x)
+        x = x.permute(0, 2, 1)
+        x = self.batchnorm1(x)
+        x = x.permute(0, 2, 1)
 
-        return output
+        x, _ = self.lstm2(x)
+        x = self.dropout2(x)
+        x = x.permute(0, 2, 1)
+        x = self.batchnorm2(x)
+        x = x.permute(0, 2, 1)
+
+        x, _ = self.lstm3(x)
+
+        # Apply attention
+        x = self.attention(x)
+
+        # Apply the output layer
+        x = self.output(x)
+
+        return x
 
 
 def create_dataset(df, lookback):
@@ -61,75 +79,6 @@ def create_dataset(df, lookback):
     return torch.tensor(np.array(X), dtype=torch.float), torch.tensor(np.array(y), dtype=torch.float)
 
 
-def get_latest_model(model_path, model_prefix):
-    search_pattern = os.path.join(model_path, f"{model_prefix}*.pth")
-    model_files = glob.glob(search_pattern)
-    if not model_files:
-        print("No previous model.")
-        return None
-    model_files.sort(key=lambda x: int(os.path.basename(x)[len(model_prefix):-4]), reverse=True)
-    print(f"Found {model_files[0]} for previous model.")
-    return model_files[0]
-
-
-def save_next_model(model, model_path, model_prefix):
-    search_pattern = os.path.join(model_path, f"{model_prefix}*.pth")
-
-    model_files = glob.glob(search_pattern)
-
-    max_counter = -1
-    for model_file in model_files:
-        basename = os.path.basename(model_file)
-        counter = basename[len(model_prefix):-4]
-        try:
-            counter = int(counter)
-            if counter > max_counter:
-                max_counter = counter
-        except ValueError:
-            continue  # Skip files that do not end with a number
-
-    next_counter = max_counter + 1
-    next_model_filename = f"{model_prefix}{next_counter}.pth"
-    next_model_path = os.path.join(model_path, next_model_filename)
-
-    # Save the model
-    torch.save(model.state_dict(), next_model_path)
-    print(f"Model saved to {next_model_path}")
-    return next_model_path
-
-
-def is_debugger_active():
-    try:
-        import pydevd  # Module used by PyCharm's debugger
-        return True
-    except ImportError:
-        return False
-
-
-def set_device():
-    if torch.cuda.is_available() and not is_debugger_active():
-        device = torch.device("cuda")
-    elif torch.backends.mps.is_available() and not is_debugger_active():
-        device = torch.device("mps")
-    else:
-        device = torch.device("cpu")
-    print(f"Using device: {device}")
-    return device
-
-
-def get_best_lost(model_path, model_prefix):
-    try:
-        with open(f"{model_path}/{model_prefix}-metrics.json", 'r') as f:
-            metrics = json.load(f)
-        best_loss = metrics['best_loss']
-    except (FileNotFoundError, KeyError):
-        best_loss = float('inf')
-    return best_loss
-
-
-def set_best_loss(model_path, model_prefix, loss):
-    with open(f"{model_path}/{model_prefix}-metrics.json", 'w') as f:
-        json.dump({'best_loss': loss}, f)
 
 
 def eval_forecaster_model(model,
@@ -155,20 +104,20 @@ def eval_forecaster_model(model,
 
     return average_loss
 
+def get_evaluator(model_path, model_prefix, eval_data_path):
 
-def eval_forecaster(model_path,
-                    model_prefix,
-                    eval_data_path):
-    current_model = get_latest_model(model_path, model_prefix)
-    model = Forecaster(g_num_features, g_hidden_dim, g_output_dim, g_num_layers, g_dropout)
-    if current_model is not None:
-        print("found model, loading previous state.")
-        model.load_state_dict(torch.load(current_model))
-    else:
-        raise Exception(f"No model to test found at: {model_path} with {model_prefix}!")
+    def eval_forecaster():
+        current_model = get_latest_model(model_path, model_prefix)
+        model = Forecaster(g_num_features, g_hidden_dim, g_output_dim, g_num_layers, g_dropout)
+        if current_model is not None:
+            print("found model, loading previous state.")
+            model.load_state_dict(torch.load(current_model))
+        else:
+            raise Exception(f"No model to test found at: {model_path} with {model_prefix}!")
 
-    return eval_forecaster_model(model, model_path, model_prefix, eval_data_path)
+        return eval_forecaster_model(model, model_path, model_prefix, eval_data_path)
 
+    return eval_forecaster
 
 def train_forecaster(model_path,
                      model_prefix,
@@ -189,6 +138,7 @@ def train_forecaster(model_path,
 
     current_model = get_latest_model(model_path, model_prefix)
     model = Forecaster(g_num_features, g_hidden_dim, g_output_dim, g_num_layers, g_dropout)
+    evaluator = get_evaluator(model_path, model_prefix, eval_data_path)
     if current_model is not None:
         print("found model, loading previous state.")
         model.load_state_dict(torch.load(current_model))
@@ -204,7 +154,7 @@ def train_forecaster(model_path,
             print("epoch: ", epoch, "last_loss: ", last_loss)
             g_tensor_board_writer.add_scalar("Loss/train", last_loss, epoch)
         if epoch % g_eval_save_interval == 0 and epoch >= g_eval_save_interval:
-            maybe_save_model(epoch, eval_data_path, eval_save, model, model_path, model_prefix)
+            maybe_save_model(epoch, evaluator, eval_save, model, model_path, model_prefix)
             g_tensor_board_writer.flush()
 
         for X_batch, y_batch in loader:
@@ -216,29 +166,18 @@ def train_forecaster(model_path,
             optimizer.step()
             last_loss = loss.item()
 
+    maybe_save_model(epoch, evaluator, eval_save, model, model_path, model_prefix)
 
 
-    maybe_save_model(epoch, eval_data_path, eval_save, model, model_path, model_prefix)
 
-
-def maybe_save_model(epoch, eval_data_path, eval_save, model, model_path, model_prefix):
-    if eval_save:
-        eval_loss = eval_forecaster_model(model, eval_data_path)
-        g_tensor_board_writer.add_scalar("Loss/eval", eval_loss, epoch)
-        best_loss = get_best_lost(model_path, model_prefix)
-        if eval_loss < best_loss:
-            print(f"New best model: {eval_loss} vs {best_loss}: saving")
-            save_next_model(model, model_path, model_prefix)
-            set_best_loss(model_path, model_prefix, eval_loss)
-        else:
-            print(f"{eval_loss} vs {best_loss}: declining save")
-    else:
-        print("saving model at: ", epoch)
-        save_next_model(model, model_path, model_prefix)
 
 
 # todo:
-# add tensor board: https://pytorch.org/tutorials/recipes/recipes/tensorboard_with_pytorch.html?highlight=tensorboard
+# Fix tensorboard
+# Learn about attention MultiheadAttention and the Transformer
+# We want to change forecaster to take an input of 30 days and then predict an optimal exit (peak or trough) price for the
+#   the following 30 days
+#   This will require preprocessing to extract these days, you'll need to test that and graph
 # how to shard on cpu
 # how to shard on gpu
 # get rudimentary forecaster working
@@ -263,6 +202,7 @@ if __name__ == "__main__":
 
     if args.action == "train":
         training_data_path = os.path.join(args.data_path, f"{args.ticker}_diffs.csv")
+        g_tensor_board_writer = SummaryWriter(f"train")
         train_forecaster(
             model_path=args.model_path,
             model_prefix=args.model_prefix,
@@ -271,6 +211,7 @@ if __name__ == "__main__":
         )
         # todo reminder we have the scaler for evaluation
         scaler = joblib.load(os.path.join(args.data_path, f"{args.ticker}_scaler.save"))
+        g_tensor_board_writer.close()
     elif args.action == "train-list":
         symbol_file = args.symbol_file
         if symbol_file is None:
@@ -280,7 +221,7 @@ if __name__ == "__main__":
             symbols = pd.read_csv(args.symbol_file)["Symbols"].tolist()
             random.shuffle(symbols)
             for ticker in symbols:
-                g_tensor_board_writer = SummaryWriter(f"train_{ticker}")
+                g_tensor_board_writer = SummaryWriter(f"train")
                 training_data_path = os.path.join(args.data_path, f"{ticker}_diffs.csv")
                 train_forecaster(
                     model_path=args.model_path,

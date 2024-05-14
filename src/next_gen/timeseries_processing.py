@@ -1,4 +1,5 @@
 import pandas as pd
+import torch
 from sklearn.preprocessing import StandardScaler
 
 
@@ -31,3 +32,6 @@ def scale_relevant_training_columns(data: pd.DataFrame, columns_to_scale: list) 
         scaled_df[col] = scaler.fit_transform(scaled_df[col].values.reshape(-1, 1))
 
     return scaled_df, scaler
+
+
+

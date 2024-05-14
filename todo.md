@@ -19,10 +19,29 @@
     * confidence?
     * Rendering?
 
+Thesis: 
+
+Transformers and gpt prove incredible at text, could we imagine a world where bars in a chart are letters, groups of bars are words and sequences of these
+bars are sentences. Ie, every sequence is telling us something and a transformer could be used to help unlock that. It could then study all timeseries and understand
+and detect investment patterns across multiple entities and be a better long term portfolio manager than a human. Using purely technical inputs to start. 
+
+* Really sit down and hammer on:
+  * torch.reshape
+  * torch.arrange
+  * repeat_interleave
+  * bmm
+  * normal vs tensor
+  * transpose
+  * permute
+  * sum
+* Got back through attention intro transformers
+  * write notes
+* Read through relevant pytorch examples/tutorials
+
 # Icebox
 
 * Kill all old notebooks - archive the tensorflow stuff
-
+* sample: https://github.com/CVxTz/time_series_forecasting/blob/main/time_series_forecasting/model.py
 # Reading List
 
 ## Open AI Five
