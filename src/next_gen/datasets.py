@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import Dataset
-
+from torch.nn.utils.rnn import pad_sequence
 class BasicPandasDataset(Dataset):
     """Dataset wrapping data and target variables in a pandas dataframe."""
 
@@ -30,8 +30,7 @@ class BasicPandasDataset(Dataset):
 
 
 def sliding_time_window(time_series, input_window, output_window):
-    # length of time series - input - output windows + 1
-    max_index = len(time_series) - (input_window - output_window + 1)
+    max_index = (len(time_series) - (input_window + output_window))
 
     # create a sliding window of sequences each predicting the next point.
     # if we have 4000 points, and we want 100 point predictions, we can have 3900 of these total
@@ -40,12 +39,17 @@ def sliding_time_window(time_series, input_window, output_window):
     # first of the 2 groups is the input input_window and the 2nd would be the expected output window
     # even tho we may predict a subset of input_window in output_window we assume it's larger here
     # the last input are the number of features time_series.size(1)
-    temp = torch.empty(max_index, 2, input_window, time_series.size(1))
+    inputs = []
+    outputs = []
     for i in range(max_index):
-        temp[i][0] = time_series[i:i + input_window]
-        temp[i][1] = time_series[i + output_window:i + input_window + output_window]
+        inputs.append(time_series[i:i + input_window])
+        outputs.append(time_series[i + input_window:i + input_window + output_window])
 
-    return temp
+    input_windows = pad_sequence(inputs, batch_first=True)
+    output_windows = pad_sequence(outputs, batch_first=True)
+
+    # Stack to create a single tensor with separate dimensions for input and output
+    return input_windows, output_windows
 
 
 class SlidingWindowPandasDataset(Dataset):
@@ -60,35 +64,42 @@ class SlidingWindowPandasDataset(Dataset):
 
         """
         features = dataframe[feature_columns].values.astype('float32')
-        self.sliding_windows = sliding_time_window(torch.tensor(features), input_window, output_window)
+        self.input_windows, self.output_windows = sliding_time_window(torch.tensor(features), input_window, output_window)
+        assert(len(self.input_windows) == len(self.output_windows))
 
     def __len__(self):
-        return len(self.sliding_windows)
+        return len(self.input_windows)
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
+        return self.input_windows[idx], self.output_windows[idx]
 
-        window = self.sliding_windows[idx][0], self.sliding_windows[idx][1]
-        return window
 
 class SlidingWindowDerivedOutputDataset(SlidingWindowPandasDataset):
-    def __init__(self, dataframe, feature_columns, input_window, derivations):
+    def __init__(self, dataframe, feature_columns, input_window, derivations, derivation_column):
+        derivations = sorted(derivations)
         output_window = max(derivations)
+
+        # Correctly slice rows of the dataframe to include the necessary range for input and output windows
+        # i don't remember why we do this
+        # required_rows = len(dataframe) - output_window + 1
+        # truncated_dataframe = dataframe.iloc[:required_rows]
+
         super().__init__(dataframe, feature_columns, input_window, output_window)
-
-        # use sliding windows to build derivations
-        self.derivations = []
-        for window in derivations:
-
-
-
-    def __len__(self):
-        return len(self.sliding_windows)
+        self.prices = dataframe[derivation_column].values
+        self.derivations = {}
+        for window in range(0, len(self.input_windows)):
+            # the last price in the input window (probably could have sliced prices into N windows as well but)
+            last_price_in_window = self.prices[window + input_window]
+            self.derivations[window] = []
+            for derivation in derivations:
+                # get the price N prices ahead of the end of the input window
+                price = self.prices[window + input_window + derivation]
+                profit = price - last_price_in_window
+                self.derivations[window].append(profit)
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-
-        window = self.sliding_windows[idx][0], self.sliding_windows[idx][1]
-        return window
+        return self.input_windows[idx], torch.tensor(self.derivations[idx])
