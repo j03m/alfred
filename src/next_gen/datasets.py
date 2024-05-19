@@ -22,9 +22,9 @@ class BasicPandasDataset(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
-        features = self.dataframe.iloc[idx][self.feature_columns].values.astype('float32')
+        features = self.dataframe.iloc[idx][self.feature_columns].values
         target = self.dataframe.iloc[idx][self.target_column]
-        sample = {'features': torch.from_numpy(features), 'target': torch.tensor(target, dtype=torch.float32)}
+        sample = {'features': torch.from_numpy(features).float(), 'target': torch.tensor(target).float()}
 
         return sample
 
@@ -63,7 +63,7 @@ class SlidingWindowPandasDataset(Dataset):
             output_window (int): the size of the output window
 
         """
-        features = dataframe[feature_columns].values.astype('float32')
+        features = dataframe[feature_columns].values
         self.input_windows, self.output_windows = sliding_time_window(torch.tensor(features), input_window, output_window)
         assert(len(self.input_windows) == len(self.output_windows))
 
@@ -73,7 +73,7 @@ class SlidingWindowPandasDataset(Dataset):
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-        return self.input_windows[idx], self.output_windows[idx]
+        return self.input_windows[idx].float(), self.output_windows[idx].float()
 
 
 class SlidingWindowDerivedOutputDataset(SlidingWindowPandasDataset):
@@ -102,4 +102,4 @@ class SlidingWindowDerivedOutputDataset(SlidingWindowPandasDataset):
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-        return self.input_windows[idx], torch.tensor(self.derivations[idx])
+        return self.input_windows[idx].float(), torch.tensor(self.derivations[idx]).float()
