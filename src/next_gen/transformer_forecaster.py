@@ -121,8 +121,7 @@ def train_tr_forecaster(model_path,
 
         if epoch % g_eval_save_interval == 0 and epoch >= g_eval_save_interval:
             # todo save model evaluator
-            # maybe_save_model(epoch, evaluator, eval_save, model, model_path, model_prefix)
-            pass
+            maybe_save_model(model, last_loss, model_path, model_prefix)
 
         # todo test this loop
         for X_batch, y_batch in loader:

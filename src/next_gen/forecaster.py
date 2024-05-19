@@ -10,7 +10,7 @@ import argparse
 import random
 from torch.utils.tensorboard import SummaryWriter
 from devices import set_device
-from model_persistence import (get_latest_model, maybe_save_model)
+from model_persistence import (get_latest_model, maybe_save_model_with_evaluator)
 g_tensor_board_writer = None
 
 g_num_features = 11  # Number of input features
@@ -154,7 +154,7 @@ def train_forecaster(model_path,
             print("epoch: ", epoch, "last_loss: ", last_loss)
             g_tensor_board_writer.add_scalar("Loss/train", last_loss, epoch)
         if epoch % g_eval_save_interval == 0 and epoch >= g_eval_save_interval:
-            maybe_save_model(epoch, evaluator, eval_save, model, model_path, model_prefix)
+            maybe_save_model_with_evaluator(epoch, evaluator, eval_save, model, model_path, model_prefix)
             g_tensor_board_writer.flush()
 
         for X_batch, y_batch in loader:
@@ -166,7 +166,7 @@ def train_forecaster(model_path,
             optimizer.step()
             last_loss = loss.item()
 
-    maybe_save_model(epoch, evaluator, eval_save, model, model_path, model_prefix)
+    maybe_save_model_with_evaluator(epoch, evaluator, eval_save, model, model_path, model_prefix)
 
 
 

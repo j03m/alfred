@@ -4,19 +4,23 @@ import torch
 import json
 
 
-def maybe_save_model(epoch, evaluator, eval_save, model, model_path, model_prefix):
+def maybe_save_model_with_evaluator(epoch, evaluator, eval_save, model, model_path, model_prefix):
     if eval_save:
         eval_loss = evaluator()
-        best_loss = get_best_loss(model_path, model_prefix)
-        if eval_loss < best_loss:
-            print(f"New best model: {eval_loss} vs {best_loss}: saving")
-            save_next_model(model, model_path, model_prefix)
-            set_best_loss(model_path, model_prefix, eval_loss)
-        else:
-            print(f"{eval_loss} vs {best_loss}: declining save")
+        maybe_save_model(model, eval_loss, model_path, model_prefix)
     else:
         print("saving model at: ", epoch)
         save_next_model(model, model_path, model_prefix)
+
+
+def maybe_save_model(model, eval_loss, model_path, model_prefix):
+    best_loss = get_best_loss(model_path, model_prefix)
+    if eval_loss < best_loss:
+        print(f"New best model: {eval_loss} vs {best_loss}: saving")
+        save_next_model(model, model_path, model_prefix)
+        set_best_loss(model_path, model_prefix, eval_loss)
+    else:
+        print(f"{eval_loss} vs {best_loss}: declining save")
 
 
 def get_best_loss(model_path, model_prefix):
