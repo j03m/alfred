@@ -56,13 +56,13 @@ def read_file(data_path_, file, symbol, fail_on_missing=False):
     return data_df
 
 
-def download_ticker_list(ticker_list, output_dir="./data/", tail=-1, head=-1):
+def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=-1, head=-1):
     bad_tickers = []
     for ticker in ticker_list:
         time.sleep(0.25)
         print("ticker: ", ticker)
         try:
-            ticker_obj = yf.download(tickers=ticker, interval="1d")
+            ticker_obj = yf.download(tickers=ticker, interval=interval)
             df = pd.DataFrame(ticker_obj)
             if tail != -1:
                 df = df.tail(tail)

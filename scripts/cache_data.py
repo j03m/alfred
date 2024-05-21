@@ -40,7 +40,7 @@ if args.random_spys is not None:
     symbols += rando_spys(args.random_spys)
 
 symbols = list(set(symbols))
-bad_symbols = download_ticker_list(symbols, args.output_dir)
+bad_symbols = download_ticker_list(symbols, args.output_dir, interval="1wk")
 
 if bad_symbols is None:
     final_symbols = set(symbols)

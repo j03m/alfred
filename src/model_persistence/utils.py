@@ -7,25 +7,28 @@ import json
 def maybe_save_model_with_evaluator(epoch, evaluator, eval_save, model, model_path, model_prefix):
     if eval_save:
         eval_loss = evaluator()
-        maybe_save_model(model, eval_loss, model_path, model_prefix)
+        return maybe_save_model(model, eval_loss, model_path, model_prefix)
     else:
         print("saving model at: ", epoch)
         save_next_model(model, model_path, model_prefix)
+        return True
 
 
-def maybe_save_model(model, eval_loss, model_path, model_prefix):
-    best_loss = get_best_loss(model_path, model_prefix)
+def maybe_save_model(model, eval_loss, model_path, model_prefix, token="all"):
+    best_loss = get_best_loss(model_path, model_prefix, token)
     if eval_loss < best_loss:
         print(f"New best model: {eval_loss} vs {best_loss}: saving")
         save_next_model(model, model_path, model_prefix)
-        set_best_loss(model_path, model_prefix, eval_loss)
+        set_best_loss(model_path, model_prefix, eval_loss, token)
+        return True
     else:
         print(f"{eval_loss} vs {best_loss}: declining save")
+        return False
 
 
-def get_best_loss(model_path, model_prefix):
+def get_best_loss(model_path, model_prefix, token="all"):
     try:
-        with open(f"{model_path}/{model_prefix}-metrics.json", 'r') as f:
+        with open(f"{model_path}/{model_prefix}-{token}-metrics.json", 'r') as f:
             metrics = json.load(f)
         best_loss = metrics['best_loss']
     except (FileNotFoundError, KeyError):
@@ -33,8 +36,8 @@ def get_best_loss(model_path, model_prefix):
     return best_loss
 
 
-def set_best_loss(model_path, model_prefix, loss):
-    with open(f"{model_path}/{model_prefix}-metrics.json", 'w') as f:
+def set_best_loss(model_path, model_prefix, loss, token="all"):
+    with open(f"{model_path}/{model_prefix}-{token}-metrics.json", 'w') as f:
         json.dump({'best_loss': loss}, f)
 
 

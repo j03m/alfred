@@ -7,15 +7,17 @@ from model_persistence import get_latest_model, maybe_save_model
 import torch.optim as optim
 import torch.utils.data as data
 
+
 from .datasets import SlidingWindowDerivedOutputDataset
 
 g_tensor_board_writer = None
 
-g_num_epochs = 2000  # Epochs
+g_num_epochs = 10000  # Epochs
 g_update_interval = 10
-g_eval_save_interval = 100
+g_eval_save_interval = 50
 g_model_size = 250
-
+g_input_window = 52
+g_max_patience = 10
 
 class PositionalEncoding(nn.Module):
     def __init__(self, model_size=g_model_size, max_len=5000):
@@ -69,23 +71,33 @@ class TransformerForecaster(nn.Module):
 def train_tr_forecaster(model_path,
                         model_prefix,
                         training_data_path,
+                        token=None,
                         eval_data_path=None):
     device = devices.set_device()
+    # todo arg us!
+    # predict pricing 4, 8, 12 bars out (weeks)
+    derivations = [
+        4, 8, 12
+    ]
+
+    # todo lets move this inside of a dataframe - we need to call it multi frame dataset
+    # it will load different datasets and then build input windows out of that until we have
+    # some limit of input windows such that larger batches make sense
     try:
         df = pd.read_csv(training_data_path, index_col='Date', parse_dates=True)
     except FileNotFoundError:
         print("No data found, skipping")
         return
 
+    if len(df) < g_input_window + max(derivations):
+        print("Not enough data data, skipping")
+        return
+
     eval_save = False
     if eval_data_path is not None:
         eval_save = True
 
-    # todo arg us!
-    # predict pricing 4, 8, 12 bars out (weeks)
-    derivations = [
-        4, 8, 12
-    ]
+
     data_set = SlidingWindowDerivedOutputDataset(dataframe=df,
                                                  feature_columns=[
                                                      "Close_diff_MA_7", "Volume_diff_MA_7", "Close_diff_MA_30",
@@ -93,7 +105,7 @@ def train_tr_forecaster(model_path,
                                                      "Close_diff_MA_90", "Volume_diff_MA_90", "Close_diff_MA_180",
                                                      "Volume_diff_MA_180", "Close_diff_MA_360", "Volume_diff_MA_360",
                                                      "Close"
-                                                 ], input_window=52, derivations=derivations, derivation_column="Close")
+                                                 ], input_window=g_input_window, derivations=derivations, derivation_column="Close")
 
     current_model = get_latest_model(model_path, model_prefix)
 
@@ -109,19 +121,32 @@ def train_tr_forecaster(model_path,
     loss_function = nn.MSELoss()
 
     # todo: variable learning rate?
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.AdamW(model.parameters(), lr=0.01, weight_decay=0.01)
 
-    # todo increase the batch size?
-    loader = data.DataLoader(data_set, batch_size=10)
+    # todo the max batch size for most of these is like 25 (all data/52 weeks)
+    # if we really want to increase the batch size to these types of sizes and max ram
+    # we need to load multiple tickers. We need to keep loading 52 week windows until we
+    # hit some max memory and then see how much we can push into the gpu I think in 10gb we
+    # can put 397,329 input windows
+    loader = data.DataLoader(data_set, batch_size=32768)
     model.train()
     last_loss = float('inf')
+    patience = 0
     for epoch in range(g_num_epochs):
         if epoch % g_update_interval == 0:
             print("epoch: ", epoch, "last_loss: ", last_loss)
 
         if epoch % g_eval_save_interval == 0 and epoch >= g_eval_save_interval:
             # todo save model evaluator
-            maybe_save_model(model, last_loss, model_path, model_prefix)
+            result = maybe_save_model(model, last_loss, model_path, model_prefix, token)
+            if not result:
+                patience = patience+1
+            else:
+                patience = 0
+            if patience > g_max_patience:
+                print("out of patience, next symbol")
+                return
+
 
         # todo test this loop
         for X_batch, y_batch in loader:
