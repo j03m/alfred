@@ -14,18 +14,13 @@ def main():
     if args.symbols:
         symbols = args.symbols.split(',')
     else:
-        symbols += pd.read_csv(args.symbol_file)["Symbols"].tolist()
+        symbols = pd.read_csv(args.symbol_file)["Symbols"].tolist()
 
     random.shuffle(symbols)
-    for symbol in symbols:
-        print(f"training: {symbol}")
-        # todo we're going to pass a single dataframe in here
-        # consisting of multiple symbols but we have to make sure each
-
-        train_tr_forecaster(model_path="./models",
-                         model_prefix="tranformer_forecaster_",
-                         training_data_path=f"./data/{symbol}_diffs.csv",
-                         token=symbol)
+    train_tr_forecaster(model_path="./models",
+                     model_prefix="tranformer_forecaster_",
+                     training_data_path=args.data,
+                     ticker_list=symbols)
 
 if __name__ == "__main__":
     main()

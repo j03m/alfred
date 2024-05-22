@@ -7,8 +7,7 @@ from model_persistence import get_latest_model, maybe_save_model
 import torch.optim as optim
 import torch.utils.data as data
 
-
-from .datasets import SlidingWindowDerivedOutputDataset
+from .datasets import MultiSymbolStreamingSlidingWindowDerivedOutputDataset
 
 g_tensor_board_writer = None
 
@@ -18,6 +17,7 @@ g_eval_save_interval = 50
 g_model_size = 250
 g_input_window = 52
 g_max_patience = 10
+
 
 class PositionalEncoding(nn.Module):
     def __init__(self, model_size=g_model_size, max_len=5000):
@@ -71,7 +71,7 @@ class TransformerForecaster(nn.Module):
 def train_tr_forecaster(model_path,
                         model_prefix,
                         training_data_path,
-                        token=None,
+                        ticker_list,
                         eval_data_path=None):
     device = devices.set_device()
     # todo arg us!
@@ -80,32 +80,18 @@ def train_tr_forecaster(model_path,
         4, 8, 12
     ]
 
-    # todo lets move this inside of a dataframe - we need to call it multi frame dataset
-    # it will load different datasets and then build input windows out of that until we have
-    # some limit of input windows such that larger batches make sense
-    try:
-        df = pd.read_csv(training_data_path, index_col='Date', parse_dates=True)
-    except FileNotFoundError:
-        print("No data found, skipping")
-        return
-
-    if len(df) < g_input_window + max(derivations):
-        print("Not enough data data, skipping")
-        return
-
-    eval_save = False
-    if eval_data_path is not None:
-        eval_save = True
-
-
-    data_set = SlidingWindowDerivedOutputDataset(dataframe=df,
-                                                 feature_columns=[
-                                                     "Close_diff_MA_7", "Volume_diff_MA_7", "Close_diff_MA_30",
-                                                     "Volume_diff_MA_30",
-                                                     "Close_diff_MA_90", "Volume_diff_MA_90", "Close_diff_MA_180",
-                                                     "Volume_diff_MA_180", "Close_diff_MA_360", "Volume_diff_MA_360",
-                                                     "Close"
-                                                 ], input_window=g_input_window, derivations=derivations, derivation_column="Close")
+    data_set = MultiSymbolStreamingSlidingWindowDerivedOutputDataset(training_data_path, ticker_list,
+                                                                     feature_columns=[
+                                                                         "Close_diff_MA_7", "Volume_diff_MA_7",
+                                                                         "Close_diff_MA_30",
+                                                                         "Volume_diff_MA_30",
+                                                                         "Close_diff_MA_90", "Volume_diff_MA_90",
+                                                                         "Close_diff_MA_180",
+                                                                         "Volume_diff_MA_180", "Close_diff_MA_360",
+                                                                         "Volume_diff_MA_360",
+                                                                         "Close"
+                                                                     ], input_window=g_input_window,
+                                                                     derivations=derivations, derivation_column="Close")
 
     current_model = get_latest_model(model_path, model_prefix)
 
@@ -128,11 +114,12 @@ def train_tr_forecaster(model_path,
     # we need to load multiple tickers. We need to keep loading 52 week windows until we
     # hit some max memory and then see how much we can push into the gpu I think in 10gb we
     # can put 397,329 input windows
-    loader = data.DataLoader(data_set, batch_size=32768)
+    loader = data.DataLoader(data_set, batch_size=4192)
     model.train()
     last_loss = float('inf')
     patience = 0
     for epoch in range(g_num_epochs):
+        token = data_set.get_current_ticker()
         if epoch % g_update_interval == 0:
             print("epoch: ", epoch, "last_loss: ", last_loss)
 
@@ -140,13 +127,12 @@ def train_tr_forecaster(model_path,
             # todo save model evaluator
             result = maybe_save_model(model, last_loss, model_path, model_prefix, token)
             if not result:
-                patience = patience+1
+                patience = patience + 1
             else:
                 patience = 0
             if patience > g_max_patience:
                 print("out of patience, next symbol")
                 return
-
 
         # todo test this loop
         for X_batch, y_batch in loader:
