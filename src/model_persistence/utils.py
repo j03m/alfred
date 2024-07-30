@@ -75,4 +75,5 @@ def save_next_model(model, model_path, model_prefix):
     # Save the model
     torch.save(model.state_dict(), next_model_path)
     print(f"Model saved to {next_model_path}")
+
     return next_model_path
