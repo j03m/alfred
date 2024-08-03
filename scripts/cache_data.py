@@ -2,7 +2,7 @@
 import pandas as pd
 import random
 import argparse
-from machine_learning_finance import download_ticker_list
+from alfred.data import download_ticker_list
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--symbols", help="Symbols to use (default: SPY), separated by comma")

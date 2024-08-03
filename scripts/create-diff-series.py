@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from machine_learning_finance import read_symbol_file
-from next_gen import attach_moving_average_diffs, scale_relevant_training_columns, attach_profits
+from alfred.data import read_symbol_file
+from alfred.data import attach_moving_average_diffs, scale_relevant_training_columns, attach_profits
 import argparse
 import os
 import joblib
