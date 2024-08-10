@@ -23,7 +23,7 @@ def main():
     ticker_data_frames = []
     for symbol in symbols:
         print("pre-processing: ", symbol)
-        df = read_symbol_file(args.data, symbol)
+        df = read_symbol_file(args.data, symbol, date_index=False)
         if df is None:
             continue
 
@@ -37,7 +37,7 @@ def main():
         # attach the labels for price movement
         for pred in args.pred:
             label = f'label_change_term_{pred}'
-            df[label] = df['close'].pct_change(periods=pred).shift(
+            df[label] = df['Close'].pct_change(periods=pred).shift(
                 periods=(-1 * pred))
             columns.append(label)
 
@@ -63,25 +63,28 @@ def main():
     final_df = final_df.ffill().bfill()
 
     # save unscaled interim path
-    directory = os.path.dirname(args.symbol_file)
     base_name = os.path.basename(args.symbol_file)
     file_name, file_extension = os.path.splitext(base_name)
     new_file_name = f"{file_name}_processed_unscaled{file_extension}"
-    new_file_path = os.path.join(directory, new_file_name)
+    new_file_path = os.path.join(args.data, new_file_name)
     final_df.to_csv(new_file_path)
 
     # continue scaling
+    # todo problems:
+    # price, volume, percent change should all be scaled separately (what does stock former do)
+
+
     final_df, scaler = scale_relevant_training_columns(final_df, columns)
 
     # save the scaled data file (final)
     new_file_name = f"{file_name}_processed_scaled{file_extension}"
-    new_file_path = os.path.join(directory, new_file_name)
-    df.to_csv(new_file_path)
+    new_file_path = os.path.join(args.data, new_file_name)
+    final_df.to_csv(new_file_path)
 
     # save the scaler
     new_file_name = f"{file_name}_scaler.save"
-    new_file_path = os.path.join(directory, new_file_name)
-    joblib.dump(scaler, os.path.join(args.data, new_file_path))
+    new_file_path = os.path.join(args.data, new_file_name)
+    joblib.dump(scaler, new_file_path)
 
 
 if __name__ == "__main__":
