@@ -1,35 +1,35 @@
 import pandas as pd
-import yfinance as yf
 import os
 import argparse
-
-
-def fetch_fundamentals(symbol):
-    stock = yf.Ticker(symbol)
-    df_financials = stock.quarterly_financials.transpose()
-    df_balance_sheet = stock.quarterly_balance_sheet.transpose()
-    df_cash_flow = stock.quarterly_cash_flow.transpose()
-    df_fundamentals = pd.concat([df_financials, df_balance_sheet, df_cash_flow], axis=1)
-
-    return df_fundamentals
-
+from alfred import utils
 
 def main(symbols_file, data_dir):
     df_symbols = pd.read_csv(symbols_file)
+    alpha = utils.AlphaDownloader()
+
     for symbol in df_symbols['Symbols']:
         print(f"Processing {symbol}")
-        df_fundamentals = fetch_fundamentals(symbol)
+        # skip the fix
+        if symbol == '^VIX':
+            continue
+
+        _, quarterly_earnings = alpha.earnings(symbol)
 
         price_file_path = os.path.join(data_dir, f"{symbol}.csv")
 
         if os.path.exists(price_file_path):
             df_prices = pd.read_csv(price_file_path)
-            df_fundamentals.index = pd.to_datetime(df_fundamentals.index)
+            quarterly_earnings.index = pd.to_datetime(quarterly_earnings["Date"])
+            quarterly_earnings = quarterly_earnings.drop(columns=['Date'])
             df_prices.index = pd.to_datetime(df_prices['Date'])
-
+            df_prices = df_prices.drop(columns=['Date'])
             # Merging data
-            df_combined = df_prices.join(df_fundamentals, how='outer')
+            df_combined = df_prices.join(quarterly_earnings, how='outer')
+            # forward will earnings - prevents lookahead
             df_combined.fillna(method='ffill', inplace=True)
+
+            # after forward fill, we may still have na if price goes back further than earnings, treat these as 0
+            df_combined.fillna(0, inplace=True)
 
             # Writing to CSV
             output_path = os.path.join(data_dir, f"{symbol}_fundamentals.csv")
