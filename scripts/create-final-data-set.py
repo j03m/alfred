@@ -6,6 +6,7 @@ import argparse
 import os
 import joblib
 import pandas as pd
+from sklearn.decomposition import PCA
 
 
 
@@ -19,6 +20,30 @@ initial_columns_to_keep = [
     "surprisePercentage"
 ]
 
+def add_treasuries(final_df, args):
+    treasuries = pd.read_csv(f"{args.data}/treasuries.csv")
+    treasuries.index = pd.to_datetime(treasuries['date'])
+    treasuries = treasuries.drop(columns=['date'])
+
+    # First, sort by index
+    final_df = final_df.sort_index()
+
+    # Then, sort by the 'Symbol' column, maintaining the order of the index
+    final_df = final_df.sort_values(by='Symbol', kind='mergesort')
+
+    earliest_date = final_df.index.min()
+
+    treasuries_filtered = treasuries[treasuries.index >= earliest_date]
+
+    # Step 3: Perform the join
+    final_df = final_df.join(treasuries_filtered, how='outer')
+
+    # forward fill - prevents lookahead
+    final_df.fillna(method='ffill', inplace=True)
+
+    # backfill anything left over
+    final_df.fillna(method='bfill', inplace=True)
+    return final_df
 
 def main():
     parser = argparse.ArgumentParser()
@@ -64,28 +89,7 @@ def main():
 
     final_df = pd.concat(ticker_data_frames)
 
-    treasuries = pd.read_csv(f"{args.data}/treasuries.csv")
-    treasuries.index = pd.to_datetime(treasuries['date'])
-    treasuries = treasuries.drop(columns=['date'])
-
-    # First, sort by index
-    final_df = final_df.sort_index()
-
-    # Then, sort by the 'Symbol' column, maintaining the order of the index
-    final_df = final_df.sort_values(by='Symbol', kind='mergesort')
-
-    earliest_date = final_df.index.min()
-
-    treasuries_filtered = treasuries[treasuries.index >= earliest_date]
-
-    # Step 3: Perform the join
-    final_df = final_df.join(treasuries_filtered, how='outer')
-
-    # forward fill - prevents lookahead
-    final_df.fillna(method='ffill', inplace=True)
-
-    # backfill anything left over
-    final_df.fillna(method='bfill', inplace=True)
+    final_df = add_treasuries(final_df, args)
 
     # save unscaled interim path
     base_name = os.path.basename(args.symbol_file)
@@ -119,8 +123,6 @@ def main():
     scaled_df.to_csv(new_file_path)
 
     scaler.serialize(os.path.join(args.data, f"{file_name}_scaler.joblib"))
-
-
 
 if __name__ == "__main__":
     main()

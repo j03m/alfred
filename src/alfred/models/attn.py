@@ -1,9 +1,10 @@
-# original impl is https://github.com/gsyyysg/StockFormer.git
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
 import numpy as np
 from math import sqrt
-from utils.masking import TriangularCausalMask
+from alfred.utils import TriangularCausalMask
 
 class FullAttention(nn.Module):
     def __init__(self, mask_flag=True, factor=5, scale=None, attention_dropout=0.1, output_attention=False):
