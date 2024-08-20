@@ -1,6 +1,9 @@
 from alfred.data import DatasetStocks
-from torch import DataLoader
+from torch import DataLoader, nn, optim
+from alfred.models import Transformer
+from alfred.devices import set_device
 import argparse
+import torch
 
 def main():
     parser = argparse.ArgumentParser()
@@ -9,20 +12,61 @@ def main():
     parser.add_argument('--shuffle', type=bool, default=False, help="shuffle data?")
     parser.add_argument('--num-workers', type=int, default=3, help="number of workers")
     parser.add_argument('--epochs', type=int, help="number of epochs")
+    parser.add_argument('--learning-rate', type=float, default=0.001, help="learning rate")
+    parser.add_argument("--sequence-length", type=int, default=24, help="sequence length")
     args = parser.parse_args()
-    data_set = DatasetStocks(args.symbol_file)
 
-    # model?
+    # Load dataset
+    # todo change dataset or loader to deal in batches of all available stocks
+    data_set = DatasetStocks(args.training_file, args.sequence_length)
 
+    device = set_device()
+
+    # Define model
+    model = Transformer(
+        enc_in=data_set.features,
+        dec_in=data_set.features,
+        c_out=data_set.labels
+    ).to(device)
+
+    # Define loss function and optimizer
+    criterion = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
+
+    # Define DataLoader
     train_loader = DataLoader(
         dataset=data_set,
-        batch_size=args.batch_size,  # Define batch size
-        shuffle=args.shuffle,  # Whether to shuffle the data at every epoch
-        num_workers=args.num_workers  # Number of subprocesses to use for data loading
+        batch_size=args.batch_size,
+        shuffle=args.shuffle,
+        num_workers=args.num_workers
     )
-    for epoch in range(args.epochs):  # Replace num_epochs with the actual number of epochs you want
+
+    # Training loop
+    for epoch in range(args.epochs):
+        model.train()  # Set model to training mode
+        running_loss = 0.0
+
         for i, (batch_x, batch_y) in enumerate(train_loader):
-            pass
+            batch_x, batch_y = batch_x.to(device), batch_y.to(device)
+
+            # Zero the parameter gradients
+            optimizer.zero_grad()
+
+            # Forward pass
+            outputs = model(batch_x)
+            loss = criterion(outputs, batch_y)
+
+            # Backward pass and optimize
+            loss.backward()
+            optimizer.step()
+
+            # Print statistics
+            running_loss += loss.item()
+            if i % 10 == 9:  # Print every 10 mini-batches
+                print(f'Epoch [{epoch + 1}/{args.epochs}], Step [{i + 1}/{len(train_loader)}], Loss: {running_loss / 10:.4f}')
+                running_loss = 0.0
+
+    print('Training complete')
 
 if __name__ == "__main__":
     main()

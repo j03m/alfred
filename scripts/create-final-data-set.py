@@ -45,6 +45,34 @@ def add_treasuries(final_df, args):
     final_df.fillna(method='bfill', inplace=True)
     return final_df
 
+
+import pandas as pd
+
+# Assuming 'final_df' has a DatetimeIndex and a column called 'Symbol'
+import pandas as pd
+
+
+def align_date_range(final_df):
+    # Step 1: Group by 'Symbol' and find the start date for each symbol
+    start_dates = final_df.groupby('Symbol').apply(lambda x: x.index.min())
+
+    # Step 2: Find the symbol with the latest start date (this limits the date range)
+    latest_start_date = start_dates.max()
+    symbol_with_latest_start_date = start_dates.idxmax()
+
+    # Step 3: Filter out rows where the date is earlier than the latest start date
+    filtered_df = final_df[final_df.index >= latest_start_date]
+
+    # Step 4: Get the final min and max dates in the filtered DataFrame
+    final_min_date = filtered_df.index.min()
+    final_max_date = filtered_df.index.max()
+
+    # Emit the final date range and the symbol causing the limitation
+    print(f"Final Date Range: {final_min_date} to {final_max_date} limited by: {symbol_with_latest_start_date}")
+
+    return filtered_df, final_min_date, final_max_date
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--symbols', type=str, help="Symbols to use separated by comma")
@@ -90,6 +118,8 @@ def main():
     final_df = pd.concat(ticker_data_frames)
 
     final_df = add_treasuries(final_df, args)
+
+    final_df, _, _ = align_date_range(final_df)
 
     # save unscaled interim path
     base_name = os.path.basename(args.symbol_file)

@@ -11,11 +11,11 @@ from .transformer_layer import EncoderLayer, DecoderLayer, Encoder, Decoder
 from .attn import FullAttention, AttentionLayer
 from .embed import DataEmbedding
 
-class Transformer_base(nn.Module):
+class Transformer(nn.Module):
     def __init__(self, enc_in, dec_in, c_out,
                 d_model=128, n_heads=4, e_layers=2, d_layers=1, d_ff=256, 
                 dropout=0.0, activation='gelu', output_attention=False):
-        super(Transformer_base, self).__init__()
+        super(Transformer, self).__init__()
 
         # Encoding
         self.enc_embedding = DataEmbedding(enc_in, d_model, dropout)
