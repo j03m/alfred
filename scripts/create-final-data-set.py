@@ -8,8 +8,6 @@ import joblib
 import pandas as pd
 from sklearn.decomposition import PCA
 
-
-
 initial_columns_to_keep = [
     "Symbol",
     "Close",
@@ -19,6 +17,7 @@ initial_columns_to_keep = [
     "surprise",
     "surprisePercentage"
 ]
+
 
 def add_treasuries(final_df, args):
     treasuries = pd.read_csv(f"{args.data}/treasuries.csv")
@@ -73,6 +72,15 @@ def align_date_range(final_df):
     return filtered_df, final_min_date, final_max_date
 
 
+def attach_price_prediction_labels(args, columns, df):
+    # attach the labels for price movement
+    for pred in args.pred:
+        label = f'price_change_term_{pred}'
+        df[label] = df['Close'].pct_change(periods=pred).shift(
+            periods=(-1 * pred))
+        columns.append(label)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--symbols', type=str, help="Symbols to use separated by comma")
@@ -98,12 +106,11 @@ def main():
         # attach moving averages
         df, columns = attach_moving_average_diffs(df)
 
-        # attach the labels for price movement
-        for pred in args.pred:
-            label = f'price_change_term_{pred}'
-            df[label] = df['Close'].pct_change(periods=pred).shift(
-                periods=(-1 * pred))
-            columns.append(label)
+        # attach labels
+        attach_price_prediction_labels(args, columns, df)
+
+        # both of these functions will cause NaN to get introduced. We can't predict for labels we don't have with missing data, so we'll trim it all out
+        df.dropna(inplace=True)
 
         df["Symbol"] = symbol
 
@@ -119,7 +126,12 @@ def main():
 
     final_df = add_treasuries(final_df, args)
 
+    # we need all stocks to be trained on the same number of days
+    # todo: maybe we should reconsider training all of them in one data frame here - since we're not using covariance, this doesn't make a ton
+    # of sense and we could get more data treating them 1 at time maybe?
     final_df, _, _ = align_date_range(final_df)
+
+    assert not final_df.isnull().any().any(), f"unscaled df has null after transform"
 
     # save unscaled interim path
     base_name = os.path.basename(args.symbol_file)
@@ -130,14 +142,16 @@ def main():
 
     # continue scaling
     scaler = CustomScaler([
-        {'regex': r'^Close.*', 'type': 'standard', 'augment': 'log'},
-        {'regex': r'^pricing_change_term_.+', 'type': 'standard', 'augment': 'log'},
+        {'regex': r'^Close.*', 'type': 'standard'},
+        {'regex': r'^pricing_change_term_.+', 'type': 'standard'},
         {'regex': r'Volume.*', 'type': 'standard', 'augment': 'log'},
         {'columns': ['reportedEPS', 'estimatedEPS', 'surprise', 'surprisePercentage'], 'type': 'standard'},
         {'regex': r'\d+year', 'type': 'standard'}
     ], final_df)
 
     scaled_df = scaler.fit_transform(final_df)
+
+    assert not scaled_df.isnull().any().any(), f"scaled df has null after transform"
 
     if args.debug:
         for column in final_df.columns:
@@ -154,5 +168,8 @@ def main():
 
     scaler.serialize(os.path.join(args.data, f"{file_name}_scaler.joblib"))
 
+
 if __name__ == "__main__":
+    print("start")
     main()
+    print("end")

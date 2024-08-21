@@ -6,6 +6,11 @@ import re
 
 SUPPORTED_AUGMENTS = ["log"]
 
+
+def signed_log1p(x):
+    return np.sign(x) * np.log1p(np.abs(x))
+
+
 class CustomScaler:
     def __init__(self, config, df):
         self.config = config
@@ -46,23 +51,29 @@ class CustomScaler:
         for column, scaler in self.scaler_mapping.items():
             augment = self.augment_mapping.get(column, None)
             if augment == 'log':
-                temp_col= np.log1p(df[[column]])
+                temp_col = np.log1p(df[[column]])
                 scaler.fit(temp_col)
             else:
                 scaler.fit(df[[column]])
 
-
-    def transform(self, df, in_place = False):
+    def transform(self, df, in_place=False):
         if not in_place:
             df = df.copy()
 
         for column, scaler in self.scaler_mapping.items():
             augment = self.augment_mapping.get(column, None)
+            assert not df[column].isnull().any(), f"{column} has null before transform"
             if augment == 'log':
-                temp_col = np.log1p(df[[column]])
-                df[column] = scaler.transform(temp_col)
+                orig_col = df[column]
+                temp_col = signed_log1p(df[[column]])
+                temp_col = scaler.transform(temp_col)
+                df[column] = temp_col
+                assert not df[column].isnull().any(), f"{column} has null after transform"
             else:
-                df[column] = scaler.transform(df[[column]])
+                orig_col = df[column]
+                temp_col = scaler.transform(df[[column]])
+                df[column] = temp_col
+                assert not df[column].isnull().any(), f"{column} has null after transform"
         return df
 
     def fit_transform(self, df):

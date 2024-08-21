@@ -1,5 +1,6 @@
 from alfred.data import DatasetStocks
-from torch import DataLoader, nn, optim
+from torch import nn, optim
+from torch.utils.data import DataLoader
 from alfred.models import Transformer
 from alfred.devices import set_device
 import argparse
