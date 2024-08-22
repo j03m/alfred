@@ -3,7 +3,7 @@ import torch
 from sklearn.preprocessing import StandardScaler
 
 
-def attach_moving_average_diffs(data: pd.DataFrame, moving_averages_days=[7, 30, 90, 180, 360]) -> pd.DataFrame:
+def attach_moving_average_diffs(data: pd.DataFrame, moving_averages_days=[7, 30, 90, 180]) -> pd.DataFrame:
     # Initialize an empty list to store the new column names
     new_columns = []
     for ma in moving_averages_days:

@@ -15,7 +15,10 @@ initial_columns_to_keep = [
     "reportedEPS",
     "estimatedEPS",
     "surprise",
-    "surprisePercentage"
+    "surprisePercentage",
+    'Margin_Gross',
+    'Margin_Operating',
+    'Margin_Net_Profit',
 ]
 
 
@@ -98,10 +101,13 @@ def main():
 
     ticker_data_frames = []
     for symbol in symbols:
-        print("pre-processing: ", symbol)
-        df = read_file(args.data, f"{symbol}_fundamentals.csv")
-        if df is None:
+        if symbol == "^VIX":
             continue
+
+        print("pre-processing: ", symbol)
+
+        df = read_file(args.data, f"{symbol}_fundamentals.csv")
+        assert(df is not None)
 
         # attach moving averages
         df, columns = attach_moving_average_diffs(df)
@@ -111,6 +117,11 @@ def main():
 
         # both of these functions will cause NaN to get introduced. We can't predict for labels we don't have with missing data, so we'll trim it all out
         df.dropna(inplace=True)
+
+        min_date = df.index.min()
+        max_date = df.index.max()
+        print(f"Min date for {symbol}: {min_date}")
+        print(f"Max date for {symbol}: {max_date}")
 
         df["Symbol"] = symbol
 
@@ -126,9 +137,7 @@ def main():
 
     final_df = add_treasuries(final_df, args)
 
-    # we need all stocks to be trained on the same number of days
-    # todo: maybe we should reconsider training all of them in one data frame here - since we're not using covariance, this doesn't make a ton
-    # of sense and we could get more data treating them 1 at time maybe?
+    # todo: what is up here? final date range is 2021 start...should go further back
     final_df, _, _ = align_date_range(final_df)
 
     assert not final_df.isnull().any().any(), f"unscaled df has null after transform"
@@ -143,6 +152,7 @@ def main():
     # continue scaling
     scaler = CustomScaler([
         {'regex': r'^Close.*', 'type': 'standard'},
+        {'regex': r'^Margin.*', 'type': 'standard'},
         {'regex': r'^pricing_change_term_.+', 'type': 'standard'},
         {'regex': r'Volume.*', 'type': 'standard', 'augment': 'log'},
         {'columns': ['reportedEPS', 'estimatedEPS', 'surprise', 'surprisePercentage'], 'type': 'standard'},

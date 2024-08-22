@@ -1,17 +1,26 @@
+import sys
+
+# Mock the 'this' module to prevent it from executing
+sys.modules['this'] = None
+
 from alfred.data import DatasetStocks
 from torch import nn, optim
 from torch.utils.data import DataLoader
 from alfred.models import Transformer
 from alfred.devices import set_device
 import argparse
-import torch
+import warnings
+
+
+# Make all UserWarnings throw exceptions
+warnings.simplefilter("error", UserWarning)
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--training-file', type=str, help="training data")
     parser.add_argument('--batch-size', type=int, default=32, help="batch size")
     parser.add_argument('--shuffle', type=bool, default=False, help="shuffle data?")
-    parser.add_argument('--num-workers', type=int, default=3, help="number of workers")
+    parser.add_argument('--num-workers', type=int, default=1, help="number of workers")
     parser.add_argument('--epochs', type=int, help="number of epochs")
     parser.add_argument('--learning-rate', type=float, default=0.001, help="learning rate")
     parser.add_argument("--sequence-length", type=int, default=24, help="sequence length")
@@ -26,7 +35,6 @@ def main():
     # Define model
     model = Transformer(
         enc_in=data_set.features,
-        dec_in=data_set.features,
         c_out=data_set.labels
     ).to(device)
 
@@ -45,8 +53,7 @@ def main():
     # Training loop
     for epoch in range(args.epochs):
         model.train()  # Set model to training mode
-        running_loss = 0.0
-
+        print("epoch: ", epoch)
         for i, (batch_x, batch_y) in enumerate(train_loader):
             batch_x, batch_y = batch_x.to(device), batch_y.to(device)
 
@@ -54,18 +61,18 @@ def main():
             optimizer.zero_grad()
 
             # Forward pass
-            outputs = model(batch_x)
-            loss = criterion(outputs, batch_y)
+            batch_x1 = batch_x.reshape(-1, batch_x.shape[-2], batch_x.shape[-1]).float().to(device)
+            batch_y1 = batch_y.reshape(-1, batch_y.shape[-2], batch_y.shape[-1]).float().to(device)
+
+            _, outputs = model(batch_x1)
+            loss = criterion(outputs, batch_y1)
 
             # Backward pass and optimize
             loss.backward()
             optimizer.step()
 
-            # Print statistics
-            running_loss += loss.item()
-            if i % 10 == 9:  # Print every 10 mini-batches
-                print(f'Epoch [{epoch + 1}/{args.epochs}], Step [{i + 1}/{len(train_loader)}], Loss: {running_loss / 10:.4f}')
-                running_loss = 0.0
+            print(f'Epoch [{epoch}], Step [{i}], Loss: {loss.item() / 10:.4f}')
+
 
     print('Training complete')
 

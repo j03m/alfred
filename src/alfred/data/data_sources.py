@@ -1,6 +1,7 @@
 from torch.utils.data import Dataset
 import torch
 import pandas as pd
+import os
 
 
 class DatasetStocks(Dataset):
@@ -11,8 +12,9 @@ class DatasetStocks(Dataset):
         self.drop = ["Date", "Symbol"]
         self.feature_columns = ["Close_diff_MA_7", "Volume_diff_MA_7", "Close_diff_MA_30", "Volume_diff_MA_30",
                                 "Close_diff_MA_90", "Volume_diff_MA_90", "Close_diff_MA_180", "Volume_diff_MA_180",
-                                "Close_diff_MA_360", "Volume_diff_MA_360", "Close", "Volume", "reportedEPS",
-                                "estimatedEPS", "surprise", "surprisePercentage", "10year", "5year", "3year", "2year"]
+                                "Close", "Volume", "reportedEPS", 'Margin_Gross', 'Margin_Operating',
+                                'Margin_Net_Profit', "estimatedEPS", "surprise", "surprisePercentage", "10year",
+                                "5year", "3year", "2year"]
         self.features = len(self.feature_columns)
         self.label_columns = ["price_change_term_4", "price_change_term_8", "price_change_term_12",
                               "price_change_term_24"]
@@ -24,6 +26,10 @@ class DatasetStocks(Dataset):
         # Calculate the starting and ending indices for the sequence
         start_idx = index * self.num_symbols
         end_idx = start_idx + self.sequence_length * self.num_symbols
+
+        # Ensure we do not go out of bounds
+        if end_idx > len(self.df):
+            raise IndexError("Index range is out of bounds")
 
         # Extract the sequence of features (X) across all stocks for the given date range
         X_seq = self.df.loc[start_idx:end_idx - 1, self.feature_columns].values
@@ -41,6 +47,5 @@ class DatasetStocks(Dataset):
 
         return X_seq, Y_seq
 
-
     def __len__(self):
-        return len(self.df)
+        return len(self.df) // (self.sequence_length * self.num_symbols)

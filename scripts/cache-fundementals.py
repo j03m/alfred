@@ -1,11 +1,11 @@
 import pandas as pd
 import os
 import argparse
-from alfred import utils
+from alfred.data import downloaders
 
 def main(symbols_file, data_dir):
     df_symbols = pd.read_csv(symbols_file)
-    alpha = utils.AlphaDownloader()
+    alpha = downloaders.AlphaDownloader()
 
     for symbol in df_symbols['Symbols']:
         print(f"Processing {symbol}")
@@ -14,6 +14,7 @@ def main(symbols_file, data_dir):
             continue
 
         _, quarterly_earnings = alpha.earnings(symbol)
+        margins = alpha.margins(symbol)
 
         price_file_path = os.path.join(data_dir, f"{symbol}.csv")
 
@@ -23,13 +24,24 @@ def main(symbols_file, data_dir):
             quarterly_earnings = quarterly_earnings.drop(columns=['Date'])
             df_prices.index = pd.to_datetime(df_prices['Date'])
             df_prices = df_prices.drop(columns=['Date'])
+
+            margins.index = pd.to_datetime(margins['Date'])
+            margins = margins.drop(columns=['Date'])
+
             # Merging data
             df_combined = df_prices.join(quarterly_earnings, how='outer')
+            df_combined = df_combined.join(margins, how='outer')
+
             # forward will earnings - prevents lookahead
             df_combined.fillna(method='ffill', inplace=True)
 
             # after forward fill, we may still have na if price goes back further than earnings, treat these as 0
             df_combined.fillna(0, inplace=True)
+
+            min_date = df_combined.index.min()
+            max_date = df_combined.index.max()
+            print(f"Min date for {symbol}: {min_date}")
+            print(f"Max date for {symbol}: {max_date}")
 
             # Writing to CSV
             output_path = os.path.join(data_dir, f"{symbol}_fundamentals.csv")
