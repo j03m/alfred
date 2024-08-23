@@ -3,17 +3,25 @@ import sys
 # Mock the 'this' module to prevent it from executing
 sys.modules['this'] = None
 
+from alfred.models import Stockformer, Transformer
+from alfred.devices import set_device
+from alfred.model_persistence import get_latest_model, maybe_save_model
+from alfred.utils.analysis_utils import calculate_robust_relative_error_percentage
 from alfred.data import DatasetStocks
+from torchmetrics import R2Score
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+
+import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
-from alfred.models import Transformer
-from alfred.devices import set_device
+
+
 import argparse
 import warnings
 
-
 # Make all UserWarnings throw exceptions
 warnings.simplefilter("error", UserWarning)
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -21,26 +29,38 @@ def main():
     parser.add_argument('--batch-size', type=int, default=32, help="batch size")
     parser.add_argument('--shuffle', type=bool, default=False, help="shuffle data?")
     parser.add_argument('--num-workers', type=int, default=1, help="number of workers")
-    parser.add_argument('--epochs', type=int, help="number of epochs")
+    parser.add_argument('--epochs', type=int, default=1000, help="number of epochs")
     parser.add_argument('--learning-rate', type=float, default=0.001, help="learning rate")
     parser.add_argument("--sequence-length", type=int, default=24, help="sequence length")
+    parser.add_argument("--model-path", type=str, default='./models', help="where to store models and best loss data")
+    parser.add_argument("--model-token", type=str, choices=['transformer', 'stockformer'], default='transformer',
+                        help="prefix used to select model architecture, also used as a persistence token to store and load models")
+    parser.add_argument("--action", type=str, choices=['train', 'assess'], default='train',
+                        help="train to train, assess to check the prediction value")
+
     args = parser.parse_args()
 
-    # Load dataset
-    # todo change dataset or loader to deal in batches of all available stocks
     data_set = DatasetStocks(args.training_file, args.sequence_length)
 
     device = set_device()
 
-    # Define model
-    model = Transformer(
-        enc_in=data_set.features,
-        c_out=data_set.labels
-    ).to(device)
+    if args.model_token == 'stockformer':
+        model = Stockformer(
+            d_model=512,
+            enc_in=data_set.features,
+            c_out=data_set.labels
+        ).to(device)
+    elif args.model_token == 'transformer':
+        model = Transformer(model_dim=512, input_dim=data_set.features, output_dim=data_set.labels).to(device)
+
+    model_data = get_latest_model(args.model_path, args.model_token)
+    if model_data is not None:
+        model.load_state_dict(torch.load(model_data))
 
     # Define loss function and optimizer
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
+    scheduler = ReduceLROnPlateau(optimizer, 'min', patience=5, factor=0.5)
 
     # Define DataLoader
     train_loader = DataLoader(
@@ -64,17 +84,25 @@ def main():
             batch_x1 = batch_x.reshape(-1, batch_x.shape[-2], batch_x.shape[-1]).float().to(device)
             batch_y1 = batch_y.reshape(-1, batch_y.shape[-2], batch_y.shape[-1]).float().to(device)
 
-            _, outputs = model(batch_x1)
+            # todo study output of stockformer why does it maintain num_stocks view
+            outputs = model(batch_x1)
             loss = criterion(outputs, batch_y1)
 
             # Backward pass and optimize
             loss.backward()
             optimizer.step()
-
-            print(f'Epoch [{epoch}], Step [{i}], Loss: {loss.item() / 10:.4f}')
-
+            loss_value = loss.item()
+            off_by = calculate_robust_relative_error_percentage(loss, batch_y1, outputs)
+            r2_metric = R2Score().to(device)
+            flattened_predictions = outputs.view(-1)
+            flattened_targets = batch_y1.view(-1)
+            r2_value = r2_metric(flattened_targets, flattened_predictions)
+            scheduler.step(loss)
+            print(f'Epoch [{epoch}], Step [{i}], Loss: {loss_value} off_by: {off_by}, r2_value: {r2_value}')
+            maybe_save_model(model, loss_value, args.model_path, args.model_token)
 
     print('Training complete')
+
 
 if __name__ == "__main__":
     main()

@@ -3,7 +3,6 @@ import glob
 import torch
 import json
 
-
 def maybe_save_model_with_evaluator(epoch, evaluator, eval_save, model, model_path, model_prefix):
     if eval_save:
         eval_loss = evaluator()

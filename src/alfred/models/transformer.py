@@ -1,45 +1,40 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
-import pdb
-import sys
-
-sys.path.append('Transformer/')
-from .transformer_layer import EncoderLayer, Encoder
-from .attn import FullAttention, AttentionLayer
-from .embed import DataEmbedding
 
 class Transformer(nn.Module):
-    def __init__(self, enc_in, c_out,
-                d_model=128, n_heads=4, e_layers=2, d_ff=256,
-                dropout=0.0, activation='gelu', output_attention=False):
+    def __init__(self, input_dim, output_dim=4, model_dim=256, nhead=8, num_encoder_layers=6):
         super(Transformer, self).__init__()
+        # Input embedding layer
+        self.embedding = nn.Linear(input_dim, model_dim)
 
-        # Encoding
-        self.enc_embedding = DataEmbedding(enc_in, d_model, dropout)
+        # Transformer Encoder
+        encoder_layer = nn.TransformerEncoderLayer(d_model=model_dim, nhead=nhead, batch_first=True)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_encoder_layers)
 
-        self.encoder = Encoder(
-            [
-                EncoderLayer(
-                    AttentionLayer(
-                        FullAttention(False, attention_dropout=dropout,
-                                      output_attention=output_attention), d_model, n_heads),
-                    d_model,
-                    d_ff,
-                    n_heads,
-                    dropout=dropout,
-                    activation=activation
-                ) for l in range(e_layers)
-            ],
-            norm_layer=torch.nn.LayerNorm(d_model)
-        )
+        # Linear layer to compress transformer output to the required output dimension
+        self.fc_out = nn.Linear(model_dim, output_dim)
 
-        self.projection_decoder = nn.Linear(d_model, c_out, bias=True)
+    def forward(self, src):
+        # src shape: (batch_size, sequence_length, input_dim)
+        batch_size, seq_length, _ = src.shape
 
-    def forward(self, x_enc, enc_self_mask=None):
-        enc_out = self.enc_embedding(x_enc)
-        enc_out, _ = self.encoder(enc_out, attn_mask=enc_self_mask)
-        output = self.projection_decoder(enc_out)
-        return enc_out, output
+        # Embed the input (linear projection)
+        embedded_src = self.embedding(src)
+
+        # Generate a causal mask (upper triangular)
+        causal_mask = torch.tril(torch.ones((seq_length, seq_length), device=src.device)).unsqueeze(0)
+
+        # Expand the mask to match the number of heads and batch size
+        # Shape should be (batch_size * num_heads, sequence_length, sequence_length)
+        causal_mask = causal_mask.expand(batch_size * self.transformer_encoder.layers[0].self_attn.num_heads, -1, -1)
+
+        # Apply transformer encoding with causal masking
+        transformer_out = self.transformer_encoder(embedded_src, mask=causal_mask)
+
+        # We take the output of the final step in the sequence
+        out = self.fc_out(transformer_out)  # Compress to (batch_size, stocks, output_dim)
+
+        return out
+
 
