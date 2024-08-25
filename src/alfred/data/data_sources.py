@@ -1,8 +1,7 @@
 from torch.utils.data import Dataset
 import torch
 import pandas as pd
-import os
-
+from .features_and_labels import feature_columns, label_columns
 
 class DatasetStocks(Dataset):
     def __init__(self, input_file, sequence_length):
@@ -10,18 +9,31 @@ class DatasetStocks(Dataset):
         self.df = pd.read_csv(input_file)
         self.num_symbols = self.df["Symbol"].nunique()
         self.drop = ["Date", "Symbol"]
-        self.feature_columns = ["Close_diff_MA_7", "Volume_diff_MA_7", "Close_diff_MA_30", "Volume_diff_MA_30",
-                                "Close_diff_MA_90", "Volume_diff_MA_90", "Close_diff_MA_180", "Volume_diff_MA_180",
-                                "Close", "Volume", "reportedEPS", 'Margin_Gross', 'Margin_Operating',
-                                'Margin_Net_Profit', "estimatedEPS", "surprise", "surprisePercentage", "10year",
-                                "5year", "3year", "2year"]
+        self.feature_columns = feature_columns
         self.features = len(self.feature_columns)
-        self.label_columns = ["price_change_term_4", "price_change_term_8", "price_change_term_12",
-                              "price_change_term_24"]
+        self.label_columns = label_columns
         self.labels = len(self.label_columns)
         self.sequence_length = sequence_length
+        self.symbols = self.df['Symbol'].values
 
-    # todo validate me
+    def filter(self, symbol:str):
+        self.df = self.df[(self.df['Symbol'] == symbol)].reset_index(drop=True)
+        self.num_symbols = 1
+
+    def trim_to_size(self, size:int):
+        if len(self.df) > size:
+            self.df = self.df.iloc[:size]
+        else:
+            raise ValueError(f"dataframe {len(self.df)} too small to be trimmed to {size}")
+
+    def get_symbols(self, batch_idx, batch_size):
+        # Calculate the start and end indices for the batch
+        start_idx = batch_idx * batch_size
+        end_idx = start_idx + batch_size
+
+        # Retrieve the symbols for this batch
+        return self.symbols[start_idx:end_idx]
+
     def __getitem__(self, index):
         # Calculate the starting and ending indices for the sequence
         start_idx = index * self.num_symbols
@@ -32,10 +44,10 @@ class DatasetStocks(Dataset):
             raise IndexError("Index range is out of bounds")
 
         # Extract the sequence of features (X) across all stocks for the given date range
-        X_seq = self.df.loc[start_idx:end_idx - 1, self.feature_columns].values
+        X_seq = self.df.iloc[start_idx:end_idx][self.feature_columns].values
 
         # Extract the sequence of labels (Y) across all stocks for the given date range
-        Y_seq = self.df.loc[start_idx:end_idx - 1, self.label_columns].values
+        Y_seq = self.df.iloc[start_idx:end_idx][self.label_columns].values
 
         # Reshape the sequences to have shape (seq_length, num_stocks, feature_dim)
         X_seq = X_seq.reshape(self.sequence_length, self.num_symbols, len(self.feature_columns))

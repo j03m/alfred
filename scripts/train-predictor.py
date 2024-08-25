@@ -15,7 +15,6 @@ import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
 
-
 import argparse
 import warnings
 
@@ -60,20 +59,21 @@ def main():
     # Define loss function and optimizer
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
-    scheduler = ReduceLROnPlateau(optimizer, 'min', patience=5, factor=0.5)
 
     # Define DataLoader
     train_loader = DataLoader(
         dataset=data_set,
         batch_size=args.batch_size,
         shuffle=args.shuffle,
-        num_workers=args.num_workers
+        #num_workers=args.num_workers
     )
 
     # Training loop
     for epoch in range(args.epochs):
         model.train()  # Set model to training mode
-        print("epoch: ", epoch)
+        epoch_loss = 0.0
+        epoch_r2 = 0.0
+        total_batches = len(train_loader)
         for i, (batch_x, batch_y) in enumerate(train_loader):
             batch_x, batch_y = batch_x.to(device), batch_y.to(device)
 
@@ -84,25 +84,25 @@ def main():
             batch_x1 = batch_x.reshape(-1, batch_x.shape[-2], batch_x.shape[-1]).float().to(device)
             batch_y1 = batch_y.reshape(-1, batch_y.shape[-2], batch_y.shape[-1]).float().to(device)
 
-            # todo study output of stockformer why does it maintain num_stocks view
             outputs = model(batch_x1)
             loss = criterion(outputs, batch_y1)
 
             # Backward pass and optimize
             loss.backward()
             optimizer.step()
-            loss_value = loss.item()
-            off_by = calculate_robust_relative_error_percentage(loss, batch_y1, outputs)
+            epoch_loss += loss.item()
             r2_metric = R2Score().to(device)
             flattened_predictions = outputs.view(-1)
             flattened_targets = batch_y1.view(-1)
             r2_value = r2_metric(flattened_targets, flattened_predictions)
-            scheduler.step(loss)
-            print(f'Epoch [{epoch}], Step [{i}], Loss: {loss_value} off_by: {off_by}, r2_value: {r2_value}')
-            maybe_save_model(model, loss_value, args.model_path, args.model_token)
+            epoch_r2 += r2_value.item()
+
+        avg_epoch_loss = epoch_loss / total_batches
+        avg_epoch_r2 = epoch_r2 / total_batches
+        print(f'Epoch [{epoch}], Avg Loss: {avg_epoch_loss}, Avg R2: {avg_epoch_r2}')
+        maybe_save_model(model, avg_epoch_loss, args.model_path, args.model_token)
 
     print('Training complete')
-
 
 if __name__ == "__main__":
     main()

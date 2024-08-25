@@ -18,9 +18,20 @@ initial_columns_to_keep = [
     "surprisePercentage",
     'Margin_Gross',
     'Margin_Operating',
-    'Margin_Net_Profit',
+    'Margin_Net_Profit'
 ]
 
+def add_vix(final_df, args):
+    vix = pd.read_csv(f"{args.data}/^VIX.csv")
+    vix.index = pd.to_datetime(vix['Date'])
+    vix = vix[["Close"]]
+    vix.rename(columns={'Close': 'VIX'}, inplace=True)
+    earliest_date = final_df.index.min()
+    vix = vix[vix.index >= earliest_date]
+    final_df = final_df.join(vix, how='outer')
+    final_df.fillna(method='ffill', inplace=True)
+    final_df.fillna(method='bfill', inplace=True)
+    return final_df
 
 def add_treasuries(final_df, args):
     treasuries = pd.read_csv(f"{args.data}/treasuries.csv")
@@ -134,7 +145,7 @@ def main():
         ticker_data_frames.append(df)
 
     final_df = pd.concat(ticker_data_frames)
-
+    final_df = add_vix(final_df, args)
     final_df = add_treasuries(final_df, args)
 
     # todo: what is up here? final date range is 2021 start...should go further back
@@ -152,6 +163,7 @@ def main():
     # continue scaling
     scaler = CustomScaler([
         {'regex': r'^Close.*', 'type': 'standard'},
+        {'regex': r'^VIX.*', 'type': 'standard'},
         {'regex': r'^Margin.*', 'type': 'standard'},
         {'regex': r'^pricing_change_term_.+', 'type': 'standard'},
         {'regex': r'Volume.*', 'type': 'standard', 'augment': 'log'},
