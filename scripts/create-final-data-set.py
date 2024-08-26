@@ -100,7 +100,7 @@ def main():
     parser.add_argument('--symbols', type=str, help="Symbols to use separated by comma")
     parser.add_argument('--symbol-file', type=str, help="List of symbols in a file")
     parser.add_argument('--data', type=str, default="./data", help="data dir (./data)")
-    parser.add_argument('--pred', type=int, nargs="+", help="A space separated list of prediction periods in days")
+    parser.add_argument('--pred', type=int, nargs="+", default=[7, 30, 120, 240], help="A space separated list of prediction periods in days")
     parser.add_argument('--debug', type=bool, default=True, help="write debug to console")
 
     args = parser.parse_args()

@@ -30,8 +30,9 @@ def main():
     parser.add_argument('--num-workers', type=int, default=1, help="number of workers")
     parser.add_argument('--epochs', type=int, default=1000, help="number of epochs")
     parser.add_argument('--learning-rate', type=float, default=0.001, help="learning rate")
-    parser.add_argument("--sequence-length", type=int, default=24, help="sequence length")
+    parser.add_argument("--sequence-length", type=int, default=240, help="sequence length, should be = max pred distance")
     parser.add_argument("--model-path", type=str, default='./models', help="where to store models and best loss data")
+    parser.add_argument("--model-size", type=str, default=1024, help="model size")
     parser.add_argument("--model-token", type=str, choices=['transformer', 'stockformer'], default='transformer',
                         help="prefix used to select model architecture, also used as a persistence token to store and load models")
     parser.add_argument("--action", type=str, choices=['train', 'assess'], default='train',
