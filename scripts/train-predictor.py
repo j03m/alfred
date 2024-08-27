@@ -3,10 +3,9 @@ import sys
 # Mock the 'this' module to prevent it from executing
 sys.modules['this'] = None
 
-from alfred.models import Stockformer, Transformer
+from alfred.models import Stockformer, Transformer, Informer
 from alfred.devices import set_device
 from alfred.model_persistence import get_latest_model, maybe_save_model
-from alfred.utils.analysis_utils import calculate_robust_relative_error_percentage
 from alfred.data import DatasetStocks
 from torchmetrics import R2Score
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -30,10 +29,12 @@ def main():
     parser.add_argument('--num-workers', type=int, default=1, help="number of workers")
     parser.add_argument('--epochs', type=int, default=1000, help="number of epochs")
     parser.add_argument('--learning-rate', type=float, default=0.001, help="learning rate")
-    parser.add_argument("--sequence-length", type=int, default=240, help="sequence length, should be = max pred distance")
+    parser.add_argument("--sequence-length", type=int, default=240,
+                        help="sequence length, should be = max pred distance")
     parser.add_argument("--model-path", type=str, default='./models', help="where to store models and best loss data")
     parser.add_argument("--model-size", type=str, default=1024, help="model size")
-    parser.add_argument("--model-token", type=str, choices=['transformer', 'stockformer'], default='transformer',
+    parser.add_argument("--model-token", type=str, choices=['transformer', 'stockformer', 'informer'],
+                        default='transformer',
                         help="prefix used to select model architecture, also used as a persistence token to store and load models")
     parser.add_argument("--action", type=str, choices=['train', 'assess'], default='train',
                         help="train to train, assess to check the prediction value")
@@ -52,7 +53,10 @@ def main():
         ).to(device)
     elif args.model_token == 'transformer':
         model = Transformer(model_dim=512, input_dim=data_set.features, output_dim=data_set.labels).to(device)
-
+    elif args.model_token == 'informer':
+        model = Informer()
+    else:
+        raise Exception("unknown model token")
     model_data = get_latest_model(args.model_path, args.model_token)
     if model_data is not None:
         model.load_state_dict(torch.load(model_data))
@@ -60,13 +64,14 @@ def main():
     # Define loss function and optimizer
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
 
     # Define DataLoader
     train_loader = DataLoader(
         dataset=data_set,
         batch_size=args.batch_size,
         shuffle=args.shuffle,
-        #num_workers=args.num_workers
+        # num_workers=args.num_workers
     )
 
     # Training loop
@@ -102,8 +107,10 @@ def main():
         avg_epoch_r2 = epoch_r2 / total_batches
         print(f'Epoch [{epoch}], Avg Loss: {avg_epoch_loss}, Avg R2: {avg_epoch_r2}')
         maybe_save_model(model, avg_epoch_loss, args.model_path, args.model_token)
+        scheduler.step(avg_epoch_loss)
 
     print('Training complete')
+
 
 if __name__ == "__main__":
     main()

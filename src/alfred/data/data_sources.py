@@ -1,7 +1,38 @@
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 import torch
 import pandas as pd
+
 from .features_and_labels import feature_columns, label_columns
+import yfinance as yf
+from sklearn.preprocessing import MinMaxScaler
+
+
+class SimpleYahooCloseDataset(Dataset):
+    def __init__(self, stock, start, end, seq_length):
+        self.df = None
+        self.data = self.fetch_data(stock, start, end)
+        self.seq_length = seq_length
+
+    def fetch_data(self, ticker, start, end):
+        self.df = yf.download(ticker, start=start, end=end)
+
+        data = self.df['Close'].values
+        scaler = MinMaxScaler(feature_range=(-1, 1))
+        return scaler.fit_transform(data.reshape(-1, 1)).flatten()
+
+    def __len__(self):
+        return len(self.data) - self.seq_length
+
+    def __getitem__(self, index):
+        x = self.data[index:index + self.seq_length]
+        y = self.data[index + self.seq_length]
+        return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
+
+
+def get_simple_yahoo_data_loader(ticker, start, end, seq_length):
+    dataset = SimpleYahooCloseDataset(ticker, start, end, seq_length)
+    return DataLoader(dataset, batch_size=32, shuffle=True)
+
 
 class DatasetStocks(Dataset):
     def __init__(self, input_file, sequence_length):
@@ -16,11 +47,11 @@ class DatasetStocks(Dataset):
         self.sequence_length = sequence_length
         self.symbols = self.df['Symbol'].values
 
-    def filter(self, symbol:str):
+    def filter(self, symbol: str):
         self.df = self.df[(self.df['Symbol'] == symbol)].reset_index(drop=True)
         self.num_symbols = 1
 
-    def trim_to_size(self, size:int):
+    def trim_to_size(self, size: int):
         if len(self.df) > size:
             self.df = self.df.iloc[:size]
         else:
