@@ -1,4 +1,4 @@
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 import torch
 import pandas as pd
 
@@ -6,8 +6,7 @@ from .features_and_labels import feature_columns, label_columns
 import yfinance as yf
 from sklearn.preprocessing import MinMaxScaler
 
-
-class SimpleYahooCloseDataset(Dataset):
+class SimpleYahooCloseChangeDataset(Dataset):
     def __init__(self, stock, start, end, seq_length):
         self.df = None
         self.data = self.fetch_data(stock, start, end)
@@ -15,23 +14,21 @@ class SimpleYahooCloseDataset(Dataset):
 
     def fetch_data(self, ticker, start, end):
         self.df = yf.download(ticker, start=start, end=end)
-
-        data = self.df['Close'].values
+        self.df["Change"] = self.df['Close'].pct_change(periods=30).shift(
+            periods=(-1 * 30))
+        data = self.df[['Close', 'Change']].values
         scaler = MinMaxScaler(feature_range=(-1, 1))
-        return scaler.fit_transform(data.reshape(-1, 1)).flatten()
+        self.scaler = scaler  # Store the scaler if you need to inverse transform later
+        return scaler.fit_transform(data)
 
     def __len__(self):
         return len(self.data) - self.seq_length
 
     def __getitem__(self, index):
-        x = self.data[index:index + self.seq_length]
-        y = self.data[index + self.seq_length]
-        return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
-
-
-def get_simple_yahoo_data_loader(ticker, start, end, seq_length):
-    dataset = SimpleYahooCloseDataset(ticker, start, end, seq_length)
-    return DataLoader(dataset, batch_size=32, shuffle=True)
+        sequence = self.data[index:index + self.seq_length]
+        x = sequence[:, 0]  # Select only the first column (Close prices)
+        y = sequence[-1, 1]  # Select the second column (Change) of the last item in the sequence
+        return torch.tensor(x, dtype=torch.float32).unsqueeze(-1), torch.tensor(y, dtype=torch.float32)
 
 
 class DatasetStocks(Dataset):

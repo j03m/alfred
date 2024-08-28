@@ -1,15 +1,15 @@
-import yfinance as yf
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import numpy as np
-import pandas as pd
-from sklearn.preprocessing import MinMaxScaler
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
+from alfred.models import LSTMModel
+from alfred.data import SimpleYahooCloseChangeDataset
+import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error
 
-
-# Step 3: Define the LSTM Model
-
+def get_simple_yahoo_data_loader(ticker, start, end, seq_length):
+    dataset = SimpleYahooCloseChangeDataset(ticker, start, end, seq_length)
+    return DataLoader(dataset, batch_size=32, shuffle=True)
 
 # Step 4: Training Loop
 def train_model(model, train_loader, epochs=20):
@@ -32,48 +32,50 @@ def train_model(model, train_loader, epochs=20):
 
 
 # Step 5: Evaluation and Prediction
-def evaluate_model(model, data, scaler, seq_length):
+def evaluate_model(model, loader):
     model.eval()
     predictions = []
-
-    for i in range(len(data) - seq_length):
-        seq = torch.tensor(data[i:i + seq_length], dtype=torch.float32)
+    actuals = []
+    for seq, labels in loader:
         with torch.no_grad():
-            model.hidden_cell = (torch.zeros(1, 1, model.hidden_layer_size),
-                                 torch.zeros(1, 1, model.hidden_layer_size))
             predictions.append(model(seq).item())
-
-    predictions = scaler.inverse_transform(np.array(predictions).reshape(-1, 1)).flatten()
-    return predictions
+            actuals.append(labels.item())
+    return predictions, actuals
 
 
 # Main Script
 if __name__ == "__main__":
-    ticker = 'AAPL'
-    start_date = '2015-01-01'
-    end_date = '2020-01-01'
+    ticker = 'SPY'
+    start_date = '2010-01-01'
+    end_date = '2021-01-01'
     seq_length = 60
 
-    # Prepare the data
-    train_loader, scaler = prepare_data(ticker, start_date, end_date, seq_length)
+    train_loader = get_simple_yahoo_data_loader(ticker, start_date, end_date, seq_length)
 
     # Initialize the model
-    model = LSTMModel(input_size=1, hidden_layer_size=50, output_size=1, num_layers=2)
+    model = LSTMModel(input_size=1, hidden_layer_size=512, output_size=1, num_layers=4)
 
     # Train the model
-    train_model(model, train_loader, epochs=20)
+    train_model(model, train_loader, epochs=1000)
 
-    # Fetch the data for prediction (newer data)
-    prediction_data = fetch_data(ticker, start_date, '2021-01-01')
-    prediction_data_normalized = scaler.transform(prediction_data.reshape(-1, 1)).flatten()
+    eval_loader = get_simple_yahoo_data_loader(ticker, end_date, '2023-01-01', seq_length)
 
     # Evaluate the model
-    predictions = evaluate_model(model, prediction_data_normalized, scaler, seq_length)
+    predictions, labels = evaluate_model(model, eval_loader)
 
-    # Plotting (optional)
-    import matplotlib.pyplot as plt
+    predictions, actuals = evaluate_model(model, eval_loader)
 
-    plt.plot(prediction_data[seq_length:], label='Actual Prices')
-    plt.plot(predictions, label='Predicted Prices')
+    # Calculate Mean Squared Error
+    mse = mean_squared_error(actuals, predictions)
+    print(f"Mean Squared Error: {mse}")
+
+    # Plotting predictions against actuals
+    plt.figure(figsize=(10, 5))
+    plt.plot(actuals, label='Actual Values')
+    plt.plot(predictions, label='Predictions', alpha=0.7)
+    plt.title('Predictions vs Actuals')
+    plt.xlabel('Sample Index')
+    plt.ylabel('Scaled Price Change')
     plt.legend()
     plt.show()
+
