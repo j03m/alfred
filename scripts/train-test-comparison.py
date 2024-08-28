@@ -4,12 +4,15 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from alfred.models import LSTMModel
 from alfred.data import SimpleYahooCloseChangeDataset
+from alfred.devices import set_device
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
 
+device = set_device()
+
 def get_simple_yahoo_data_loader(ticker, start, end, seq_length):
     dataset = SimpleYahooCloseChangeDataset(ticker, start, end, seq_length)
-    return DataLoader(dataset, batch_size=32, shuffle=True)
+    return DataLoader(dataset, batch_size=32, shuffle=False)
 
 # Step 4: Training Loop
 def train_model(model, train_loader, epochs=20):
@@ -18,9 +21,11 @@ def train_model(model, train_loader, epochs=20):
 
     for epoch in range(epochs):
         for seq, labels in train_loader:
+            seq, labels = seq.to(device), labels.to(device)
+
             optimizer.zero_grad()
-            model.hidden_cell = (torch.zeros(1, 1, model.hidden_layer_size),
-                                 torch.zeros(1, 1, model.hidden_layer_size))
+            model.hidden_cell = (torch.zeros(model.num_layers, 1, model.hidden_layer_size),
+                                 torch.zeros(model.num_layers, 1, model.hidden_layer_size))
 
             y_pred = model(seq)
             single_loss = loss_function(y_pred, labels)
@@ -48,12 +53,11 @@ if __name__ == "__main__":
     ticker = 'SPY'
     start_date = '2010-01-01'
     end_date = '2021-01-01'
-    seq_length = 60
-
+    seq_length = 365
     train_loader = get_simple_yahoo_data_loader(ticker, start_date, end_date, seq_length)
 
     # Initialize the model
-    model = LSTMModel(input_size=1, hidden_layer_size=512, output_size=1, num_layers=4)
+    model = LSTMModel(input_size=seq_length, hidden_layer_size=512, output_size=1, num_layers=4).to(device)
 
     # Train the model
     train_model(model, train_loader, epochs=1000)
@@ -79,3 +83,9 @@ if __name__ == "__main__":
     plt.legend()
     plt.show()
 
+# todo:
+# add transformer
+# add stockformer
+# add informer
+# add nbeats
+# add tft
