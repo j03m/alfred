@@ -16,6 +16,7 @@ class SimpleYahooCloseChangeDataset(Dataset):
         self.df = yf.download(ticker, start=start, end=end)
         self.df["Change"] = self.df['Close'].pct_change(periods=30).shift(
             periods=(-1 * 30))
+        self.df.dropna(inplace=True)
         data = self.df[['Close', 'Change']].values
         scaler = MinMaxScaler(feature_range=(-1, 1))
         self.scaler = scaler  # Store the scaler if you need to inverse transform later

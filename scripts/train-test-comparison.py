@@ -12,7 +12,7 @@ device = set_device()
 
 def get_simple_yahoo_data_loader(ticker, start, end, seq_length):
     dataset = SimpleYahooCloseChangeDataset(ticker, start, end, seq_length)
-    return DataLoader(dataset, batch_size=32, shuffle=False)
+    return DataLoader(dataset, batch_size=32, shuffle=False, drop_last=True)
 
 # Step 4: Training Loop
 def train_model(model, train_loader, epochs=20):
@@ -24,14 +24,15 @@ def train_model(model, train_loader, epochs=20):
             seq, labels = seq.to(device), labels.to(device)
 
             optimizer.zero_grad()
-            model.hidden_cell = (torch.zeros(model.num_layers, 1, model.hidden_layer_size),
-                                 torch.zeros(model.num_layers, 1, model.hidden_layer_size))
+            model.hidden_cell = (torch.zeros(model.num_layers, 1, model.hidden_layer_size, device=device),
+                                 torch.zeros(model.num_layers, 1, model.hidden_layer_size, device=device))
 
             y_pred = model(seq)
-            single_loss = loss_function(y_pred, labels)
+            single_loss = loss_function(y_pred, labels.unsqueeze(1))
             single_loss.backward()
             optimizer.step()
-
+            if torch.isnan(single_loss):
+                print("NaN detected in loss, stopping training")
         if epoch % 5 == 0:
             print(f'Epoch {epoch} loss: {single_loss.item()}')
 
