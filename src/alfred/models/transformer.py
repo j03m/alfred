@@ -3,11 +3,11 @@ import torch.nn as nn
 
 
 class Transformer(nn.Module):
-    def __init__(self, input_dim, output_dim=4, model_dim=1024, nhead=8, num_encoder_layers=12):
+    def __init__(self, features, output_dim=4, model_dim=1024, nhead=8, num_encoder_layers=2):
         super(Transformer, self).__init__()
 
         # Input embedding layer
-        self.embedding = nn.Linear(input_dim, model_dim)
+        self.embedding = nn.Linear(features, model_dim)
 
         # Transformer Encoder
         encoder_layer = nn.TransformerEncoderLayer(d_model=model_dim, nhead=nhead, batch_first=True)
