@@ -6,11 +6,13 @@ from .features_and_labels import feature_columns, label_columns
 import yfinance as yf
 from sklearn.preprocessing import MinMaxScaler
 
+
 class SimpleYahooCloseChangeDataset(Dataset):
     def __init__(self, stock, start, end, seq_length):
         self.df = None
         self.data = self.fetch_data(stock, start, end)
         self.seq_length = seq_length
+        self.scaler = None
 
     def fetch_data(self, ticker, start, end):
         self.df = yf.download(ticker, start=start, end=end)
@@ -18,7 +20,7 @@ class SimpleYahooCloseChangeDataset(Dataset):
             periods=(-1 * 30))
         self.df.dropna(inplace=True)
         data = self.df[['Close', 'Change']].values
-        scaler = MinMaxScaler(feature_range=(-1, 1))
+        scaler = MinMaxScaler()
         self.scaler = scaler  # Store the scaler if you need to inverse transform later
         return scaler.fit_transform(data)
 

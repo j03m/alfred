@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 class Transformer(nn.Module):
-    def __init__(self, features, output_dim=4, model_dim=1024, nhead=8, num_encoder_layers=2):
+    def __init__(self, features, output_dim=4, model_dim=512, nhead=4, num_encoder_layers=2):
         super(Transformer, self).__init__()
 
         # Input embedding layer
@@ -24,7 +24,7 @@ class Transformer(nn.Module):
         transformer_out = self.transformer_encoder(embedded_src)
 
         # We take the output of the final step in the sequence
-        out = self.fc_out(transformer_out)  # Compress to (batch_size, stocks, output_dim)
+        out = self.fc_out(transformer_out[:, -1, :])  # Compress to (batch_size, stocks, output_dim)
 
         return out
 
