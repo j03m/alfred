@@ -8,21 +8,25 @@ from sklearn.preprocessing import MinMaxScaler
 
 
 class SimpleYahooCloseChangeDataset(Dataset):
-    def __init__(self, stock, start, end, seq_length):
+    def __init__(self, stock, start, end, seq_length, change):
         self.df = None
+        self.change = change
         self.data = self.fetch_data(stock, start, end)
         self.seq_length = seq_length
         self.scaler = None
 
     def fetch_data(self, ticker, start, end):
         self.df = yf.download(ticker, start=start, end=end)
-        self.df["Change"] = self.df['Close'].pct_change(periods=30).shift(
-            periods=(-1 * 30))
-        self.df.dropna(inplace=True)
-        data = self.df[['Close', 'Change']].values
+        data = self.produce_data()
         scaler = MinMaxScaler()
         self.scaler = scaler  # Store the scaler if you need to inverse transform later
         return scaler.fit_transform(data)
+
+    def produce_data(self):
+        self.df["Change"] = self.df['Close'].pct_change(periods=self.change).shift(
+            periods=(-1 * self.change))
+        self.df.dropna(inplace=True)
+        return self.df[['Close', 'Change']].values
 
     def __len__(self):
         return len(self.data) - self.seq_length
@@ -33,6 +37,14 @@ class SimpleYahooCloseChangeDataset(Dataset):
         y = sequence[-1, 1]  # Select the second column (Change) of the last item in the sequence
         return torch.tensor(x, dtype=torch.float32).unsqueeze(-1), torch.tensor(y, dtype=torch.float32)
 
+
+class SimpleYahooCloseDirectionDataset(SimpleYahooCloseChangeDataset):
+    def produce_data(self):
+        self.df["Change"] = self.df['Close'].pct_change(periods=self.change).shift(
+            periods=(-1 * self.change))
+        self.df["Direction"] = self.df["Change"].apply(lambda x: 1 if x > 0 else -1 if x < 0 else 0)
+        self.df.dropna(inplace=True)
+        return self.df[['Close', 'Direction']].values
 
 class DatasetStocks(Dataset):
     def __init__(self, input_file, sequence_length):

@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from alfred.models import LSTMModel, Transformer, AdvancedLSTM
-from alfred.data import SimpleYahooCloseChangeDataset
+from alfred.data import SimpleYahooCloseChangeDataset, SimpleYahooCloseDirectionDataset
 from alfred.model_persistence import maybe_save_model, get_latest_model
 import matplotlib.pyplot as plt
 from statistics import mean
@@ -21,16 +21,22 @@ warnings.simplefilter("error", UserWarning)
 BATCH_SIZE = 64
 
 
-def get_simple_yahoo_data_loader(ticker, start, end, seq_length):
-    dataset = SimpleYahooCloseChangeDataset(ticker, start, end, seq_length)
-    return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True)
+def get_simple_yahoo_data_loader(ticker, start, end, seq_length, data_type):
+    if data_type == "change":
+        dataset = SimpleYahooCloseChangeDataset(ticker, start, end, seq_length, change=5)
+        return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True)
+    elif data_type == "direction":
+        dataset = SimpleYahooCloseDirectionDataset(ticker, start, end, seq_length, change=5)
+        return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True)
+    else:
+        raise NotImplementedError(f"Data type: {data_type} not implemented")
 
 
 # Step 4: Training Loop
-def train_model(model, train_loader, patience, epochs=20):
+def train_model(model, train_loader, patience, model_path, model_token, epochs=20):
     loss_function = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.01)
-    # scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
+    optimizer = optim.Adam(model.parameters(), lr=0.1)
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
     single_loss = None
     patience_count = 0
     for epoch in range(epochs):
@@ -51,14 +57,14 @@ def train_model(model, train_loader, patience, epochs=20):
         loss_mean = mean(epoch_losses)
 
         print(f'Epoch {epoch} loss: {loss_mean}')
-        if not maybe_save_model(model, loss_mean, args.model_path, args.model_token):
+        if not maybe_save_model(model, loss_mean, model_path, model_token):
             patience_count += 1
         else:
             patience_count = 0
         if patience_count > patience:
             print(f'Out of patience at epoch {epoch}. Patience count: {patience_count}. Limit: {patience}')
             return
-        # scheduler.step(single_loss)
+        scheduler.step(loss_mean)
 
 
 # Step 5: Evaluation and Prediction
@@ -76,17 +82,18 @@ def evaluate_model(model, loader):
     return predictions, actuals
 
 
-# Main Script
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-token", type=str, choices=['transformer', 'lstm', 'advanced_lstm'],
                         default='lstm',
                         help="prefix used to select model architecture, also used as a persistence token to store and load models")
     parser.add_argument("--model-path", type=str, default='./models', help="where to store models and best loss data")
-    parser.add_argument("--patience", type=int, default=50,
+    parser.add_argument("--patience", type=int, default=100,
                         help="when to stop training after patience epochs of no improvements")
     parser.add_argument("--action", type=str, choices=['train', 'eval', 'both'], default='both',
                         help="when to stop training after patience epochs of no improvements")
+    parser.add_argument("--data-type", type=str, choices=['change', 'direction'], default='change',
+                        help="type of data prediction to make")
     args = parser.parse_args()
 
     ticker = 'SPY'
@@ -98,24 +105,27 @@ if __name__ == "__main__":
 
     # Initialize the model
     if args.model_token == 'lstm':
-        model = LSTMModel(features=num_features, seq_len=seq_length, hidden_dim=512, batch_size=BATCH_SIZE, output_size=output,
+        model = LSTMModel(features=num_features, hidden_dim=1024, batch_size=BATCH_SIZE, output_size=output,
                           num_layers=4).to(device)
     elif args.model_token == 'transformer':
-        model = Transformer(features=num_features, model_dim=512, output_dim=output).to(device)
+        model = Transformer(features=num_features, model_dim=1024, output_dim=output).to(device)
     elif args.model_token == 'advanced_lstm':
-        model = AdvancedLSTM(features=num_features, hidden_dim=512, output_dim=output)
+        model = AdvancedLSTM(features=num_features, output_dim=output)
     else:
         raise Exception("Model type not supported")
 
-    model_data = get_latest_model(args.model_path, args.model_token)
+    model_token = args.model_token + "-" + args.data_type
+
+    model_data = get_latest_model(args.model_path, model_token)
     if model_data is not None:
         model.load_state_dict(torch.load(model_data))
 
     if args.action == 'train' or args.action == 'both':
         # todo allow ticker as arg, do caching of files etc
-        train_loader = get_simple_yahoo_data_loader(ticker, start_date, end_date, seq_length)
+        train_loader = get_simple_yahoo_data_loader(ticker, start_date, end_date, seq_length, args.data_type)
         # Train the model
-        train_model(model, train_loader, args.patience, epochs=1000)
+        train_model(model, train_loader, patience=args.patience, model_token=model_token,
+                    model_path=args.model_path, epochs=1000)
 
     if args.action == 'eval' or args.action == 'both':
         eval_loader = get_simple_yahoo_data_loader(ticker, end_date, '2023-01-01', seq_length)
@@ -133,7 +143,12 @@ if __name__ == "__main__":
         plt.xlabel('Sample Index')
         plt.ylabel('Scaled Price Change')
         plt.legend()
-        plt.savefig(f"{args.model_path}/{args.model_token}_eval.png", dpi=600, bbox_inches='tight', transparent=True)
+        plt.savefig(f"{args.model_path}/{model_token}_eval.png", dpi=600, bbox_inches='tight', transparent=True)
+
+
+# Main Script
+if __name__ == "__main__":
+    main()
 
 # todo:
 # add transformer
