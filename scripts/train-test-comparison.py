@@ -1,3 +1,7 @@
+# Todo:
+# Run a new set of experiments with model size, sequence length and going back to lstm_out vs hn to see where we land
+
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -5,13 +9,11 @@ from torch.utils.data import DataLoader
 from alfred.models import LSTMModel, Transformer, AdvancedLSTM
 from alfred.data import SimpleYahooCloseChangeDataset, SimpleYahooCloseDirectionDataset, YahooCloseWindowDataSet
 from alfred.model_persistence import maybe_save_model, get_latest_model
-import matplotlib.pyplot as plt
 from statistics import mean
 from sklearn.metrics import mean_squared_error
 import argparse
 import warnings
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from alfred.devices import set_device, get_device_token
+from alfred.devices import set_device, build_model_token
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 
@@ -22,6 +24,7 @@ warnings.simplefilter("error", UserWarning)
 
 BATCH_SIZE = 64
 SIZE = 32
+
 
 def get_simple_yahoo_data_loader(ticker, start, end, seq_length, predict_type):
     if predict_type == "change":
@@ -87,6 +90,7 @@ def evaluate_model(model, loader):
             actuals.extend(labels.cpu().tolist())
     return predictions, actuals
 
+
 def plot(df):
     fig = figure(figsize=(25, 5), dpi=80)
     fig.patch.set_facecolor((1.0, 1.0, 1.0))
@@ -95,6 +99,7 @@ def plot(df):
     plt.title("Daily close price")
     plt.grid(which='major', axis='y', linestyle='--')
     plt.show(block=False)
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -115,22 +120,26 @@ def main():
     ticker = 'SPY'
     start_date = '1999-01-01'
     end_date = '2021-01-01'
-    seq_length = 20
+    seq_length = 365
     num_features = 1
     output = 1
-
+    layers = 2
     # Initialize the model
     if args.model_token == 'lstm':
-        model = LSTMModel(features=num_features, hidden_dim=SIZE, batch_size=BATCH_SIZE, output_size=output,
-                          num_layers=4).to(device)
+        model = LSTMModel(features=num_features, hidden_dim=SIZE, output_size=output,
+                          num_layers=layers).to(device)
+
     elif args.model_token == 'transformer':
-        model = Transformer(features=num_features, model_dim=SIZE, output_dim=output).to(device)
+        model = Transformer(features=num_features, model_dim=SIZE, output_dim=output, num_encoder_layers=layers).to(
+            device)
     elif args.model_token == 'advanced_lstm':
         model = AdvancedLSTM(features=num_features, hidden_dim=SIZE, output_dim=output)
     else:
         raise Exception("Model type not supported")
 
-    model_token = args.model_token + "_" +  args.predict_type + "_" + get_device_token()
+    # all this does is make a string separated by _ with the device tacked on the end
+    model_token = build_model_token(
+        [args.model_token, args.predict_type, seq_length, num_features, SIZE, layers, output])
 
     model_data = get_latest_model(args.model_path, model_token)
     if model_data is not None:
@@ -138,7 +147,8 @@ def main():
 
     if args.action == 'train' or args.action == 'both':
         # todo allow ticker as arg, do caching of files etc
-        train_loader, dataset= get_simple_yahoo_data_loader(ticker, start_date, end_date, seq_length, args.predict_type)
+        train_loader, dataset = get_simple_yahoo_data_loader(ticker, start_date, end_date, seq_length,
+                                                             args.predict_type)
 
         if args.make_plots:
             plot(dataset.df)
@@ -148,7 +158,8 @@ def main():
                     model_path=args.model_path, epochs=100)
 
     if args.action == 'eval' or args.action == 'both':
-        eval_loader, dataset = get_simple_yahoo_data_loader(ticker, end_date, '2023-01-01', seq_length, args.predict_type)
+        eval_loader, dataset = get_simple_yahoo_data_loader(ticker, end_date, '2023-01-01', seq_length,
+                                                            args.predict_type)
         if args.make_plots:
             plot(dataset.df)
         predictions, actuals = evaluate_model(model, eval_loader)

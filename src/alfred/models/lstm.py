@@ -17,10 +17,9 @@ import torch.nn as nn
 
 # lstm model from: https://github.com/jinglescode/time-series-forecasting-pytorch.git
 class LSTMModel(nn.Module):
-    def __init__(self, features, batch_size, hidden_dim, output_size, num_layers=1, dropout=0.2):
+    def __init__(self, features, hidden_dim, output_size, num_layers=1, dropout=0.2):
         super().__init__()
         self.hidden_dim = hidden_dim
-        self.batch_size = batch_size
         self.linear_1 = nn.Linear(features, hidden_dim)
         self.relu = nn.ReLU()
         self.lstm = nn.LSTM(hidden_dim, hidden_size=self.hidden_dim, num_layers=num_layers,
@@ -41,7 +40,7 @@ class LSTMModel(nn.Module):
                 nn.init.orthogonal_(param)
 
     def forward(self, x):
-        #batchsize = x.shape[0]
+        batch_size = x.shape[0]
 
         # layer 1
         x = self.linear_1(x)
@@ -51,7 +50,7 @@ class LSTMModel(nn.Module):
         lstm_out, (h_n, c_n) = self.lstm(x)
 
         # reshape output from hidden cell into [batch, features] for `linear_2`
-        x = h_n.permute(1, 0, 2).reshape(self.batch_size, -1)
+        x = h_n.permute(1, 0, 2).reshape(batch_size, -1)
 
         # layer 2
         x = self.dropout(x)

@@ -17,17 +17,17 @@ class Attention(nn.Module):
         return context_vector
 
 class AdvancedLSTM(nn.Module):
-    def __init__(self, features=1, hidden_dim=1024, output_dim=1):
+    def __init__(self, features=1, hidden_dim=1024, output_dim=1, num_layers=2):
         super(AdvancedLSTM, self).__init__()
-        self.lstm1 = nn.LSTM(features, hidden_dim, batch_first=True).to(device)
+        self.lstm1 = nn.LSTM(features, hidden_dim, num_layers=num_layers, batch_first=True).to(device)
         self.dropout1 = nn.Dropout(0.3).to(device)
         self.batch_norm1 = nn.BatchNorm1d(hidden_dim).to(device)
 
-        self.lstm2 = nn.LSTM(hidden_dim, hidden_dim, batch_first=True).to(device)
+        self.lstm2 = nn.LSTM(hidden_dim, hidden_dim, num_layers=num_layers, batch_first=True).to(device)
         self.dropout2 = nn.Dropout(0.3).to(device)
         self.batch_norm2 = nn.BatchNorm1d(hidden_dim).to(device)
 
-        self.lstm3 = nn.LSTM(hidden_dim, hidden_dim, batch_first=True).to(device)
+        self.lstm3 = nn.LSTM(hidden_dim, hidden_dim, num_layers=num_layers, batch_first=True).to(device)
 
         self.attention = Attention(hidden_dim).to(device)
         self.fc = nn.Linear(hidden_dim*2, output_dim).to(device)

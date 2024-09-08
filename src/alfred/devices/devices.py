@@ -26,3 +26,7 @@ def is_debugger_active():
         return True
     except ImportError:
         return False
+
+def build_model_token(descriptors):
+    device = get_device_token()
+    return f'{"_".join(map(str, descriptors))}_{device}'

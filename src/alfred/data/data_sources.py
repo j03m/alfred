@@ -54,6 +54,9 @@ class YahooCloseWindowDataSet(SimpleYahooCloseChangeDataset):
         # perform windowing
         return data.reshape(-1, 1)
 
+    def __len__(self):
+        return len(self.x)
+
     def __getitem__(self, index):
         x = self.x[index]
         y = self.y[index]
