@@ -6,8 +6,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from alfred.models import LSTMModel, Transformer, AdvancedLSTM
-from alfred.data import SimpleYahooCloseChangeDataset, SimpleYahooCloseDirectionDataset, YahooCloseWindowDataSet
+from alfred.models import LSTMModel, LSTMModelSimple, Transformer, AdvancedLSTM
+from alfred.data import YahooCloseWindowDataSet, YahooChangeWindowDataSet, YahooDirectionWindowDataSet
 from alfred.model_persistence import maybe_save_model, get_latest_model
 from statistics import mean
 from sklearn.metrics import mean_squared_error
@@ -28,10 +28,10 @@ SIZE = 32
 
 def get_simple_yahoo_data_loader(ticker, start, end, seq_length, predict_type):
     if predict_type == "change":
-        dataset = SimpleYahooCloseChangeDataset(ticker, start, end, seq_length, change=5)
+        dataset = YahooChangeWindowDataSet(ticker, start, end, seq_length, change=5)
         return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True), dataset
     elif predict_type == "direction":
-        dataset = SimpleYahooCloseDirectionDataset(ticker, start, end, seq_length, change=5)
+        dataset = YahooDirectionWindowDataSet(ticker, start, end, seq_length, change=5)
         return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True), dataset
     elif predict_type == "price":
         dataset = YahooCloseWindowDataSet(ticker, start, end, seq_length, -1)
@@ -120,13 +120,13 @@ def main():
     ticker = 'SPY'
     start_date = '1999-01-01'
     end_date = '2021-01-01'
-    seq_length = 365
+    seq_length = 30
     num_features = 1
     output = 1
     layers = 2
     # Initialize the model
     if args.model_token == 'lstm':
-        model = LSTMModel(features=num_features, hidden_dim=SIZE, output_size=output,
+        model = LSTMModelSimple(features=num_features, hidden_dim=SIZE, output_size=output,
                           num_layers=layers).to(device)
 
     elif args.model_token == 'transformer':
