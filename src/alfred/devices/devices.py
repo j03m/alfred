@@ -11,6 +11,14 @@ def set_device():
     print(f"Using device: {device}")
     return device
 
+def get_device_token():
+    if torch.cuda.is_available() and not is_debugger_active():
+        return "cuda"
+    elif torch.backends.mps.is_available() and not is_debugger_active():
+        return "mps"
+    else:
+        return "cpu"
+
 
 def is_debugger_active():
     try:

@@ -1,7 +1,7 @@
 from torch.utils.data import Dataset
 import torch
 import pandas as pd
-
+import numpy as np
 from .features_and_labels import feature_columns, label_columns
 import yfinance as yf
 from sklearn.preprocessing import MinMaxScaler
@@ -11,9 +11,9 @@ class SimpleYahooCloseChangeDataset(Dataset):
     def __init__(self, stock, start, end, seq_length, change):
         self.df = None
         self.change = change
-        self.data = self.fetch_data(stock, start, end)
         self.seq_length = seq_length
         self.scaler = None
+        self.data = self.fetch_data(stock, start, end)
 
     def fetch_data(self, ticker, start, end):
         self.df = yf.download(ticker, start=start, end=end)
@@ -29,13 +29,35 @@ class SimpleYahooCloseChangeDataset(Dataset):
         return self.df[['Close', 'Change']].values
 
     def __len__(self):
-        return len(self.data) - self.seq_length
+        return len(self.data)
 
     def __getitem__(self, index):
         sequence = self.data[index:index + self.seq_length]
         x = sequence[:, 0]  # Select only the first column (Close prices)
         y = sequence[-1, 1]  # Select the second column (Change) of the last item in the sequence
         return torch.tensor(x, dtype=torch.float32).unsqueeze(-1), torch.tensor(y, dtype=torch.float32)
+
+
+class YahooCloseWindowDataSet(SimpleYahooCloseChangeDataset):
+    def __init__(self, stock, start, end, seq_length, change):
+        super().__init__(stock, start, end, seq_length, change)
+        n_row = self.data.shape[0] - self.seq_length + 1
+        x = np.lib.stride_tricks.as_strided(self.data, shape=(n_row, self.seq_length),
+                                            strides=(self.data.strides[0], self.data.strides[0]))
+        self.x = np.expand_dims(x[:-1], 2)
+
+        self.y = self.data[self.seq_length:]
+
+
+    def produce_data(self):
+        data = self.df["Close"].values
+        # perform windowing
+        return data.reshape(-1, 1)
+
+    def __getitem__(self, index):
+        x = self.x[index]
+        y = self.y[index]
+        return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
 
 
 class SimpleYahooCloseDirectionDataset(SimpleYahooCloseChangeDataset):
@@ -45,6 +67,7 @@ class SimpleYahooCloseDirectionDataset(SimpleYahooCloseChangeDataset):
         self.df["Direction"] = self.df["Change"].apply(lambda x: 1 if x > 0 else -1 if x < 0 else 0)
         self.df.dropna(inplace=True)
         return self.df[['Close', 'Direction']].values
+
 
 class DatasetStocks(Dataset):
     def __init__(self, input_file, sequence_length):

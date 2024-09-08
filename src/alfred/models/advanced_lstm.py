@@ -30,7 +30,7 @@ class AdvancedLSTM(nn.Module):
         self.lstm3 = nn.LSTM(hidden_dim, hidden_dim, batch_first=True).to(device)
 
         self.attention = Attention(hidden_dim).to(device)
-        self.fc = nn.Linear(hidden_dim, output_dim).to(device)
+        self.fc = nn.Linear(hidden_dim*2, output_dim).to(device)
 
     def forward(self, x):
         # LSTM Layer 1
@@ -44,10 +44,13 @@ class AdvancedLSTM(nn.Module):
         x = self.batch_norm2(x.permute(0, 2, 1)).permute(0, 2, 1)
 
         # LSTM Layer 3
-        x, _ = self.lstm3(x)
+        lstm_out, (h_n, _) = self.lstm3(x)
 
         # Attention Layer
-        context_vector = self.attention(x)
+        attention_vector = self.attention(lstm_out)
+
+        # Concatenate the attention vector with the hidden state
+        context_vector = torch.cat([attention_vector, h_n[-1]], dim=1)
 
         # Fully connected layer
         output = self.fc(context_vector)
