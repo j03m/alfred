@@ -28,10 +28,10 @@ SIZE = 32
 
 def get_simple_yahoo_data_loader(ticker, start, end, seq_length, predict_type):
     if predict_type == "change":
-        dataset = YahooChangeWindowDataSet(ticker, start, end, seq_length, change=5)
+        dataset = YahooChangeWindowDataSet(ticker, start, end, seq_length, change=1)
         return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True), dataset
     elif predict_type == "direction":
-        dataset = YahooDirectionWindowDataSet(ticker, start, end, seq_length, change=5)
+        dataset = YahooDirectionWindowDataSet(ticker, start, end, seq_length, change=1)
         return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True), dataset
     elif predict_type == "price":
         dataset = YahooCloseWindowDataSet(ticker, start, end, seq_length, -1)
@@ -115,6 +115,7 @@ def main():
                         help="type of data prediction to make")
     parser.add_argument("--make-plots", action='store_true',
                         help="plot all data")
+    parser.add_argument("--epochs", type=int, default=100, help="epochs")
     args = parser.parse_args()
 
     ticker = 'SPY'
@@ -126,7 +127,7 @@ def main():
     layers = 2
     # Initialize the model
     if args.model_token == 'lstm':
-        model = LSTMModelSimple(features=num_features, hidden_dim=SIZE, output_size=output,
+        model = LSTMModel(features=num_features, hidden_dim=SIZE, output_size=output,
                           num_layers=layers).to(device)
 
     elif args.model_token == 'transformer':
@@ -155,7 +156,7 @@ def main():
 
         # Train the model
         train_model(model, train_loader, patience=args.patience, model_token=model_token,
-                    model_path=args.model_path, epochs=100)
+                    model_path=args.model_path, epochs=args.epochs)
 
     if args.action == 'eval' or args.action == 'both':
         eval_loader, dataset = get_simple_yahoo_data_loader(ticker, end_date, '2023-01-01', seq_length,

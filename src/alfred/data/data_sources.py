@@ -18,6 +18,9 @@ class BaseYahooDataSet(Dataset):
     def fetch_data(self, ticker, start, end):
         self.df = yf.download(ticker, start=start, end=end)
         data = self.produce_data()
+        return self.scale_data(data)
+
+    def scale_data(self, data):
         scaler = MinMaxScaler()
         self.scaler = scaler  # Store the scaler if you need to inverse transform later
         return scaler.fit_transform(data)
@@ -57,6 +60,8 @@ class YahooCloseWindowDataSet(BaseYahooDataSet):
 
 class YahooChangeWindowDataSet(YahooCloseWindowDataSet):
     def __init__(self, stock, start, end, seq_length, change):
+        self.close_scaler = MinMaxScaler()  # Standard min-max scaling (0, 1)
+        self.change_scaler = MinMaxScaler(feature_range=(-1, 1))  # Scaling (-1, 1)
         super().__init__(stock, start, end, seq_length, change)
         n_row = self.data.shape[0] - self.seq_length + 1
         x = self.data[:,0]
@@ -65,6 +70,12 @@ class YahooChangeWindowDataSet(YahooCloseWindowDataSet):
                                             strides=(self.data.strides[0], self.data.strides[0]))
         self.x = np.expand_dims(x[:-1], 2)
         self.y = np.expand_dims(y, 1)
+
+    def scale_data(self, data):
+        close_scaled = self.close_scaler.fit_transform(data[:, [0]])
+        change_scaled = self.change_scaler.fit_transform(data[:, [1]])
+        scaled_data = np.hstack((close_scaled, change_scaled))
+        return scaled_data
 
     def produce_data(self):
         self.df["Change"] = self.df['Close'].pct_change(periods=self.change).shift(
