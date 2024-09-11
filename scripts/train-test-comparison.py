@@ -1,13 +1,9 @@
-# Todo:
-# Run a new set of experiments with model size, sequence length and going back to lstm_out vs hn to see where we land
-
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from alfred.models import LSTMModel, LSTMModelSimple, Transformer, AdvancedLSTM
-from alfred.data import YahooCloseWindowDataSet, YahooChangeWindowDataSet, YahooDirectionWindowDataSet
+from alfred.models import LSTMModel, Transformer, AdvancedLSTM, SeriesAsLinear
+from alfred.data import YahooCloseWindowDataSet, YahooChangeWindowDataSet, YahooDirectionWindowDataSet, YahooChangeSeriesWindowDataSet
 from alfred.model_persistence import maybe_save_model, get_latest_model
 from statistics import mean
 from sklearn.metrics import mean_squared_error
@@ -29,6 +25,9 @@ SIZE = 32
 def get_simple_yahoo_data_loader(ticker, start, end, seq_length, predict_type):
     if predict_type == "change":
         dataset = YahooChangeWindowDataSet(ticker, start, end, seq_length, change=1)
+        return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True), dataset
+    elif predict_type == "change-series":
+        dataset = YahooChangeSeriesWindowDataSet(ticker, start, end, seq_length, change=1)
         return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True), dataset
     elif predict_type == "direction":
         dataset = YahooDirectionWindowDataSet(ticker, start, end, seq_length, change=1)
@@ -103,7 +102,7 @@ def plot(df):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model-token", type=str, choices=['transformer', 'lstm', 'advanced_lstm'],
+    parser.add_argument("--model-token", type=str, choices=['transformer', 'lstm', 'advanced_lstm', "linear"],
                         default='lstm',
                         help="prefix used to select model architecture, also used as a persistence token to store and load models")
     parser.add_argument("--model-path", type=str, default='./models', help="where to store models and best loss data")
@@ -111,7 +110,7 @@ def main():
                         help="when to stop training after patience epochs of no improvements")
     parser.add_argument("--action", type=str, choices=['train', 'eval', 'both'], default='both',
                         help="when to stop training after patience epochs of no improvements")
-    parser.add_argument("--predict-type", type=str, choices=['change', 'direction', 'price'], default='change',
+    parser.add_argument("--predict-type", type=str, choices=['change', 'change-series', 'direction', 'price'], default='price',
                         help="type of data prediction to make")
     parser.add_argument("--make-plots", action='store_true',
                         help="plot all data")
@@ -135,6 +134,8 @@ def main():
             device)
     elif args.model_token == 'advanced_lstm':
         model = AdvancedLSTM(features=num_features, hidden_dim=SIZE, output_dim=output)
+    elif args.model_token == 'linear':
+        model = SeriesAsLinear(seq_len=seq_length, hidden_dim=SIZE, output_size=output).to(device)
     else:
         raise Exception("Model type not supported")
 
@@ -147,7 +148,6 @@ def main():
         model.load_state_dict(torch.load(model_data))
 
     if args.action == 'train' or args.action == 'both':
-        # todo allow ticker as arg, do caching of files etc
         train_loader, dataset = get_simple_yahoo_data_loader(ticker, start_date, end_date, seq_length,
                                                              args.predict_type)
 

@@ -148,7 +148,6 @@ def main():
     final_df = add_vix(final_df, args)
     final_df = add_treasuries(final_df, args)
 
-    # todo: what is up here? final date range is 2021 start...should go further back
     final_df, _, _ = align_date_range(final_df)
 
     assert not final_df.isnull().any().any(), f"unscaled df has null after transform"

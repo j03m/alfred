@@ -58,14 +58,46 @@ class YahooCloseWindowDataSet(BaseYahooDataSet):
         y = self.y[index]
         return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
 
+
+class YahooChangeSeriesWindowDataSet(BaseYahooDataSet):
+    def __init__(self, stock, start, end, seq_length, change):
+        super().__init__(stock, start, end, seq_length, change)
+        n_row = self.data.shape[0] - self.seq_length + 1
+        x = np.lib.stride_tricks.as_strided(self.data, shape=(n_row, self.seq_length),
+                                            strides=(self.data.strides[0], self.data.strides[0]))
+        self.x = np.expand_dims(x[:-1], 2)
+
+        self.y = self.data[self.seq_length:]
+
+    def scale_data(self, data):
+        self.scaler = MinMaxScaler(feature_range=(-1, 1))  # Scaling (-1, 1)
+        return self.scaler.fit_transform(data)
+
+    def produce_data(self):
+        self.df["Change"] = self.df['Close'].pct_change(periods=self.change).shift(
+            periods=(-1 * self.change))
+        self.df.dropna(inplace=True)
+        data = self.df["Change"].values
+        # perform windowing
+        return data.reshape(-1, 1)
+
+    def __len__(self):
+        return len(self.x)
+
+    def __getitem__(self, index):
+        x = self.x[index]
+        y = self.y[index]
+        return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
+
+
 class YahooChangeWindowDataSet(YahooCloseWindowDataSet):
     def __init__(self, stock, start, end, seq_length, change):
         self.close_scaler = MinMaxScaler()  # Standard min-max scaling (0, 1)
         self.change_scaler = MinMaxScaler(feature_range=(-1, 1))  # Scaling (-1, 1)
         super().__init__(stock, start, end, seq_length, change)
         n_row = self.data.shape[0] - self.seq_length + 1
-        x = self.data[:,0]
-        y = self.data[:,1]
+        x = self.data[:, 0]
+        y = self.data[:, 1]
         x = np.lib.stride_tricks.as_strided(x, shape=(n_row, self.seq_length),
                                             strides=(self.data.strides[0], self.data.strides[0]))
         self.x = np.expand_dims(x[:-1], 2)
@@ -89,6 +121,7 @@ class YahooChangeWindowDataSet(YahooCloseWindowDataSet):
         y = self.y[index]
         return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
 
+
 class YahooDirectionWindowDataSet(YahooCloseWindowDataSet):
     def produce_data(self):
         self.df["Change"] = self.df['Close'].pct_change(periods=self.change).shift(
@@ -96,6 +129,13 @@ class YahooDirectionWindowDataSet(YahooCloseWindowDataSet):
         self.df["Direction"] = self.df["Change"].apply(lambda x: 1 if x > 0 else -1 if x < 0 else 0)
         self.df.dropna(inplace=True)
         return self.df[['Close', 'Direction']].values
+
+
+class YahooSeriesAsFeaturesWindowDataSet(YahooCloseWindowDataSet):
+    def __getitem__(self, index):
+        x = self.x[index].flatten()
+        y = self.y[index]
+        return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
 
 class DatasetStocks(Dataset):
     def __init__(self, input_file, sequence_length):
