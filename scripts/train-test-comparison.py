@@ -47,8 +47,9 @@ def get_simple_yahoo_data_loader(ticker, start, end, seq_length, predict_type, w
 def train_model(model, train_loader, patience, model_path, model_token, epochs=20, loss_function=nn.MSELoss()):
     model.train()
 
-    optimizer = optim.Adam(model.parameters(), lr=0.01)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.5)
     single_loss = None
     patience_count = 0
     last_mean_loss = None
@@ -81,7 +82,7 @@ def train_model(model, train_loader, patience, model_path, model_token, epochs=2
         if patience_count > patience:
             print(f'Out of patience at epoch {epoch}. Patience count: {patience_count}. Limit: {patience}')
             return
-        scheduler.step()
+        scheduler.step(loss_mean)
 
 
 # Step 5: Evaluation and Prediction
