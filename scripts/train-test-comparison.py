@@ -37,7 +37,7 @@ def get_simple_yahoo_data_loader(ticker, start, end, seq_length, predict_type, w
         dataset = YahooDirectionWindowDataSet(ticker, start, end, seq_length, change=window)
         return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True), dataset
     elif predict_type == "price":
-        dataset = YahooNextCloseWindowDataSet(ticker, start, end, seq_length, -1)
+        dataset = YahooNextCloseWindowDataSet(ticker, start, end, seq_length, change=window)
         return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True), dataset
     else:
         raise NotImplementedError(f"Data type: {predict_type} not implemented")
@@ -95,8 +95,7 @@ def evaluate_model(model, loader):
         labels = labels.to(device)
         with torch.no_grad():
             output = model(seq).squeeze(-1)
-            predicted = (output > 0.5).float()
-            predictions.extend(predicted.cpu().tolist())
+            predictions.extend(output.cpu().tolist())
             actuals.extend(labels.cpu().tolist())
 
     return predictions, actuals

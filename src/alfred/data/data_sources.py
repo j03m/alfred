@@ -67,7 +67,7 @@ class YahooChangeSeriesWindowDataSet(BaseYahooDataSet):
                                             strides=(self.data.strides[0], self.data.strides[0]))
         self.x = np.expand_dims(x[:-1], 2)
 
-        self.y = self.data[self.seq_length:]
+        self.y = self.data[seq_length + change - 1:]
 
     def scale_data(self, data):
         self.scaler = MinMaxScaler(feature_range=(-1, 1))  # Scaling (-1, 1)
