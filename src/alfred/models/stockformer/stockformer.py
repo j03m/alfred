@@ -1,11 +1,6 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
-import pdb
-import sys
-
-sys.path.append('Transformer/')
 from .stockformer_layer import EncoderLayer, Encoder
 from .attn import FullAttention, AttentionLayer
 from .embed import DataEmbedding

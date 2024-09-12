@@ -1,0 +1,1 @@
+These are small one offish experiments against a single time series (appl). My goal here isn't and over arching thesis (yet), but rather I'm feeling around to see what seems to function as a good technical analyst (the first part of alfred) on a small scale and then to build that out.

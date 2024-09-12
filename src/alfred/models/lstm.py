@@ -18,7 +18,7 @@ class LSTMModelSimple(nn.Module):
         return predictions
 
 
-# lstm model from: https://github.com/jinglescode/time-series-forecasting-pytorch.git
+# lstm model borrowed from: https://github.com/jinglescode/time-series-forecasting-pytorch.git
 class LSTMModel(nn.Module):
     def __init__(self, features, hidden_dim, output_size, num_layers=1, dropout=0.2):
         super().__init__()

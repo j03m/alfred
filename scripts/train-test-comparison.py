@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from alfred.models import LSTMModel, Transformer, AdvancedLSTM, SeriesAsLinear
-from alfred.data import YahooCloseWindowDataSet, YahooChangeWindowDataSet, YahooDirectionWindowDataSet, YahooChangeSeriesWindowDataSet
+from alfred.models import LSTMModel, Transformer, AdvancedLSTM, LinearSeries, LinearConv1dSeries
+from alfred.data import YahooNextCloseWindowDataSet, YahooChangeWindowDataSet, YahooDirectionWindowDataSet, YahooChangeSeriesWindowDataSet
 from alfred.model_persistence import maybe_save_model, get_latest_model
 from statistics import mean
 from sklearn.metrics import mean_squared_error
@@ -22,27 +22,27 @@ BATCH_SIZE = 64
 SIZE = 32
 
 
-def get_simple_yahoo_data_loader(ticker, start, end, seq_length, predict_type):
+def get_simple_yahoo_data_loader(ticker, start, end, seq_length, predict_type, window=1):
     if predict_type == "change":
-        dataset = YahooChangeWindowDataSet(ticker, start, end, seq_length, change=1)
+        dataset = YahooChangeWindowDataSet(ticker, start, end, seq_length, change=window)
         return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True), dataset
     elif predict_type == "change-series":
-        dataset = YahooChangeSeriesWindowDataSet(ticker, start, end, seq_length, change=1)
+        dataset = YahooChangeSeriesWindowDataSet(ticker, start, end, seq_length, change=window)
         return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True), dataset
     elif predict_type == "direction":
-        dataset = YahooDirectionWindowDataSet(ticker, start, end, seq_length, change=1)
+        dataset = YahooDirectionWindowDataSet(ticker, start, end, seq_length, change=window)
         return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True), dataset
     elif predict_type == "price":
-        dataset = YahooCloseWindowDataSet(ticker, start, end, seq_length, -1)
+        dataset = YahooNextCloseWindowDataSet(ticker, start, end, seq_length, -1)
         return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True), dataset
     else:
         raise NotImplementedError(f"Data type: {predict_type} not implemented")
 
 
 # Step 4: Training Loop
-def train_model(model, train_loader, patience, model_path, model_token, epochs=20):
+def train_model(model, train_loader, patience, model_path, model_token, epochs=20, loss_function = nn.MSELoss()):
     model.train()
-    loss_function = nn.MSELoss()
+
     optimizer = optim.Adam(model.parameters(), lr=0.01)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
     single_loss = None
@@ -85,8 +85,10 @@ def evaluate_model(model, loader):
         labels = labels.to(device)
         with torch.no_grad():
             output = model(seq).squeeze(-1)
-            predictions.extend(output.cpu().tolist())
+            predicted = (output > 0.5).float()
+            predictions.extend(predicted.cpu().tolist())
             actuals.extend(labels.cpu().tolist())
+
     return predictions, actuals
 
 
@@ -112,6 +114,8 @@ def main():
                         help="when to stop training after patience epochs of no improvements")
     parser.add_argument("--predict-type", type=str, choices=['change', 'change-series', 'direction', 'price'], default='price',
                         help="type of data prediction to make")
+    parser.add_argument("--window", type=int, default=1,
+                        help="some datasets need a window, for example when predict the next change")
     parser.add_argument("--make-plots", action='store_true',
                         help="plot all data")
     parser.add_argument("--epochs", type=int, default=100, help="epochs")
@@ -125,6 +129,7 @@ def main():
     output = 1
     layers = 2
     # Initialize the model
+    loss_function = None # default
     if args.model_token == 'lstm':
         model = LSTMModel(features=num_features, hidden_dim=SIZE, output_size=output,
                           num_layers=layers).to(device)
@@ -134,8 +139,14 @@ def main():
             device)
     elif args.model_token == 'advanced_lstm':
         model = AdvancedLSTM(features=num_features, hidden_dim=SIZE, output_dim=output)
-    elif args.model_token == 'linear':
-        model = SeriesAsLinear(seq_len=seq_length, hidden_dim=SIZE, output_size=output).to(device)
+    elif args.model_token == 'linear' and args.predict_type != 'direction':
+        model = LinearSeries(seq_len=seq_length, hidden_dim=SIZE, output_size=output).to(device)
+    elif args.model_token == 'linear' and args.predict_type == 'direction':
+        loss_function = nn.BCELoss()
+        model = LinearSeries(seq_len=seq_length, hidden_dim=SIZE, output_size=output, activation=nn.Sigmoid()).to(device)
+    elif args.model_token == 'linear-conv1d':
+        # size 10 kernel should smooth about 2 weeks of data
+        model = LinearConv1dSeries(seq_len=seq_length, hidden_dim=SIZE, output_size=output, kernel_size=10)
     else:
         raise Exception("Model type not supported")
 
@@ -149,14 +160,14 @@ def main():
 
     if args.action == 'train' or args.action == 'both':
         train_loader, dataset = get_simple_yahoo_data_loader(ticker, start_date, end_date, seq_length,
-                                                             args.predict_type)
+                                                             args.predict_type, args.window)
 
         if args.make_plots:
             plot(dataset.df)
 
         # Train the model
         train_model(model, train_loader, patience=args.patience, model_token=model_token,
-                    model_path=args.model_path, epochs=args.epochs)
+                    model_path=args.model_path, epochs=args.epochs, loss_function=loss_function)
 
     if args.action == 'eval' or args.action == 'both':
         eval_loader, dataset = get_simple_yahoo_data_loader(ticker, end_date, '2023-01-01', seq_length,
