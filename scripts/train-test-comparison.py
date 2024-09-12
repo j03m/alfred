@@ -3,7 +3,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from alfred.models import LSTMModel, Transformer, AdvancedLSTM, LinearSeries, LinearConv1dSeries
-from alfred.data import YahooNextCloseWindowDataSet, YahooChangeWindowDataSet, YahooDirectionWindowDataSet, YahooChangeSeriesWindowDataSet
+from alfred.data import YahooNextCloseWindowDataSet, YahooChangeWindowDataSet, YahooDirectionWindowDataSet, \
+    YahooChangeSeriesWindowDataSet
 from alfred.model_persistence import maybe_save_model, get_latest_model
 from statistics import mean
 from sklearn.metrics import mean_squared_error
@@ -12,6 +13,9 @@ import warnings
 from alfred.devices import set_device, build_model_token
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
+import numpy as np
+
+np.random.seed(42)
 
 device = set_device()
 
@@ -40,13 +44,14 @@ def get_simple_yahoo_data_loader(ticker, start, end, seq_length, predict_type, w
 
 
 # Step 4: Training Loop
-def train_model(model, train_loader, patience, model_path, model_token, epochs=20, loss_function = nn.MSELoss()):
+def train_model(model, train_loader, patience, model_path, model_token, epochs=20, loss_function=nn.MSELoss()):
     model.train()
 
     optimizer = optim.Adam(model.parameters(), lr=0.01)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
     single_loss = None
     patience_count = 0
+    last_mean_loss = None
     for epoch in range(epochs):
         epoch_losses = []
         for seq, labels in train_loader:
@@ -64,11 +69,15 @@ def train_model(model, train_loader, patience, model_path, model_token, epochs=2
 
         loss_mean = mean(epoch_losses)
 
-        print(f'Epoch {epoch} loss: {loss_mean}')
-        if not maybe_save_model(model, loss_mean, model_path, model_token):
-            patience_count += 1
-        else:
-            patience_count = 0
+        print(f'Epoch {epoch} loss: {loss_mean}, patience: {patience_count}')
+        maybe_save_model(model, loss_mean, model_path, model_token)
+
+        if last_mean_loss != None:
+            if loss_mean >= last_mean_loss:
+                patience_count += 1
+            else:
+                patience_count = 0
+        last_mean_loss = loss_mean
         if patience_count > patience:
             print(f'Out of patience at epoch {epoch}. Patience count: {patience_count}. Limit: {patience}')
             return
@@ -104,15 +113,17 @@ def plot(df):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model-token", type=str, choices=['transformer', 'lstm', 'advanced_lstm', "linear"],
+    parser.add_argument("--model-token", type=str,
+                        choices=['transformer', 'lstm', 'advanced_lstm', "linear", "linear-conv1d"],
                         default='lstm',
                         help="prefix used to select model architecture, also used as a persistence token to store and load models")
     parser.add_argument("--model-path", type=str, default='./models', help="where to store models and best loss data")
-    parser.add_argument("--patience", type=int, default=100,
+    parser.add_argument("--patience", type=int, default=250,
                         help="when to stop training after patience epochs of no improvements")
     parser.add_argument("--action", type=str, choices=['train', 'eval', 'both'], default='both',
                         help="when to stop training after patience epochs of no improvements")
-    parser.add_argument("--predict-type", type=str, choices=['change', 'change-series', 'direction', 'price'], default='price',
+    parser.add_argument("--predict-type", type=str, choices=['change', 'change-series', 'direction', 'price'],
+                        default='price',
                         help="type of data prediction to make")
     parser.add_argument("--window", type=int, default=1,
                         help="some datasets need a window, for example when predict the next change")
@@ -129,26 +140,27 @@ def main():
     output = 1
     layers = 2
     # Initialize the model
-    loss_function = None # default
+    loss_function = nn.MSELoss()  # default
     if args.model_token == 'lstm':
         model = LSTMModel(features=num_features, hidden_dim=SIZE, output_size=output,
                           num_layers=layers).to(device)
 
     elif args.model_token == 'transformer':
-        model = Transformer(features=num_features, model_dim=SIZE, output_dim=output, num_encoder_layers=layers).to(
-            device)
+        model = Transformer(features=num_features, model_dim=SIZE, output_dim=output, num_encoder_layers=layers)
     elif args.model_token == 'advanced_lstm':
         model = AdvancedLSTM(features=num_features, hidden_dim=SIZE, output_dim=output)
     elif args.model_token == 'linear' and args.predict_type != 'direction':
-        model = LinearSeries(seq_len=seq_length, hidden_dim=SIZE, output_size=output).to(device)
+        model = LinearSeries(seq_len=seq_length, hidden_dim=SIZE, output_size=output)
     elif args.model_token == 'linear' and args.predict_type == 'direction':
         loss_function = nn.BCELoss()
-        model = LinearSeries(seq_len=seq_length, hidden_dim=SIZE, output_size=output, activation=nn.Sigmoid()).to(device)
+        model = LinearSeries(seq_len=seq_length, hidden_dim=SIZE, output_size=output, activation=nn.Sigmoid())
     elif args.model_token == 'linear-conv1d':
         # size 10 kernel should smooth about 2 weeks of data
         model = LinearConv1dSeries(seq_len=seq_length, hidden_dim=SIZE, output_size=output, kernel_size=10)
     else:
         raise Exception("Model type not supported")
+
+    model = model.to(device)
 
     # all this does is make a string separated by _ with the device tacked on the end
     model_token = build_model_token(

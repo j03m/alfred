@@ -32,15 +32,17 @@ class LinearConv1dSeries(nn.Module):
         self.seq_len =seq_len
         self.kernel_size = kernel_size
         self.conv1 = nn.Conv1d(in_channels=1, out_channels=hidden_dim, kernel_size=seq_len, padding=padding)
-        self.hidden1 = nn.Linear(hidden_dim * seq_len, hidden_dim)
+        self.hidden1 = nn.Linear(hidden_dim * (seq_len +1), hidden_dim)
         self.hidden2 = nn.Linear(hidden_dim, hidden_dim)
         self.hidden3 = nn.Linear(hidden_dim, hidden_dim)
         self.final = nn.Linear(hidden_dim, output_size)
 
     def forward(self, input_seq):
 
+        # Reshape to [batch_size, in_channels, seq_len] for Conv1d
+        input_seq = input_seq.permute(0, 2, 1)  # Transpose to [64, 1, 30]
         x = self.conv1(input_seq)
-        x = x.view(x.size(0), -1)
+        x = x.reshape(x.size(0), -1)
         x = F.relu(self.hidden1(x))
         x = F.relu(self.hidden2(x))
         x = F.relu(self.hidden3(x))
