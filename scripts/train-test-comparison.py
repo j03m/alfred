@@ -44,12 +44,10 @@ def get_simple_yahoo_data_loader(ticker, start, end, seq_length, predict_type, w
 
 
 # Step 4: Training Loop
-def train_model(model, train_loader, patience, model_path, model_token, epochs=20, loss_function=nn.MSELoss()):
+def train_model(model, optimizer, scheduler, train_loader, patience, model_path, model_token, epochs=20,
+                loss_function=nn.MSELoss()):
     model.train()
 
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
-    #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.5)
     single_loss = None
     patience_count = 0
     last_mean_loss = None
@@ -71,7 +69,9 @@ def train_model(model, train_loader, patience, model_path, model_token, epochs=2
         loss_mean = mean(epoch_losses)
 
         print(f'Epoch {epoch} loss: {loss_mean}, patience: {patience_count}')
-        maybe_save_model(model, loss_mean, model_path, model_token)
+        # todo: maybe save model really needs to take the optimizer and scheduler as well if its going to resume at an optimzied state
+        # otherwise we lose like a 100 epochs prior to it getting to the right place again
+        maybe_save_model(model, optimizer, scheduler, loss_mean, model_path, model_token)
 
         if last_mean_loss != None:
             if loss_mean >= last_mean_loss:
@@ -166,9 +166,15 @@ def main():
     model_token = build_model_token(
         [args.model_token, args.predict_type, seq_length, num_features, SIZE, layers, output])
 
-    model_data = get_latest_model(args.model_path, model_token)
-    if model_data is not None:
-        model.load_state_dict(torch.load(model_data))
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.5)
+
+    model_checkpoint = get_latest_model(args.model_path, model_token)
+    if model_checkpoint is not None:
+        model.load_state_dict(model_checkpoint['model_state_dict'])
+        optimizer.load_state_dict(model_checkpoint['optimizer_state_dict'])
+        scheduler.load_state_dict(model_checkpoint['scheduler_state_dict'])
 
     if args.action == 'train' or args.action == 'both':
         train_loader, dataset = get_simple_yahoo_data_loader(ticker, start_date, end_date, seq_length,
@@ -178,7 +184,7 @@ def main():
             plot(dataset.df)
 
         # Train the model
-        train_model(model, train_loader, patience=args.patience, model_token=model_token,
+        train_model(model, optimizer, scheduler, train_loader, patience=args.patience, model_token=model_token,
                     model_path=args.model_path, epochs=args.epochs, loss_function=loss_function)
 
     if args.action == 'eval' or args.action == 'both':
