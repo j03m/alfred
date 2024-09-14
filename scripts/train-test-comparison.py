@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from alfred.models import LSTMModel, Transformer, AdvancedLSTM, LinearSeries, LinearConv1dSeries
+from alfred.models import LSTMModel, Transformer, AdvancedLSTM, LinearSeries, LinearConv1dSeries, LSTMConv1d
 from alfred.data import YahooNextCloseWindowDataSet, YahooChangeWindowDataSet, YahooDirectionWindowDataSet, \
     YahooChangeSeriesWindowDataSet
 from alfred.model_persistence import maybe_save_model, get_latest_model
@@ -114,7 +114,7 @@ def plot(df):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-token", type=str,
-                        choices=['transformer', 'lstm', 'advanced_lstm', "linear", "linear-conv1d"],
+                        choices=['transformer', 'lstm', 'advanced_lstm', "linear", "linear-conv1d", "lstm-conv1d"],
                         default='lstm',
                         help="prefix used to select model architecture, also used as a persistence token to store and load models")
     parser.add_argument("--model-path", type=str, default='./models', help="where to store models and best loss data")
@@ -146,7 +146,7 @@ def main():
                           num_layers=layers).to(device)
 
     elif args.model_token == 'transformer':
-        model = Transformer(features=num_features, model_dim=SIZE, output_dim=output, num_encoder_layers=layers)
+        model = Transformer(features=num_features, seq_len=seq_length, model_dim=SIZE, output_dim=output, num_encoder_layers=layers)
     elif args.model_token == 'advanced_lstm':
         model = AdvancedLSTM(features=num_features, hidden_dim=SIZE, output_dim=output)
     elif args.model_token == 'linear' and args.predict_type != 'direction':
@@ -157,6 +157,9 @@ def main():
     elif args.model_token == 'linear-conv1d':
         # size 10 kernel should smooth about 2 weeks of data
         model = LinearConv1dSeries(seq_len=seq_length, hidden_dim=SIZE, output_size=output, kernel_size=10)
+    elif args.model_token == 'lstm-conv1d':
+        # size 10 kernel should smooth about 2 weeks of data
+        model = LSTMConv1d(features=1, seq_len=seq_length, hidden_dim=SIZE, output_size=output, kernel_size=10)
     else:
         raise Exception("Model type not supported")
 

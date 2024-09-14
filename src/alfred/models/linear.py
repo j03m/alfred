@@ -25,13 +25,12 @@ class LinearSeries(nn.Module):
             return x
 
 class LinearConv1dSeries(nn.Module):
-    def __init__(self, seq_len, hidden_dim, output_size, kernel_size, activation=None, padding=15):
+    def __init__(self, seq_len, kernel_size, hidden_dim, output_size, activation=None, padding=15):
         super().__init__()
         self.activation = activation
         self.padding = padding
         self.seq_len =seq_len
-        self.kernel_size = kernel_size
-        self.conv1 = nn.Conv1d(in_channels=1, out_channels=hidden_dim, kernel_size=seq_len, padding=padding)
+        self.conv1 = nn.Conv1d(in_channels=1, out_channels=hidden_dim, kernel_size=kernel_size, padding=padding)
         self.hidden1 = nn.Linear(hidden_dim * (seq_len +1), hidden_dim)
         self.hidden2 = nn.Linear(hidden_dim, hidden_dim)
         self.hidden3 = nn.Linear(hidden_dim, hidden_dim)
