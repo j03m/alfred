@@ -191,7 +191,7 @@ def main():
 
         if args.make_plots:
             plot(dataset.df.index, dataset.df["Close"])
-            plot(dataset.df.index, dataset.x)
+            plot(dataset.df.index[:len(dataset.data)], dataset.data)
 
         # Train the model
         train_model(model, optimizer, scheduler, train_loader, patience=args.patience, model_token=model_token,
@@ -202,7 +202,7 @@ def main():
                                                             args.predict_type)
         if args.make_plots:
             plot(dataset.df.index, dataset.df["Close"])
-            plot(dataset.df.index, dataset.x)
+            plot(dataset.df.index[:len(dataset.data)], dataset.data)
 
         predictions, actuals = evaluate_model(model, eval_loader)
 

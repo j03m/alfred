@@ -32,20 +32,27 @@ class LogReturnScaler(BaseEstimator, TransformerMixin):
     '''
 
     def __init__(self, cumsum:bool=True, amplifier:int=2):
-        self.cumsum = cumsum
+        self.do_cumsum = cumsum
         self.amplifier = amplifier
+        # used to capture interim steps so they can be graphed
+        self.cumsum = None
+        self.log_returns = None
+        self.amplified = None
+        self.original = None
 
     def fit(self, X, y=None):
         return self  # This scaler doesn't require fitting
 
     def transform(self, X, y=None):
         X = np.asarray(X)
-        X = np.diff(np.log(X), axis=0)  # Log returns
-        if self.cumsum:
-            X = X.cumsum()
+        self.original = X
+        X = self.log_returns = np.diff(np.log(X), axis=0) # Log returns
+        if self.do_cumsum:
+            X = self.cumsum = X.cumsum()
         if self.amplifier != 0:
-            X = self.amplifier*X
-        return X
+            X = self.amplified = self.amplifier*X
+
+        return np.expand_dims(X, axis=1) # to match what minmax scaler produces
 
     def inverse_transform(self, X, initial_price=None):
         if initial_price is None:

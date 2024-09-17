@@ -42,7 +42,7 @@ class BaseYahooDataSet(Dataset):
 
 class YahooNextCloseWindowDataSet(BaseYahooDataSet):
     def __init__(self, stock, start, end, seq_length, change, log_return_scaler=False):
-        super().__init__(stock, start, end, seq_length, change)
+        super().__init__(stock, start, end, seq_length, change, log_return_scaler)
         n_row = self.data.shape[0] - self.seq_length + 1
         x = np.lib.stride_tricks.as_strided(self.data, shape=(n_row, self.seq_length),
                                             strides=(self.data.strides[0], self.data.strides[0]))
