@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from alfred.models import LSTMModel, Transformer, AdvancedLSTM, LinearSeries, LinearConv1dSeries, LSTMConv1d
+from alfred.models import LSTMModel, Transformer, AdvancedLSTM, LinearSeries, LinearConv1dSeries, LSTMConv1d, TransAm
 from alfred.data import YahooNextCloseWindowDataSet, YahooChangeWindowDataSet, YahooDirectionWindowDataSet, \
     YahooChangeSeriesWindowDataSet
 from alfred.model_persistence import maybe_save_model, get_latest_model
@@ -14,6 +14,8 @@ from alfred.devices import set_device, build_model_token
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 import numpy as np
+import faulthandler
+faulthandler.enable()
 
 np.random.seed(42)
 
@@ -37,7 +39,7 @@ def get_simple_yahoo_data_loader(ticker, start, end, seq_length, predict_type, w
         dataset = YahooDirectionWindowDataSet(ticker, start, end, seq_length, change=window)
         return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True), dataset
     elif predict_type == "price":
-        dataset = YahooNextCloseWindowDataSet(ticker, start, end, seq_length, change=window)
+        dataset = YahooNextCloseWindowDataSet(ticker, start, end, seq_length, change=window, log_return_scaler=True)
         return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True), dataset
     else:
         raise NotImplementedError(f"Data type: {predict_type} not implemented")
@@ -101,10 +103,10 @@ def evaluate_model(model, loader):
     return predictions, actuals
 
 
-def plot(df):
+def plot(index, x):
     fig = figure(figsize=(25, 5), dpi=80)
     fig.patch.set_facecolor((1.0, 1.0, 1.0))
-    plt.plot(df.index, df["Close"], color="blue")
+    plt.plot(index, x, color="blue")
 
     plt.title("Daily close price")
     plt.grid(which='major', axis='y', linestyle='--')
@@ -114,7 +116,8 @@ def plot(df):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-token", type=str,
-                        choices=['transformer', 'lstm', 'advanced_lstm', "linear", "linear-conv1d", "lstm-conv1d"],
+                        choices=['transformer', 'lstm', 'advanced-lstm', "linear", "linear-conv1d", "lstm-conv1d",
+                                 "trans-am"],
                         default='lstm',
                         help="prefix used to select model architecture, also used as a persistence token to store and load models")
     parser.add_argument("--model-path", type=str, default='./models', help="where to store models and best loss data")
@@ -146,8 +149,9 @@ def main():
                           num_layers=layers).to(device)
 
     elif args.model_token == 'transformer':
-        model = Transformer(features=num_features, seq_len=seq_length, model_dim=SIZE, output_dim=output, num_encoder_layers=layers)
-    elif args.model_token == 'advanced_lstm':
+        model = Transformer(features=num_features, seq_len=seq_length, model_dim=SIZE, output_dim=output,
+                            num_encoder_layers=layers)
+    elif args.model_token == 'advanced-lstm':
         model = AdvancedLSTM(features=num_features, hidden_dim=SIZE, output_dim=output)
     elif args.model_token == 'linear' and args.predict_type != 'direction':
         model = LinearSeries(seq_len=seq_length, hidden_dim=SIZE, output_size=output)
@@ -160,6 +164,8 @@ def main():
     elif args.model_token == 'lstm-conv1d':
         # size 10 kernel should smooth about 2 weeks of data
         model = LSTMConv1d(features=1, seq_len=seq_length, hidden_dim=SIZE, output_size=output, kernel_size=10)
+    elif args.model_token == 'trans-am':
+        model = TransAm(feature_size=250, last_bar=True) # not apples to apples, size needs to be div by heads so larger number from transam exp
     else:
         raise Exception("Model type not supported")
 
@@ -184,7 +190,8 @@ def main():
                                                              args.predict_type, args.window)
 
         if args.make_plots:
-            plot(dataset.df)
+            plot(dataset.df.index, dataset.df["Close"])
+            plot(dataset.df.index, dataset.x)
 
         # Train the model
         train_model(model, optimizer, scheduler, train_loader, patience=args.patience, model_token=model_token,
@@ -194,7 +201,9 @@ def main():
         eval_loader, dataset = get_simple_yahoo_data_loader(ticker, end_date, '2023-01-01', seq_length,
                                                             args.predict_type)
         if args.make_plots:
-            plot(dataset.df)
+            plot(dataset.df.index, dataset.df["Close"])
+            plot(dataset.df.index, dataset.x)
+
         predictions, actuals = evaluate_model(model, eval_loader)
 
         # Calculate Mean Squared Error

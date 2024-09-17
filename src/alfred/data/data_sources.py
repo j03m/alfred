@@ -5,14 +5,17 @@ import numpy as np
 from .features_and_labels import feature_columns, label_columns
 import yfinance as yf
 from sklearn.preprocessing import MinMaxScaler
+from alfred.utils.custom_scaler import LogReturnScaler
+
 
 
 class BaseYahooDataSet(Dataset):
-    def __init__(self, stock, start, end, seq_length, change):
+    def __init__(self, stock, start, end, seq_length, change, log_return_scaler=False):
         self.df = None
         self.change = change
         self.seq_length = seq_length
         self.scaler = None
+        self.log_return_scaler = log_return_scaler
         self.data = self.fetch_data(stock, start, end)
 
     def fetch_data(self, ticker, start, end):
@@ -21,7 +24,10 @@ class BaseYahooDataSet(Dataset):
         return self.scale_data(data)
 
     def scale_data(self, data):
-        scaler = MinMaxScaler()
+        if self.log_return_scaler:
+            scaler = LogReturnScaler()
+        else:
+            scaler = MinMaxScaler()
         self.scaler = scaler  # Store the scaler if you need to inverse transform later
         return scaler.fit_transform(data)
 
@@ -34,9 +40,8 @@ class BaseYahooDataSet(Dataset):
     def __getitem__(self, index):
         raise NotImplementedError
 
-
 class YahooNextCloseWindowDataSet(BaseYahooDataSet):
-    def __init__(self, stock, start, end, seq_length, change):
+    def __init__(self, stock, start, end, seq_length, change, log_return_scaler=False):
         super().__init__(stock, start, end, seq_length, change)
         n_row = self.data.shape[0] - self.seq_length + 1
         x = np.lib.stride_tricks.as_strided(self.data, shape=(n_row, self.seq_length),
@@ -91,8 +96,11 @@ class YahooChangeSeriesWindowDataSet(BaseYahooDataSet):
 
 
 class YahooChangeWindowDataSet(YahooNextCloseWindowDataSet):
-    def __init__(self, stock, start, end, seq_length, change):
-        self.close_scaler = MinMaxScaler()  # Standard min-max scaling (0, 1)
+    def __init__(self, stock, start, end, seq_length, change, log_return_scale=False):
+        if log_return_scale:
+            self.close_scaler = LogReturnScaler()  # Standard min-max scaling (0, 1)
+        else:
+            self.close_scaler = MinMaxScaler()
         self.change_scaler = MinMaxScaler(feature_range=(-1, 1))  # Scaling (-1, 1)
         super().__init__(stock, start, end, seq_length, change)
         n_row = self.data.shape[0] - self.seq_length + 1
@@ -123,8 +131,11 @@ class YahooChangeWindowDataSet(YahooNextCloseWindowDataSet):
 
 
 class YahooDirectionWindowDataSet(YahooNextCloseWindowDataSet):
-    def __init__(self, stock, start, end, seq_length, change):
-        self.close_scaler = MinMaxScaler()  # Standard min-max scaling (0, 1)
+    def __init__(self, stock, start, end, seq_length, change, log_return_scale=False):
+        if log_return_scale:
+            self.close_scaler = LogReturnScaler()  # Standard min-max scaling (0, 1)
+        else:
+            self.close_scaler = MinMaxScaler()
         self.dir_scaler = MinMaxScaler()
         super().__init__(stock, start, end, seq_length, change)
         n_row = self.data.shape[0] - self.seq_length + 1
@@ -159,63 +170,3 @@ class YahooSeriesAsFeaturesWindowDataSet(YahooNextCloseWindowDataSet):
         x = self.x[index].flatten()
         y = self.y[index]
         return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
-
-
-class DatasetStocks(Dataset):
-    def __init__(self, input_file, sequence_length):
-        super().__init__()
-        self.df = pd.read_csv(input_file)
-        self.num_symbols = self.df["Symbol"].nunique()
-        self.drop = ["Date", "Symbol"]
-        self.feature_columns = feature_columns
-        self.features = len(self.feature_columns)
-        self.label_columns = label_columns
-        self.labels = len(self.label_columns)
-        self.sequence_length = sequence_length
-        self.symbols = self.df['Symbol'].values
-
-    def filter(self, symbol: str):
-        self.df = self.df[(self.df['Symbol'] == symbol)].reset_index(drop=True)
-        self.num_symbols = 1
-
-    def trim_to_size(self, size: int):
-        if len(self.df) > size:
-            self.df = self.df.iloc[:size]
-        else:
-            raise ValueError(f"dataframe {len(self.df)} too small to be trimmed to {size}")
-
-    def get_symbols(self, batch_idx, batch_size):
-        # Calculate the start and end indices for the batch
-        start_idx = batch_idx * batch_size
-        end_idx = start_idx + batch_size
-
-        # Retrieve the symbols for this batch
-        return self.symbols[start_idx:end_idx]
-
-    def __getitem__(self, index):
-        # Calculate the starting and ending indices for the sequence
-        start_idx = index * self.num_symbols
-        end_idx = start_idx + self.sequence_length * self.num_symbols
-
-        # Ensure we do not go out of bounds
-        if end_idx > len(self.df):
-            raise IndexError("Index range is out of bounds")
-
-        # Extract the sequence of features (X) across all stocks for the given date range
-        X_seq = self.df.iloc[start_idx:end_idx][self.feature_columns].values
-
-        # Extract the sequence of labels (Y) across all stocks for the given date range
-        Y_seq = self.df.iloc[start_idx:end_idx][self.label_columns].values
-
-        # Reshape the sequences to have shape (seq_length, num_stocks, feature_dim)
-        X_seq = X_seq.reshape(self.sequence_length, self.num_symbols, len(self.feature_columns))
-        Y_seq = Y_seq.reshape(self.sequence_length, self.num_symbols, len(self.label_columns))
-
-        # Convert to PyTorch tensors
-        X_seq = torch.tensor(X_seq, dtype=torch.float32)
-        Y_seq = torch.tensor(Y_seq, dtype=torch.float32)
-
-        return X_seq, Y_seq
-
-    def __len__(self):
-        return len(self.df) // (self.sequence_length * self.num_symbols)

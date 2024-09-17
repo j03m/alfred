@@ -11,6 +11,78 @@ def signed_log1p(x):
     return np.sign(x) * np.log1p(np.abs(x))
 
 
+from sklearn.base import BaseEstimator, TransformerMixin
+import numpy as np
+
+
+class LogReturnScaler(BaseEstimator, TransformerMixin):
+    '''
+    Experimental, I've not done this before
+
+    Why Use Log Returns?
+    	1.	Stability: Log returns remove the dependency on the absolute price and focus on the percentage change, which helps reduce the effect of large price differences.
+    	2.	Stationarity: Log returns often make a time series more stationary (a necessary condition for many statistical models), as the distribution of returns tends to be more stable over time compared to raw prices.
+    	3.	Normalization: It eliminates the scale effects from stocks with different price ranges (e.g., a $5 stock versus a $500 stock).
+
+    Why Use cumsum and amplifier:
+        1. One common scenario where you would see .cumsum() used is when dealing with log returns (or percentage returns). In financial modeling, log returns are often used as features because they are more stationary and easier to model. If you’re converting back to prices (for interpretability or prediction purposes), applying .cumsum() makes sense:
+	    2. Log returns are additive, so summing them over time gives you the log of the cumulative price change. This allows you to recover the actual price trajectory.
+	    3. In this case, .cumsum() is a well-known technique to revert the log returns back to a price-like series, and this is common in finance.
+
+    '''
+
+    def __init__(self, cumsum:bool=True, amplifier:int=2):
+        self.cumsum = cumsum
+        self.amplifier = amplifier
+
+    def fit(self, X, y=None):
+        return self  # This scaler doesn't require fitting
+
+    def transform(self, X, y=None):
+        X = np.asarray(X)
+        X = np.diff(np.log(X), axis=0)  # Log returns
+        if self.cumsum:
+            X = X.cumsum()
+        if self.amplifier != 0:
+            X = self.amplifier*X
+        return X
+
+    def inverse_transform(self, X, initial_price=None):
+        if initial_price is None:
+            raise ValueError("initial_price is required for inverse_transform to recover prices.")
+        X = np.asarray(X)
+        prices = np.exp(np.cumsum(X, axis=0))  # Reverse log returns by cumulative sum
+        return np.vstack([initial_price, initial_price * prices])  # Recover prices by starting with the initial price
+
+
+
+
+class SignedLog1pMinMaxScaler(BaseEstimator, TransformerMixin):
+    '''
+    Why use sign log1p min max? I think log returns might be better, but this was meant to reduce vol numbers
+    '''
+
+    def __init__(self, feature_range=(0, 1)):
+        self.feature_range = feature_range
+        self.minmax_scaler = MinMaxScaler(feature_range=feature_range)
+
+    def fit(self, X, y=None):
+        # Apply signed log1p transformation and then fit the MinMaxScaler
+        X_transformed = signed_log1p(X)
+        self.minmax_scaler.fit(X_transformed)
+        return self
+
+    def transform(self, X, y=None):
+        # Apply signed log1p transformation and then MinMax scaling
+        X_transformed = signed_log1p(X)
+        return self.minmax_scaler.transform(X_transformed)
+
+    def inverse_transform(self, X, y=None):
+        # First inverse the MinMax scaling, then apply the inverse of the signed log1p
+        X_inverse_scaled = self.minmax_scaler.inverse_transform(X)
+        return np.sign(X_inverse_scaled) * (np.expm1(np.abs(X_inverse_scaled)))
+
+
 class CustomScaler:
     def __init__(self, config, df):
         self.config = config
@@ -38,23 +110,25 @@ class CustomScaler:
                     self.scaler_mapping[column] = MinMaxScaler()
                 elif scaler_type == "robust":
                     self.scaler_mapping[column] = RobustScaler()
+                elif scaler_type == "log_returns":
+                    self.scaler_mapping[column] = LogReturnScaler()
+                elif scaler_type == "log1p":
+                    self.scaler_mapping[column] = SignedLog1pMinMaxScaler()
                 else:
                     raise ValueError(f"Unsupported scaler type: {scaler_type}")
 
-                if augment_type and augment_type not in SUPPORTED_AUGMENTS:
-                    raise ValueError(f"Unsupported augment type: {augment_type}")
+            if augment_type and augment_type not in SUPPORTED_AUGMENTS:
+                raise ValueError(f"Unsupported augment type: {augment_type}")
 
-                self.augment_mapping[column] = augment_type
+            self.augment_mapping[column] = augment_type
 
     def fit(self, df):
 
         for column, scaler in self.scaler_mapping.items():
             augment = self.augment_mapping.get(column, None)
-            if augment == 'log':
-                temp_col = np.log1p(df[[column]])
-                scaler.fit(temp_col)
-            else:
-                scaler.fit(df[[column]])
+            # todo no augments available, implement here. Wrote this prior to just implementing new scalers
+            # maybe I won't ever use it
+            scaler.fit(df[[column]])
 
     def transform(self, df, in_place=False):
         if not in_place:
