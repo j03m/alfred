@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 import math
+from alfred.utils import generate_square_subsequent_mask
 
 class PositionalEncoding(nn.Module):
 
@@ -49,7 +50,7 @@ class TransAm(nn.Module):
     def forward(self, src):
         if self.src_mask is None or self.src_mask.size(0) != len(src):
             device = src.device
-            mask = self._generate_square_subsequent_mask(src.shape[1]).to(device)
+            mask = generate_square_subsequent_mask(src.shape[1]).to(device)
             self.src_mask = mask
 
         src = self.pos_encoder(src)
@@ -60,7 +61,3 @@ class TransAm(nn.Module):
         else:
             return output
 
-    def _generate_square_subsequent_mask(self, sz):
-        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
-        mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-        return mask

@@ -3,15 +3,19 @@
 * ~~Try Conv1d projections~~
 * Fix advanced lstm, informer, transformer models
   * advanced works but seems to suck
-  * trans-am is busted
-    * Test scaled cumsum - maybe graph the trans-am data vs our data?
-      * Retest, graph
-    * Positional Encoding has the wrong dims? It is not set up for batch_first
-      * replace with a learnable embedding?
-      * Time for a experiment config
-        * script reads the config, runs all experiments
-  * Stockformer + Informer - maybe next
+  * ~trans-am is busted~
+  * Stockformer (transformer model only)
+  * Informer (transformer model only)
+  * Pytorch timeseries model
+  
 * Set up a generalization test with a full basic of test stocks
+  * Experiment config and manager
+    * pull + cache data for experiment period
+    * Configure all variations of models, epochs for each
+    * run all experiments
+    * Capture results
+    * Eval must be on a fresh model loaded
+    * Consider a json format we can feed to an llm for comment
 
 Analyst Ideas
 * series translation to trend

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from alfred.models import LSTMModel, Transformer, AdvancedLSTM, LinearSeries, LinearConv1dSeries, LSTMConv1d, TransAm
+from alfred.models import LSTMModel, Stockformer, AdvancedLSTM, LinearSeries, LinearConv1dSeries, LSTMConv1d, TransAm
 from alfred.data import YahooNextCloseWindowDataSet, YahooChangeWindowDataSet, YahooDirectionWindowDataSet, \
     YahooChangeSeriesWindowDataSet
 from alfred.model_persistence import maybe_save_model, get_latest_model
@@ -116,7 +116,7 @@ def plot(index, x):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-token", type=str,
-                        choices=['transformer', 'lstm', 'advanced-lstm', "linear", "linear-conv1d", "lstm-conv1d",
+                        choices=['stockformer', 'lstm', 'advanced-lstm', "linear", "linear-conv1d", "lstm-conv1d",
                                  "trans-am"],
                         default='lstm',
                         help="prefix used to select model architecture, also used as a persistence token to store and load models")
@@ -148,9 +148,8 @@ def main():
         model = LSTMModel(features=num_features, hidden_dim=SIZE, output_size=output,
                           num_layers=layers).to(device)
 
-    elif args.model_token == 'transformer':
-        model = Transformer(features=num_features, seq_len=seq_length, model_dim=SIZE, output_dim=output,
-                            num_encoder_layers=layers)
+    elif args.model_token == 'stockformer':
+        model = Stockformer(1,1)
     elif args.model_token == 'advanced-lstm':
         model = AdvancedLSTM(features=num_features, hidden_dim=SIZE, output_dim=output)
     elif args.model_token == 'linear' and args.predict_type != 'direction':
