@@ -1,6 +1,7 @@
 from torch.utils.data import Dataset
 import torch
 import pandas as pd
+import os
 import numpy as np
 from .features_and_labels import feature_columns, label_columns
 import yfinance as yf
@@ -170,3 +171,8 @@ class YahooSeriesAsFeaturesWindowDataSet(YahooNextCloseWindowDataSet):
         x = self.x[index].flatten()
         y = self.y[index]
         return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
+
+
+class CachedStockDataSet(Dataset):
+    def __init__(self, ticker, start, end, sequence_length, prediction_length, data_path="./data"):
+        pass

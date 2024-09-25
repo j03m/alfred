@@ -4,8 +4,6 @@ import numpy as np
 import joblib
 import re
 
-SUPPORTED_AUGMENTS = ["log"]
-
 
 def signed_log1p(x):
     return np.sign(x) * np.log1p(np.abs(x))
@@ -31,7 +29,7 @@ class LogReturnScaler(BaseEstimator, TransformerMixin):
 
     '''
 
-    def __init__(self, cumsum:bool=True, amplifier:int=2):
+    def __init__(self, cumsum: bool = True, amplifier: int = 2):
         self.do_cumsum = cumsum
         self.amplifier = amplifier
         # used to capture interim steps so they can be graphed
@@ -43,16 +41,21 @@ class LogReturnScaler(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         return self  # This scaler doesn't require fitting
 
-    def transform(self, X, y=None):
-        X = np.asarray(X)
+    def transform(self, input, y=None):
+        # zeros negative values and nulls will break this
+        assert(input.where((input<0)), "this transform only support data that is >=0 no negative numbers")
+        scrub_condition = (input == 0) | (input.isnull())
+        cleaned = input.where(~scrub_condition).ffill()
+        X = np.asarray(cleaned)
         self.original = X
-        X = self.log_returns = np.diff(np.log(X), axis=0) # Log returns
+        # todo you still have the off by 1 issue here, append the last value to the end
+        X = self.log_returns = np.diff(np.log(X), axis=0)  # Log returns
         if self.do_cumsum:
             X = self.cumsum = X.cumsum()
         if self.amplifier != 0:
-            X = self.amplified = self.amplifier*X
-
-        return np.expand_dims(X, axis=1) # to match what minmax scaler produces
+            X = self.amplified = self.amplifier * X
+        X = np.append(X, X[-1])
+        return np.expand_dims(X, axis=1)  # to match what minmax scaler produces
 
     def inverse_transform(self, X, initial_price=None):
         if initial_price is None:
@@ -60,8 +63,6 @@ class LogReturnScaler(BaseEstimator, TransformerMixin):
         X = np.asarray(X)
         prices = np.exp(np.cumsum(X, axis=0))  # Reverse log returns by cumulative sum
         return np.vstack([initial_price, initial_price * prices])  # Recover prices by starting with the initial price
-
-
 
 
 class SignedLog1pMinMaxScaler(BaseEstimator, TransformerMixin):
@@ -94,14 +95,12 @@ class CustomScaler:
     def __init__(self, config, df):
         self.config = config
         self.scaler_mapping = {}
-        self.augment_mapping = {}
         self.scalers = {}
         self._process_config(df)
 
     def _process_config(self, df):
         for entry in self.config:
             scaler_type = entry.get('type', 'standard')
-            augment_type = entry.get('augment', None)
             columns = entry.get('columns', [])
             regex_pattern = entry.get('regex', None)
 
@@ -124,17 +123,9 @@ class CustomScaler:
                 else:
                     raise ValueError(f"Unsupported scaler type: {scaler_type}")
 
-            if augment_type and augment_type not in SUPPORTED_AUGMENTS:
-                raise ValueError(f"Unsupported augment type: {augment_type}")
-
-            self.augment_mapping[column] = augment_type
-
     def fit(self, df):
 
         for column, scaler in self.scaler_mapping.items():
-            augment = self.augment_mapping.get(column, None)
-            # todo no augments available, implement here. Wrote this prior to just implementing new scalers
-            # maybe I won't ever use it
             scaler.fit(df[[column]])
 
     def transform(self, df, in_place=False):
@@ -142,19 +133,10 @@ class CustomScaler:
             df = df.copy()
 
         for column, scaler in self.scaler_mapping.items():
-            augment = self.augment_mapping.get(column, None)
             assert not df[column].isnull().any(), f"{column} has null before transform"
-            if augment == 'log':
-                orig_col = df[column]
-                temp_col = signed_log1p(df[[column]])
-                temp_col = scaler.transform(temp_col)
-                df[column] = temp_col
-                assert not df[column].isnull().any(), f"{column} has null after transform"
-            else:
-                orig_col = df[column]
-                temp_col = scaler.transform(df[[column]])
-                df[column] = temp_col
-                assert not df[column].isnull().any(), f"{column} has null after transform"
+            temp_col = scaler.transform(df[[column]])
+            df[column] = temp_col
+            assert not df[column].isnull().any(), f"{column} has null after transform"
         return df
 
     def fit_transform(self, df):
@@ -170,8 +152,6 @@ class CustomScaler:
     def inverse_transform(self, df):
         for column, scaler in self.scaler_mapping.items():
             df[[column]] = scaler.inverse_transform(df[[column]])
-            if self.augment_mapping[column] == 'log':
-                df[column] = np.expm1(df[column])  # Reverse the log1p operation
         return df
 
     def serialize(self, path):
@@ -179,7 +159,6 @@ class CustomScaler:
         joblib.dump({
             "config": self.config,
             "scaler_mapping": self.scaler_mapping,
-            "augment_mapping": self.augment_mapping,
             "scalers": {col: scaler for col, scaler in self.scaler_mapping.items()}
         }, path)
 
@@ -188,7 +167,6 @@ class CustomScaler:
         data = joblib.load(path)
         custom_scaler = CustomScaler(data['config'])
         custom_scaler.scaler_mapping = data['scalers']
-        custom_scaler.augment_mapping = data['augment_mapping']
         return custom_scaler
 
     def get_scaled(self, df):

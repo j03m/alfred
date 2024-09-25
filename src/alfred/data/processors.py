@@ -9,9 +9,10 @@ def attach_moving_average_diffs(data: pd.DataFrame, moving_averages_days=[7, 30,
     for ma in moving_averages_days:
         close_col_name = f'Close_diff_MA_{ma}'
         volume_col_name = f'Volume_diff_MA_{ma}'
-
-        data[close_col_name] = data['Close'] - data['Close'].rolling(window=ma).mean()
-        data[volume_col_name] = data['Volume'] - data['Volume'].rolling(window=ma).mean()
+        price_mean = data['Close'].rolling(window=ma).mean()
+        volume_mean = data['Volume'].rolling(window=ma).mean()
+        data[close_col_name] = (data['Close'] - price_mean) / price_mean
+        data[volume_col_name] = (data['Volume'] - volume_mean) / volume_mean
 
         # Add the new column names to the list
         new_columns.extend([close_col_name, volume_col_name])

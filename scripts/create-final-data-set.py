@@ -21,6 +21,15 @@ initial_columns_to_keep = [
     'Margin_Net_Profit'
 ]
 
+scaler_config = [
+                {'regex': r'^Close$', 'type': 'log_returns'},
+                {'regex': r'^VIX.*', 'type': 'standard'},
+                {'regex': r'^Margin.*', 'type': 'standard'},
+                {'regex': r'^Volume$', 'type': 'log_returns'},
+                {'columns': ['reportedEPS', 'estimatedEPS', 'surprise', 'surprisePercentage'], 'type': 'standard'},
+                {'regex': r'\d+year', 'type': 'standard'}
+            ]
+
 def add_vix(final_df, args):
     vix = pd.read_csv(f"{args.data}/^VIX.csv")
     vix.index = pd.to_datetime(vix['Date'])
@@ -32,6 +41,7 @@ def add_vix(final_df, args):
     final_df.fillna(method='ffill', inplace=True)
     final_df.fillna(method='bfill', inplace=True)
     return final_df
+
 
 def add_treasuries(final_df, args):
     treasuries = pd.read_csv(f"{args.data}/treasuries.csv")
@@ -100,7 +110,9 @@ def main():
     parser.add_argument('--symbols', type=str, help="Symbols to use separated by comma")
     parser.add_argument('--symbol-file', type=str, help="List of symbols in a file")
     parser.add_argument('--data', type=str, default="./data", help="data dir (./data)")
-    parser.add_argument('--pred', type=int, nargs="+", default=[7, 30, 120, 240], help="A space separated list of prediction periods in days")
+    parser.add_argument('--individual-files', type=bool, default=True, help="write each ticker separately")
+    parser.add_argument('--pred', type=int, nargs="+", default=[7, 30, 120, 240],
+                        help="A space separated list of prediction periods in days")
     parser.add_argument('--debug', type=bool, default=True, help="write debug to console")
 
     args = parser.parse_args()
@@ -118,7 +130,7 @@ def main():
         print("pre-processing: ", symbol)
 
         df = read_file(args.data, f"{symbol}_fundamentals.csv")
-        assert(df is not None)
+        assert (df is not None)
 
         # attach moving averages
         df, columns = attach_moving_average_diffs(df)
@@ -144,6 +156,23 @@ def main():
         # prepare to merge all
         ticker_data_frames.append(df)
 
+    if not args.individual_files:
+        finalize_single_data_file(args, ticker_data_frames)
+    else:
+        for frame, symbol in zip(ticker_data_frames, symbols):
+            frame = add_vix(frame, args)
+            frame = add_treasuries(frame, args)
+            new_file_path = os.path.join(args.data, f"{symbol}_unscaled.csv")
+            frame.to_csv(new_file_path)
+
+            scaler = CustomScaler(scaler_config, frame)
+            scaled_df = scaler.fit_transform(frame)
+            scaled_file_path = os.path.join(args.data, f"{symbol}_scaled.csv")
+            scaled_df.to_csv(scaled_file_path)
+            scaler.serialize(os.path.join(args.data, f"{symbol}_scaler.joblib"))
+
+
+def finalize_single_data_file(args, ticker_data_frames):
     final_df = pd.concat(ticker_data_frames)
     final_df = add_vix(final_df, args)
     final_df = add_treasuries(final_df, args)
@@ -158,22 +187,10 @@ def main():
     new_file_name = f"{file_name}_processed_unscaled{file_extension}"
     new_file_path = os.path.join(args.data, new_file_name)
     final_df.to_csv(new_file_path)
-
     # continue scaling
-    scaler = CustomScaler([
-        {'regex': r'^Close.*', 'type': 'standard'},
-        {'regex': r'^VIX.*', 'type': 'standard'},
-        {'regex': r'^Margin.*', 'type': 'standard'},
-        {'regex': r'^pricing_change_term_.+', 'type': 'standard'},
-        {'regex': r'Volume.*', 'type': 'standard', 'augment': 'log'},
-        {'columns': ['reportedEPS', 'estimatedEPS', 'surprise', 'surprisePercentage'], 'type': 'standard'},
-        {'regex': r'\d+year', 'type': 'standard'}
-    ], final_df)
-
+    scaler = CustomScaler(scaler_config, final_df)
     scaled_df = scaler.fit_transform(final_df)
-
     assert not scaled_df.isnull().any().any(), f"scaled df has null after transform"
-
     if args.debug:
         for column in final_df.columns:
             print("column: ", column,
@@ -181,16 +198,13 @@ def main():
                   "max value: ", final_df[column].max(),
                   "min scaled: ", scaled_df[column].min(),
                   "max scaled: ", scaled_df[column].max())
-
     # save the scaled data file (final)
     new_file_name = f"{file_name}_processed_scaled{file_extension}"
     new_file_path = os.path.join(args.data, new_file_name)
     scaled_df.to_csv(new_file_path)
-
     scaler.serialize(os.path.join(args.data, f"{file_name}_scaler.joblib"))
 
 
 if __name__ == "__main__":
-    print("start")
     main()
-    print("end")
+    print("Done")

@@ -1,11 +1,11 @@
 import pandas as pd
 import os
 import argparse
-from alfred.data import downloaders
+from alfred.data import AlphaDownloader
 
 def main(symbols_file, data_dir):
     df_symbols = pd.read_csv(symbols_file)
-    alpha = downloaders.AlphaDownloader()
+    alpha = AlphaDownloader()
 
     for symbol in df_symbols['Symbols']:
         print(f"Processing {symbol}")

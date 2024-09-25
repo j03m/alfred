@@ -1,10 +1,10 @@
 import pandas as pd
 import os
 import argparse
-from alfred import utils
+from alfred import data
 
 def main(data_dir):
-    alpha = utils.AlphaDownloader()
+    alpha = data.AlphaDownloader()
     alpha.treasury_yields_to_csv(csv_file=f"{data_dir}/treasuries.csv")
 
 if __name__ == "__main__":

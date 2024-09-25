@@ -92,6 +92,9 @@ class AlphaDownloader:
                 else:
                     report['totalRevenue'] = '0'
 
+            if report['operatingIncome'] == 'None':
+                report['operatingIncome'] = '0'
+
             # Calculate Gross Margin
             gross_margin = (float(report['grossProfit']) / float(report['totalRevenue'])) if report['totalRevenue'] != 0 else 0
             gross_margins.append(gross_margin)
