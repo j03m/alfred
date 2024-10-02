@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
 
-from alfred.data import attach_moving_average_diffs, scale_relevant_training_columns, read_file
-from alfred.utils import CustomScaler
+from alfred.data import attach_moving_average_diffs, read_file
 import argparse
 import os
-import joblib
-import pandas as pd
-from sklearn.decomposition import PCA
 
 initial_columns_to_keep = [
     "Symbol",
@@ -20,15 +16,6 @@ initial_columns_to_keep = [
     'Margin_Operating',
     'Margin_Net_Profit'
 ]
-
-scaler_config = [
-                {'regex': r'^Close$', 'type': 'log_returns'},
-                {'regex': r'^VIX.*', 'type': 'standard'},
-                {'regex': r'^Margin.*', 'type': 'standard'},
-                {'regex': r'^Volume$', 'type': 'log_returns'},
-                {'columns': ['reportedEPS', 'estimatedEPS', 'surprise', 'surprisePercentage'], 'type': 'standard'},
-                {'regex': r'\d+year', 'type': 'standard'}
-            ]
 
 def add_vix(final_df, args):
     vix = pd.read_csv(f"{args.data}/^VIX.csv")
@@ -165,13 +152,6 @@ def main():
             new_file_path = os.path.join(args.data, f"{symbol}_unscaled.csv")
             frame.to_csv(new_file_path)
 
-            scaler = CustomScaler(scaler_config, frame)
-            scaled_df = scaler.fit_transform(frame)
-            scaled_file_path = os.path.join(args.data, f"{symbol}_scaled.csv")
-            scaled_df.to_csv(scaled_file_path)
-            scaler.serialize(os.path.join(args.data, f"{symbol}_scaler.joblib"))
-
-
 def finalize_single_data_file(args, ticker_data_frames):
     final_df = pd.concat(ticker_data_frames)
     final_df = add_vix(final_df, args)
@@ -187,23 +167,6 @@ def finalize_single_data_file(args, ticker_data_frames):
     new_file_name = f"{file_name}_processed_unscaled{file_extension}"
     new_file_path = os.path.join(args.data, new_file_name)
     final_df.to_csv(new_file_path)
-    # continue scaling
-    scaler = CustomScaler(scaler_config, final_df)
-    scaled_df = scaler.fit_transform(final_df)
-    assert not scaled_df.isnull().any().any(), f"scaled df has null after transform"
-    if args.debug:
-        for column in final_df.columns:
-            print("column: ", column,
-                  "min value: ", final_df[column].min(),
-                  "max value: ", final_df[column].max(),
-                  "min scaled: ", scaled_df[column].min(),
-                  "max scaled: ", scaled_df[column].max())
-    # save the scaled data file (final)
-    new_file_name = f"{file_name}_processed_scaled{file_extension}"
-    new_file_path = os.path.join(args.data, new_file_name)
-    scaled_df.to_csv(new_file_path)
-    scaler.serialize(os.path.join(args.data, f"{file_name}_scaler.joblib"))
-
 
 if __name__ == "__main__":
     main()

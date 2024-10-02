@@ -1,5 +1,3 @@
-from sympy.benchmarks.bench_discrete_log import data_set_1
-
 from alfred.data import YahooNextCloseWindowDataSet
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure

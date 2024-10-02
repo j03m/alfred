@@ -41,7 +41,11 @@ class LogReturnScaler(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         return self  # This scaler doesn't require fitting
 
-    def transform(self, input, y=None):
+    def transform(self, input_data, y=None):
+        if isinstance(input_data, np.ndarray):
+            input = pd.Series(input_data)
+        else:
+            input = input_data
         # zeros negative values and nulls will break this
         assert(input.where((input<0)), "this transform only support data that is >=0 no negative numbers")
         scrub_condition = (input == 0) | (input.isnull())

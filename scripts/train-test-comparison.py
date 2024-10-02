@@ -3,8 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from alfred.models import LSTMModel, Stockformer, AdvancedLSTM, LinearSeries, LinearConv1dSeries, LSTMConv1d, TransAm
-from alfred.data import YahooNextCloseWindowDataSet, YahooChangeWindowDataSet, YahooDirectionWindowDataSet, \
-    YahooChangeSeriesWindowDataSet
+from alfred.data import YahooNextCloseWindowDataSet, CachedStockDataSet
 from alfred.model_persistence import maybe_save_model, get_latest_model
 from statistics import mean
 from sklearn.metrics import mean_squared_error
@@ -15,6 +14,7 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 import numpy as np
 import faulthandler
+
 faulthandler.enable()
 
 np.random.seed(42)
@@ -27,16 +27,26 @@ warnings.simplefilter("error", UserWarning)
 BATCH_SIZE = 64
 SIZE = 32
 
+scaler_config = [
+                {'regex': r'^Close$', 'type': 'log_returns'},
+                {'regex': r'^VIX.*', 'type': 'standard'},
+                {'regex': r'^Margin.*', 'type': 'standard'},
+                {'regex': r'^Volume$', 'type': 'log_returns'},
+                {'columns': ['reportedEPS', 'estimatedEPS', 'surprise', 'surprisePercentage'], 'type': 'standard'},
+                {'regex': r'\d+year', 'type': 'standard'}
+            ]
 
-def get_simple_yahoo_data_loader(ticker, start, end, seq_length, predict_type, window=1):
-    if predict_type == "change":
-        dataset = YahooChangeWindowDataSet(ticker, start, end, seq_length, change=window)
-        return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True), dataset
-    elif predict_type == "change-series":
-        dataset = YahooChangeSeriesWindowDataSet(ticker, start, end, seq_length, change=window)
-        return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True), dataset
-    elif predict_type == "direction":
-        dataset = YahooDirectionWindowDataSet(ticker, start, end, seq_length, change=window)
+
+def get_simple_yahoo_data_loader(ticker, start, end, seq_length, predict_type, window=1, use_cache=False):
+    if use_cache:  # assume close only but test cache
+        file = f"./data/{ticker}_unscaled.csv"
+        dataset = CachedStockDataSet(file=file,
+                                     start=start,
+                                     end=end,
+                                     scaler_config = scaler_config,
+                                     sequence_length=seq_length,
+                                     feature_columns=["Close"],
+                                     target_columns=["Close"])
         return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True), dataset
     elif predict_type == "price":
         dataset = YahooNextCloseWindowDataSet(ticker, start, end, seq_length, change=window, log_return_scaler=True)
@@ -132,12 +142,17 @@ def main():
                         help="some datasets need a window, for example when predict the next change")
     parser.add_argument("--make-plots", action='store_true',
                         help="plot all data")
+    parser.add_argument("--use-cache", action='store_true',
+                        help="use data cache files")
     parser.add_argument("--epochs", type=int, default=100, help="epochs")
+    parser.add_argument("--ticker", type=str, default="SPY", help="symbol to train or eval")
+    parser.add_argument("--start", type=str, default='1999-01-01', help="start date")
+    parser.add_argument("--end", type=str, default="'2021-01-01'", help="end date")
     args = parser.parse_args()
 
-    ticker = 'SPY'
-    start_date = '1999-01-01'
-    end_date = '2021-01-01'
+    ticker = args.ticker
+    start_date = args.start
+    end_date = args.end
     seq_length = 30
     num_features = 1
     output = 1
@@ -149,7 +164,7 @@ def main():
                           num_layers=layers).to(device)
 
     elif args.model_token == 'stockformer':
-        model = Stockformer(1,1)
+        model = Stockformer(1, 1)
     elif args.model_token == 'advanced-lstm':
         model = AdvancedLSTM(features=num_features, hidden_dim=SIZE, output_dim=output)
     elif args.model_token == 'linear' and args.predict_type != 'direction':
@@ -164,7 +179,8 @@ def main():
         # size 10 kernel should smooth about 2 weeks of data
         model = LSTMConv1d(features=1, seq_len=seq_length, hidden_dim=SIZE, output_size=output, kernel_size=10)
     elif args.model_token == 'trans-am':
-        model = TransAm(feature_size=250, last_bar=True) # not apples to apples, size needs to be div by heads so larger number from transam exp
+        model = TransAm(feature_size=250,
+                        last_bar=True)  # not apples to apples, size needs to be div by heads so larger number from transam exp
     else:
         raise Exception("Model type not supported")
 
@@ -186,8 +202,8 @@ def main():
 
     if args.action == 'train' or args.action == 'both':
         train_loader, dataset = get_simple_yahoo_data_loader(ticker, start_date, end_date, seq_length,
-                                                             args.predict_type, args.window)
-
+                                                             args.predict_type, args.window, args.use_cache)
+        print("**********TRAIN")
         if args.make_plots:
             plot(dataset.df.index, dataset.df["Close"])
             plot(dataset.df.index[:len(dataset.data)], dataset.data)
@@ -197,8 +213,9 @@ def main():
                     model_path=args.model_path, epochs=args.epochs, loss_function=loss_function)
 
     if args.action == 'eval' or args.action == 'both':
+        print("**********EVAL")
         eval_loader, dataset = get_simple_yahoo_data_loader(ticker, end_date, '2023-01-01', seq_length,
-                                                            args.predict_type)
+                                                            args.predict_type, args.window, args.use_cache)
         if args.make_plots:
             plot(dataset.df.index, dataset.df["Close"])
             plot(dataset.df.index[:len(dataset.data)], dataset.data)

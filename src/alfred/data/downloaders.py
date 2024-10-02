@@ -3,6 +3,9 @@ import pandas as pd
 import yfinance as yf
 import time
 import requests
+import ssl
+
+ssl.create_default_https_context = ssl._create_unverified_context
 
 def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=-1, head=-1):
     bad_tickers = []
@@ -40,7 +43,7 @@ class AlphaDownloader:
         # Construct the URL for the API request
         url = f'https://www.alphavantage.co/query?function=EARNINGS&symbol={symbol}&apikey={self.api_key}'
         # Send the request and get the JSON response
-        response = requests.get(url)
+        response = requests.get(url, verify=False)
         data = response.json()
 
         # Convert the earnings data to a DataFrame

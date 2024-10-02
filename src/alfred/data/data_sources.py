@@ -1,16 +1,44 @@
+from sympy import false
 from torch.utils.data import Dataset
 import torch
 import pandas as pd
-import os
 import numpy as np
-from .features_and_labels import feature_columns, label_columns
+#from .features_and_labels import feature_columns, label_columns
 import yfinance as yf
 from sklearn.preprocessing import MinMaxScaler
 from alfred.utils.custom_scaler import LogReturnScaler
+from alfred.utils import CustomScaler
+
+# added this flag to go live (yahoo) or cache (file) due to network issues
+LIVE = false
+TICKER = "AAPL"
+
+def filter_by_date_range(df, start_date, end_date):
+    # Ensure the index is a DatetimeIndex
+    if not isinstance(df.index, pd.DatetimeIndex):
+        raise ValueError("The DataFrame index must be a DatetimeIndex.")
+
+    # Convert start_date and end_date to pd.Timestamp for comparison
+    start = pd.Timestamp(start_date)
+    end = pd.Timestamp(end_date)
+
+    # Check if the start and end dates are within the DataFrame's index range
+    if not (start in df.index or df.index.min() <= start <= df.index.max()):
+        raise ValueError(f"Start date {start_date} is out of range.")
+    if not (end in df.index or df.index.min() <= end <= df.index.max()):
+        raise ValueError(f"End date {end_date} is out of range.")
+
+    # Filter the DataFrame within the date range
+    filtered_df = df.loc[start:end]
+
+    # Raise an exception if the resulting DataFrame is empty
+    if filtered_df.empty:
+        raise ValueError(f"No data available between {start_date} and {end_date}.")
+
+    return filtered_df
 
 
-
-class BaseYahooDataSet(Dataset):
+class YahooNextCloseWindowDataSet(Dataset):
     def __init__(self, stock, start, end, seq_length, change, log_return_scaler=False):
         self.df = None
         self.change = change
@@ -18,9 +46,23 @@ class BaseYahooDataSet(Dataset):
         self.scaler = None
         self.log_return_scaler = log_return_scaler
         self.data = self.fetch_data(stock, start, end)
+        n_row = self.data.shape[0] - self.seq_length + 1
+        x = np.lib.stride_tricks.as_strided(self.data, shape=(n_row, self.seq_length),
+                                            strides=(self.data.strides[0], self.data.strides[0]))
+        self.x = np.expand_dims(x[:-1], 2)
+
+        self.y = self.data[seq_length + change - 1:]
+
 
     def fetch_data(self, ticker, start, end):
-        self.df = yf.download(ticker, start=start, end=end)
+        if LIVE:
+            self.df = yf.download(ticker, start=start, end=end)
+        else:
+            df = pd.read_csv(f"./data/{TICKER}.csv")
+            date_column = "Date"
+            df[date_column] = pd.to_datetime(df[date_column])
+            df = df.set_index(date_column)
+            self.df = filter_by_date_range(df, start, end)
         data = self.produce_data()
         return self.scale_data(data)
 
@@ -30,149 +72,50 @@ class BaseYahooDataSet(Dataset):
         else:
             scaler = MinMaxScaler()
         self.scaler = scaler  # Store the scaler if you need to inverse transform later
-        return scaler.fit_transform(data)
-
-    def produce_data(self):
-        raise NotImplementedError
-
-    def __len__(self):
-        raise NotImplementedError
-
-    def __getitem__(self, index):
-        raise NotImplementedError
-
-class YahooNextCloseWindowDataSet(BaseYahooDataSet):
-    def __init__(self, stock, start, end, seq_length, change, log_return_scaler=False):
-        super().__init__(stock, start, end, seq_length, change, log_return_scaler)
-        n_row = self.data.shape[0] - self.seq_length + 1
-        x = np.lib.stride_tricks.as_strided(self.data, shape=(n_row, self.seq_length),
-                                            strides=(self.data.strides[0], self.data.strides[0]))
-        self.x = np.expand_dims(x[:-1], 2)
-
-        self.y = self.data[seq_length + change - 1:]
+        return scaler.fit_transform(data).reshape(-1, 1)
 
     def produce_data(self):
         data = self.df["Close"].values
         # perform windowing
-        return data.reshape(-1, 1)
-
-    def __len__(self):
-        return len(self.x)
-
-    def __getitem__(self, index):
-        x = self.x[index]
-        y = self.y[index]
-        return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
-
-
-class YahooChangeSeriesWindowDataSet(BaseYahooDataSet):
-    def __init__(self, stock, start, end, seq_length, change):
-        super().__init__(stock, start, end, seq_length, change)
-        n_row = self.data.shape[0] - self.seq_length + 1
-        x = np.lib.stride_tricks.as_strided(self.data, shape=(n_row, self.seq_length),
-                                            strides=(self.data.strides[0], self.data.strides[0]))
-        self.x = np.expand_dims(x[:-1], 2)
-
-        self.y = self.data[seq_length + change - 1:]
-
-    def scale_data(self, data):
-        self.scaler = MinMaxScaler(feature_range=(-1, 1))  # Scaling (-1, 1)
-        return self.scaler.fit_transform(data)
-
-    def produce_data(self):
-        self.df["Change"] = self.df['Close'].pct_change(periods=self.change).shift(
-            periods=(-1 * self.change))
-        self.df.dropna(inplace=True)
-        data = self.df["Change"].values
-        # perform windowing
-        return data.reshape(-1, 1)
-
-    def __len__(self):
-        return len(self.x)
-
-    def __getitem__(self, index):
-        x = self.x[index]
-        y = self.y[index]
-        return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
-
-
-class YahooChangeWindowDataSet(YahooNextCloseWindowDataSet):
-    def __init__(self, stock, start, end, seq_length, change, log_return_scale=False):
-        if log_return_scale:
-            self.close_scaler = LogReturnScaler()  # Standard min-max scaling (0, 1)
-        else:
-            self.close_scaler = MinMaxScaler()
-        self.change_scaler = MinMaxScaler(feature_range=(-1, 1))  # Scaling (-1, 1)
-        super().__init__(stock, start, end, seq_length, change)
-        n_row = self.data.shape[0] - self.seq_length + 1
-        x = self.data[:, 0]
-        y = self.data[:, 1]
-        x = np.lib.stride_tricks.as_strided(x, shape=(n_row, self.seq_length),
-                                            strides=(self.data.strides[0], self.data.strides[0]))
-        self.x = np.expand_dims(x[:-1], 2)
-        self.y = np.expand_dims(y, 1)
-
-    def scale_data(self, data):
-        close_scaled = self.close_scaler.fit_transform(data[:, [0]])
-        change_scaled = self.change_scaler.fit_transform(data[:, [1]])
-        scaled_data = np.hstack((close_scaled, change_scaled))
-        return scaled_data
-
-    def produce_data(self):
-        self.df["Change"] = self.df['Close'].pct_change(periods=self.change).shift(
-            periods=(-1 * self.change))
-        self.df.dropna(inplace=True)
-        data = self.df[['Close', 'Change']].values
         return data
 
-    def __getitem__(self, index):
-        x = self.x[index]
-        y = self.y[index]
-        return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
-
-
-class YahooDirectionWindowDataSet(YahooNextCloseWindowDataSet):
-    def __init__(self, stock, start, end, seq_length, change, log_return_scale=False):
-        if log_return_scale:
-            self.close_scaler = LogReturnScaler()  # Standard min-max scaling (0, 1)
-        else:
-            self.close_scaler = MinMaxScaler()
-        self.dir_scaler = MinMaxScaler()
-        super().__init__(stock, start, end, seq_length, change)
-        n_row = self.data.shape[0] - self.seq_length + 1
-        x = self.data[:, 0]
-        y = self.data[:, 1]
-        x = np.lib.stride_tricks.as_strided(x, shape=(n_row, self.seq_length),
-                                            strides=(self.data.strides[0], self.data.strides[0]))
-        self.x = np.expand_dims(x[:-1], 2)
-        self.y = np.expand_dims(y, 1)
-
-    def scale_data(self, data):
-        close_scaled = self.close_scaler.fit_transform(data[:, [0]])
-        dir_scaled = self.dir_scaler.fit_transform(data[:, [1]])
-        scaled_data = np.hstack((close_scaled, dir_scaled))
-        return scaled_data
-
-    def produce_data(self):
-        self.df["Change"] = self.df['Close'].pct_change(periods=self.change).shift(
-            periods=(-1 * self.change))
-        self.df["Direction"] = self.df["Change"].apply(lambda x: 1 if x > 0 else -1 if x < 0 else 0)
-        self.df.dropna(inplace=True)
-        return self.df[['Close', 'Direction']].values
+    def __len__(self):
+        return len(self.x)
 
     def __getitem__(self, index):
         x = self.x[index]
         y = self.y[index]
         return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
-
-
-class YahooSeriesAsFeaturesWindowDataSet(YahooNextCloseWindowDataSet):
-    def __getitem__(self, index):
-        x = self.x[index].flatten()
-        y = self.y[index]
-        return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
-
 
 class CachedStockDataSet(Dataset):
-    def __init__(self, ticker, start, end, sequence_length, prediction_length, data_path="./data"):
-        pass
+    def __init__(self, file, start, end, sequence_length, feature_columns, target_columns, scaler_config, change=1,
+                 date_column="Unnamed: 0"):
+        df = pd.read_csv(file)
+        df[date_column] = pd.to_datetime(df[date_column])
+        df = df.set_index(date_column)
+
+        self.orig_df = filter_by_date_range(df=df, start_date=start, end_date=end)
+        # continue scaling
+        self.scaler = CustomScaler(scaler_config, self.orig_df)
+        self.df = self.scaler.fit_transform(self.orig_df)
+        assert not self.df.isnull().any().any(), f"scaled df has null after transform"
+
+        self.seq_length = sequence_length
+        features = self.df[feature_columns].values
+        targets = self.df[target_columns].values
+        n_row = features.shape[0] - self.seq_length + 1
+        x = np.lib.stride_tricks.as_strided(features,
+                                            shape=(n_row, self.seq_length, len(feature_columns)),
+                                            strides=(features.strides[0], features.strides[0], features.strides[1]))
+        self.x = x[:-1]
+        # y seems off? 2.604 is 391 index in df
+        self.y = targets[self.seq_length + change - 1:]
+        self.data = features
+
+    def __len__(self):
+        return len(self.x)
+
+    def __getitem__(self, index):
+        x = self.x[index]  # Get the input sequence
+        y = self.y[index]  # Get the target value
+        return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
