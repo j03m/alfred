@@ -3,15 +3,17 @@ from torch.utils.data import Dataset
 import torch
 import pandas as pd
 import numpy as np
-#from .features_and_labels import feature_columns, label_columns
+# from .features_and_labels import feature_columns, label_columns
 import yfinance as yf
 from sklearn.preprocessing import MinMaxScaler
 from alfred.utils.custom_scaler import LogReturnScaler
 from alfred.utils import CustomScaler
+from .range_selection import load_csv_files_and_apply_range
 
 # added this flag to go live (yahoo) or cache (file) due to network issues
 LIVE = false
 TICKER = "AAPL"
+
 
 def filter_by_date_range(df, start_date, end_date):
     # Ensure the index is a DatetimeIndex
@@ -53,7 +55,6 @@ class YahooNextCloseWindowDataSet(Dataset):
 
         self.y = self.data[seq_length + change - 1:]
 
-
     def fetch_data(self, ticker, start, end):
         if LIVE:
             self.df = yf.download(ticker, start=start, end=end)
@@ -87,16 +88,16 @@ class YahooNextCloseWindowDataSet(Dataset):
         y = self.y[index]
         return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
 
-class CachedStockDataSet(Dataset):
-    def __init__(self, file, start, end, sequence_length, feature_columns, target_columns, scaler_config, change=1,
-                 date_column="Unnamed: 0"):
-        df = pd.read_csv(file)
-        df[date_column] = pd.to_datetime(df[date_column])
-        df = df.set_index(date_column)
 
-        self.orig_df = filter_by_date_range(df=df, start_date=start, end_date=end)
-        # continue scaling
-        self.scaler = CustomScaler(scaler_config, self.orig_df)
+class CachedStockDataSet(Dataset):
+    def __init__(self, files, seed, train_len, eval_len, sequence_length, feature_columns, target_columns,
+                 scaler_config, change=1,
+                 date_column="Unnamed: 0"):
+        training_sets = load_csv_files_and_apply_range(csv_files=files, train_length=train_len, eval_length=eval_len,
+                                                       seed=seed, date_column=date_column)
+
+        for training_set in training_sets:
+            self.scaler = CustomScaler(scaler_config, self.orig_df)
         self.df = self.scaler.fit_transform(self.orig_df)
         assert not self.df.isnull().any().any(), f"scaled df has null after transform"
 
@@ -108,7 +109,6 @@ class CachedStockDataSet(Dataset):
                                             shape=(n_row, self.seq_length, len(feature_columns)),
                                             strides=(features.strides[0], features.strides[0], features.strides[1]))
         self.x = x[:-1]
-        # y seems off? 2.604 is 391 index in df
         self.y = targets[self.seq_length + change - 1:]
         self.data = features
 

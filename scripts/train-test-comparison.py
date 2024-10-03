@@ -135,7 +135,7 @@ def main():
                         help="when to stop training after patience epochs of no improvements")
     parser.add_argument("--action", type=str, choices=['train', 'eval', 'both'], default='both',
                         help="when to stop training after patience epochs of no improvements")
-    parser.add_argument("--predict-type", type=str, choices=['change', 'change-series', 'direction', 'price'],
+    parser.add_argument("--predict-type", type=str, choices=['price'],
                         default='price',
                         help="type of data prediction to make")
     parser.add_argument("--window", type=int, default=1,
