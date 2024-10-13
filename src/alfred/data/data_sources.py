@@ -90,14 +90,17 @@ class YahooNextCloseWindowDataSet(Dataset):
 
 
 class CachedStockDataSet(Dataset):
-    def __init__(self, files, seed, train_len, eval_len, sequence_length, feature_columns, target_columns,
-                 scaler_config, change=1,
-                 date_column="Unnamed: 0"):
-        training_sets = load_csv_files_and_apply_range(csv_files=files, train_length=train_len, eval_length=eval_len,
-                                                       seed=seed, date_column=date_column)
+    def __init__(self, symbol, seed, length, sequence_length, feature_columns, target_columns,
+                 scaler_config, range_provider, change=1,
+                 date_column="Unnamed: 0", data_path="./data"):
 
-        for training_set in training_sets:
-            self.scaler = CustomScaler(scaler_config, self.orig_df)
+
+        # i wrote this to get many files, but then decided I would only train one series at a time
+        # so we just take 
+        training_sets = load_csv_files_and_apply_range([symbol], data_path, length, seed, date_column).values()[0]
+
+
+            self.scaler = CustomScaler(scaler_config, training_set)
         self.df = self.scaler.fit_transform(self.orig_df)
         assert not self.df.isnull().any().any(), f"scaled df has null after transform"
 
