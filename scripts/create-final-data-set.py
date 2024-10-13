@@ -111,7 +111,7 @@ def main():
 
     ticker_data_frames = []
     for symbol in symbols:
-        if symbol == "^VIX":
+        if symbol == "^VIX" or symbol == "SPY":
             continue
 
         print("pre-processing: ", symbol)

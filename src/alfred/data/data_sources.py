@@ -99,8 +99,7 @@ class CachedStockDataSet(Dataset):
         # so we just take 
         training_sets = load_csv_files_and_apply_range([symbol], data_path, length, seed, date_column).values()[0]
 
-
-            self.scaler = CustomScaler(scaler_config, training_set)
+        self.scaler = CustomScaler(scaler_config, training_sets)
         self.df = self.scaler.fit_transform(self.orig_df)
         assert not self.df.isnull().any().any(), f"scaled df has null after transform"
 

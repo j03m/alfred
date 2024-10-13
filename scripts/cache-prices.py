@@ -2,6 +2,7 @@
 import pandas as pd
 import argparse
 from alfred.data import download_ticker_list
+import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--symbols", help="Symbols to use (default: SPY), separated by comma")
@@ -24,6 +25,12 @@ if args.symbols is not None:
 
 if args.symbol_file is not None:
     symbols += load_symbols_from_file(args.symbol_file)
+
+if not os.path.exists(args.output_dir):
+    os.makedirs(args.output_dir)
+    print(f"Directory '{args.output_dir}' created.")
+else:
+    print(f"Directory '{args.output_dir}' already exists.")
 
 
 symbols = list(set(symbols))

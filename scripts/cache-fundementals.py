@@ -10,7 +10,7 @@ def main(symbols_file, data_dir):
     for symbol in df_symbols['Symbols']:
         print(f"Processing {symbol}")
         # skip the fix
-        if symbol == '^VIX':
+        if symbol == '^VIX' or symbol == 'SPY':
             continue
 
         _, quarterly_earnings = alpha.earnings(symbol)
@@ -33,7 +33,7 @@ def main(symbols_file, data_dir):
             df_combined = df_combined.join(margins, how='outer')
 
             # forward will earnings - prevents lookahead
-            df_combined.fillna(method='ffill', inplace=True)
+            df_combined.ffill(inplace=True)
 
             # after forward fill, we may still have na if price goes back further than earnings, treat these as 0
             df_combined.fillna(0, inplace=True)
