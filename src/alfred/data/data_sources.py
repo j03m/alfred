@@ -6,8 +6,7 @@ import numpy as np
 # from .features_and_labels import feature_columns, label_columns
 import yfinance as yf
 from sklearn.preprocessing import MinMaxScaler
-from alfred.utils.custom_scaler import LogReturnScaler
-from alfred.utils import CustomScaler
+from alfred.data.scalers import LogReturnScaler, CustomScaler
 from .range_selection import load_csv_files_and_apply_range
 
 # added this flag to go live (yahoo) or cache (file) due to network issues
@@ -90,17 +89,32 @@ class YahooNextCloseWindowDataSet(Dataset):
 
 
 class CachedStockDataSet(Dataset):
-    def __init__(self, symbol, seed, length, sequence_length, feature_columns, target_columns,
-                 scaler_config, range_provider, change=1,
+    def __init__(self, symbol, seed, period_length, sequence_length, feature_columns, target_columns,
+                 scaler_config, change=1,
                  date_column="Unnamed: 0", data_path="./data"):
+        '''
+        symbol - ticker
+        seed - random seed
+        period_length - the length of the total training/eval window
+        sequence_length - the length of the sequence
+        feature_columns - the columns of the stock features
+        target_columns - the columns of the stock targets
+        scaler_config - the scaler config for CustomScaler
+        change - how many days out to predict
+        data_column - the name of the date column in the df
+        data_path - where the data files are
+        '''
 
 
-        # i wrote this to get many files, but then decided I would only train one series at a time
-        # so we just take 
-        training_sets = load_csv_files_and_apply_range([symbol], data_path, length, seed, date_column).values()[0]
-
-        self.scaler = CustomScaler(scaler_config, training_sets)
-        self.df = self.scaler.fit_transform(self.orig_df)
+        # I wrote this to get many files, but then decided I would only train one series at a time
+        # so the input is a single symbol
+        training_set = list(load_csv_files_and_apply_range(symbols=[symbol],
+                                                       data_path=data_path,
+                                                       period_length=period_length,
+                                                       seed=seed,
+                                                       date_column=date_column).values())[0]
+        self.scaler = CustomScaler(scaler_config, training_set)
+        self.df = self.scaler.fit_transform(training_set)
         assert not self.df.isnull().any().any(), f"scaled df has null after transform"
 
         self.seq_length = sequence_length

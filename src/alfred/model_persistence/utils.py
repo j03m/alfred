@@ -53,6 +53,9 @@ def get_latest_model(model_path, model_prefix):
 
 
 def save_next_model(model, optimizer, scheduler, model_path, model_prefix):
+    if not os.path.exists(model_path):
+        os.makedirs(model_path)
+
     search_pattern = os.path.join(model_path, f"{model_prefix}*.pth")
 
     model_files = glob.glob(search_pattern)

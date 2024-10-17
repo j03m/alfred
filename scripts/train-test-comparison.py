@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader
 from alfred.models import LSTMModel, Stockformer, AdvancedLSTM, LinearSeries, LinearConv1dSeries, LSTMConv1d, TransAm
 from alfred.data import YahooNextCloseWindowDataSet, CachedStockDataSet
 from alfred.model_persistence import maybe_save_model, get_latest_model
+from alfred.model_evaluation import simple_profit_measure, analyze_ledger
 from statistics import mean
 from sklearn.metrics import mean_squared_error
 import argparse
@@ -26,29 +27,20 @@ warnings.simplefilter("error", UserWarning)
 
 BATCH_SIZE = 64
 SIZE = 32
-
+SEED = 42
+PERIOD = 365
 scaler_config = [
-                {'regex': r'^Close$', 'type': 'log_returns'},
-                {'regex': r'^VIX.*', 'type': 'standard'},
-                {'regex': r'^Margin.*', 'type': 'standard'},
-                {'regex': r'^Volume$', 'type': 'log_returns'},
-                {'columns': ['reportedEPS', 'estimatedEPS', 'surprise', 'surprisePercentage'], 'type': 'standard'},
-                {'regex': r'\d+year', 'type': 'standard'}
-            ]
+    {'regex': r'^Close$', 'type': 'yeo-johnson'},
+    {'regex': r'^VIX.*', 'type': 'standard'},
+    {'regex': r'^Margin.*', 'type': 'standard'},
+    {'regex': r'^Volume$', 'type': 'yeo-johnson'},
+    {'columns': ['reportedEPS', 'estimatedEPS', 'surprise', 'surprisePercentage'], 'type': 'standard'},
+    {'regex': r'\d+year', 'type': 'standard'}
+]
 
 
 def get_simple_yahoo_data_loader(ticker, start, end, seq_length, predict_type, window=1, use_cache=False):
-    if use_cache:  # assume close only but test cache
-        file = f"./data/{ticker}_unscaled.csv"
-        dataset = CachedStockDataSet(file=file,
-                                     start=start,
-                                     end=end,
-                                     scaler_config = scaler_config,
-                                     sequence_length=seq_length,
-                                     feature_columns=["Close"],
-                                     target_columns=["Close"])
-        return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True), dataset
-    elif predict_type == "price":
+    if predict_type == "price":
         dataset = YahooNextCloseWindowDataSet(ticker, start, end, seq_length, change=window, log_return_scaler=True)
         return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True), dataset
     else:
@@ -108,7 +100,7 @@ def evaluate_model(model, loader):
         with torch.no_grad():
             output = model(seq).squeeze(-1)
             predictions.extend(output.cpu().tolist())
-            actuals.extend(labels.cpu().tolist())
+            actuals.extend(labels.squeeze().cpu().tolist())
 
     return predictions, actuals
 
@@ -142,10 +134,11 @@ def main():
                         help="some datasets need a window, for example when predict the next change")
     parser.add_argument("--make-plots", action='store_true',
                         help="plot all data")
-    parser.add_argument("--use-cache", action='store_true',
+    parser.add_argument("--use-cache", action='store_true', default=True,
                         help="use data cache files")
     parser.add_argument("--epochs", type=int, default=100, help="epochs")
-    parser.add_argument("--ticker", type=str, default="SPY", help="symbol to train or eval")
+    parser.add_argument("--ticker", type=str, default="AAPL", help="symbol to train or eval")
+    parser.add_argument("--eval-ticker", type=str, default="TSLA", help="symbol to train or eval")
     parser.add_argument("--start", type=str, default='1999-01-01', help="start date")
     parser.add_argument("--end", type=str, default="'2021-01-01'", help="end date")
     args = parser.parse_args()
@@ -201,8 +194,20 @@ def main():
         scheduler.load_state_dict(model_checkpoint['scheduler_state_dict'])
 
     if args.action == 'train' or args.action == 'both':
-        train_loader, dataset = get_simple_yahoo_data_loader(ticker, start_date, end_date, seq_length,
-                                                             args.predict_type, args.window, args.use_cache)
+        if args.use_cache:
+            # This will select a consistent range based on ticker, seed and period_length
+            dataset = CachedStockDataSet(symbol=ticker,
+                                         seed=SEED,
+                                         scaler_config=scaler_config,
+                                         period_length=PERIOD,
+                                         sequence_length=seq_length,
+                                         feature_columns=["Close"],
+                                         target_columns=["Close"])
+            train_loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True)
+
+        else:
+            train_loader, dataset = get_simple_yahoo_data_loader(ticker, start_date, end_date, seq_length,
+                                                                 args.predict_type, args.window)
         print("**********TRAIN")
         if args.make_plots:
             plot(dataset.df.index, dataset.df["Close"])
@@ -214,8 +219,19 @@ def main():
 
     if args.action == 'eval' or args.action == 'both':
         print("**********EVAL")
-        eval_loader, dataset = get_simple_yahoo_data_loader(ticker, end_date, '2023-01-01', seq_length,
-                                                            args.predict_type, args.window, args.use_cache)
+        if args.use_cache:
+            # This will select a consistent range based on ticker, seed and period_length
+            dataset = CachedStockDataSet(symbol=args.eval_ticker,
+                                         seed=SEED,
+                                         scaler_config=scaler_config,
+                                         period_length=PERIOD,
+                                         sequence_length=seq_length,
+                                         feature_columns=["Close"],
+                                         target_columns=["Close"])
+            eval_loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True)
+        else:
+            eval_loader, dataset = get_simple_yahoo_data_loader(ticker, end_date, '2023-01-01', seq_length,
+                                                            args.predict_type, args.window)
         if args.make_plots:
             plot(dataset.df.index, dataset.df["Close"])
             plot(dataset.df.index[:len(dataset.data)], dataset.data)
@@ -225,6 +241,19 @@ def main():
         # Calculate Mean Squared Error
         mse = mean_squared_error(actuals, predictions)
         print(f"Mean Squared Error: {mse}")
+
+        unscaled_predictions = dataset.scaler.inverse_transform_column("Close", np.array(predictions).reshape(-1, 1))
+        unscaled_actuals = dataset.scaler.inverse_transform_column("Close", np.array(actuals).reshape(-1, 1))
+        profit, ledger_df = simple_profit_measure(unscaled_predictions.squeeze(), unscaled_actuals.squeeze())
+        print(f"Profit: ${profit:.2f}")
+
+        # Analyze the ledger
+        metrics = analyze_ledger(ledger_df)
+        print("Ledger Metrics:")
+        for key, value in metrics.items():
+            print(f"{key}: {value}")
+
+        ledger_df.to_csv(f"{args.model_path}/{model_token}_simple_ledger.csv", index=False)
 
         # Plotting predictions against actuals
         plt.figure(figsize=(10, 5))

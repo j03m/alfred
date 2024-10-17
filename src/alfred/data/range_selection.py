@@ -21,7 +21,7 @@ def choose_eval_range(symbol, seed, data_length, training_length, training_start
 def choose_train_range(symbol, seed, data_length, training_length):
     return consistent_rand_for_symbol(symbol, seed, 0, data_length - training_length)
 
-
+# todo, implement this into sacred
 def load_csv_files_and_apply_range(symbols, data_path, period_length, seed, date_column):
     train_data = {}
 

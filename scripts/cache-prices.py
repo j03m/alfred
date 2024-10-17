@@ -28,10 +28,6 @@ if args.symbol_file is not None:
 
 if not os.path.exists(args.output_dir):
     os.makedirs(args.output_dir)
-    print(f"Directory '{args.output_dir}' created.")
-else:
-    print(f"Directory '{args.output_dir}' already exists.")
-
 
 symbols = list(set(symbols))
 bad_symbols = download_ticker_list(symbols, args.output_dir, interval=args.interval)
