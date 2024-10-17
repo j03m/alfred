@@ -24,6 +24,7 @@
   "data": [
     "^VIX",
     "SPY",
-    "WT"
+    "CL=F",
+    "BZ=F"
   ]
 }

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import pandas as pd
 import argparse
-from alfred.data import download_ticker_list
+from alfred.data import download_ticker_list, TickerCategories
 import os
-
+import json
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--symbols", help="Symbols to use (default: SPY), separated by comma")
 parser.add_argument("-f", "--symbol-file", help="Load symbols from a file")
@@ -16,8 +16,8 @@ parser.add_argument("-o", "--output-dir", default="./data", help="Output directo
 args = parser.parse_args()
 
 def load_symbols_from_file(file):
-    return pd.read_csv(file)["Symbols"].tolist()
-
+    tickers = TickerCategories(file)
+    return tickers.get(["training", "evaluation", "data"])
 
 symbols = []
 if args.symbols is not None:

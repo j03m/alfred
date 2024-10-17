@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from alfred.data import attach_moving_average_diffs, read_file
+from alfred.data import attach_moving_average_diffs, read_file, TickerCategories
 import argparse
 import os
 
@@ -94,7 +94,6 @@ def attach_price_prediction_labels(args, columns, df):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--symbols', type=str, help="Symbols to use separated by comma")
     parser.add_argument('--symbol-file', type=str, help="List of symbols in a file")
     parser.add_argument('--data', type=str, default="./data", help="data dir (./data)")
     parser.add_argument('--individual-files', type=bool, default=True, help="write each ticker separately")
@@ -103,17 +102,11 @@ def main():
     parser.add_argument('--debug', type=bool, default=True, help="write debug to console")
 
     args = parser.parse_args()
-    symbols = []
-    if args.symbols:
-        symbols = args.symbols.split(',')
-    else:
-        symbols += pd.read_csv(args.symbol_file)["Symbols"].tolist()
+    tickerCategories = TickerCategories(args.symbol_file)
+    symbols = tickerCategories.get(["training", "evaluation"])
 
     ticker_data_frames = []
     for symbol in symbols:
-        if symbol == "^VIX" or symbol == "SPY":
-            continue
-
         print("pre-processing: ", symbol)
 
         df = read_file(args.data, f"{symbol}_fundamentals.csv")

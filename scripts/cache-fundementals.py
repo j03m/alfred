@@ -1,17 +1,15 @@
 import pandas as pd
 import os
 import argparse
-from alfred.data import AlphaDownloader
+from alfred.data import AlphaDownloader, TickerCategories
 
 def main(symbols_file, data_dir):
-    df_symbols = pd.read_csv(symbols_file)
+    ticker_categories = TickerCategories(symbols_file)
     alpha = AlphaDownloader()
-
-    for symbol in df_symbols['Symbols']:
+    symbols = ticker_categories.get(["training", "evaluation"])
+    for symbol in symbols:
         print(f"Processing {symbol}")
-        # skip the fix
-        if symbol == '^VIX' or symbol == 'SPY':
-            continue
+
 
         _, quarterly_earnings = alpha.earnings(symbol)
         margins = alpha.margins(symbol)
