@@ -1,8 +1,3 @@
-* Implement a column fetcher - gets columns based on metadata
-* Separate the basic lists into:
-  * Training
-  * Eval
-  * Data only
 * Modify the dataloaders and trainers to use the symbol meta data
 * Create an experiment descriptor
   * models

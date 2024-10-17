@@ -22,8 +22,10 @@
         { "name": "price_change_term_120" },
         { "name": "price_change_term_240" }
     ],
+    "price-only": [
+        { "name": "Close" }
+    ],
     "core": [
-        { "name": "Symbol" },
         { "name": "Close" },
         { "name": "Volume" }
     ],
