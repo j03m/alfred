@@ -1,0 +1,8 @@
+{
+  "data-only": [
+    "^VIX",
+    "SPY",
+    "BRENT",
+    "WTI"
+  ]
+}

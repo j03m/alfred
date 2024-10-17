@@ -7,7 +7,7 @@
 * Sizes
   * 128, 256, 512, 1024, 2048
 * Columns
-  * TODO: Add price of oil, price of bitcoin to macro
+  * TODO: Add price of oil, price of bitcoin, price of spy to macro
   * Core
   * Core, Fundamentals
   * Core, Technicals
