@@ -17,16 +17,16 @@ initial_columns_to_keep = [
     'Margin_Net_Profit'
 ]
 
-def add_vix(final_df, args):
-    vix = pd.read_csv(f"{args.data}/^VIX.csv")
-    vix.index = pd.to_datetime(vix['Date'])
-    vix = vix[["Close"]]
-    vix.rename(columns={'Close': 'VIX'}, inplace=True)
+def add_data_column(final_df, args, ticker):
+    data = pd.read_csv(f"{args.data}/{ticker}.csv")
+    data.index = pd.to_datetime(data['Date'])
+    data = data[["Close"]]
+    data.rename(columns={'Close': ticker}, inplace=True)
     earliest_date = final_df.index.min()
-    vix = vix[vix.index >= earliest_date]
-    final_df = final_df.join(vix, how='outer')
-    final_df.fillna(method='ffill', inplace=True)
-    final_df.fillna(method='bfill', inplace=True)
+    data = data[data.index >= earliest_date]
+    final_df = final_df.join(data, how='outer')
+    final_df.ffill(inplace=True)
+    final_df.bfill(inplace=True)
     return final_df
 
 
@@ -49,10 +49,10 @@ def add_treasuries(final_df, args):
     final_df = final_df.join(treasuries_filtered, how='outer')
 
     # forward fill - prevents lookahead
-    final_df.fillna(method='ffill', inplace=True)
+    final_df.ffill(inplace=True)
 
     # backfill anything left over
-    final_df.fillna(method='bfill', inplace=True)
+    final_df.bfill(inplace=True)
     return final_df
 
 
@@ -102,8 +102,8 @@ def main():
     parser.add_argument('--debug', type=bool, default=True, help="write debug to console")
 
     args = parser.parse_args()
-    tickerCategories = TickerCategories(args.symbol_file)
-    symbols = tickerCategories.get(["training", "evaluation"])
+    ticker_categories = TickerCategories(args.symbol_file)
+    symbols = ticker_categories.get(["training", "evaluation"])
 
     ticker_data_frames = []
     for symbol in symbols:
@@ -140,7 +140,11 @@ def main():
         finalize_single_data_file(args, ticker_data_frames)
     else:
         for frame, symbol in zip(ticker_data_frames, symbols):
-            frame = add_vix(frame, args)
+            data_tickers = ticker_categories.get(["data"])
+            # add each data ticker
+            for ticker in data_tickers:
+                frame = add_data_column(frame, args, ticker)
+
             frame = add_treasuries(frame, args)
             new_file_path = os.path.join(args.data, f"{symbol}_unscaled.csv")
             frame.to_csv(new_file_path)
@@ -148,6 +152,7 @@ def main():
 def finalize_single_data_file(args, ticker_data_frames):
     final_df = pd.concat(ticker_data_frames)
     final_df = add_vix(final_df, args)
+
     final_df = add_treasuries(final_df, args)
 
     final_df, _, _ = align_date_range(final_df)
