@@ -1,0 +1,37 @@
+{
+    "fundamentals": [
+        { "name": "reportedEPS" },
+        { "name": "estimatedEPS" },
+        { "name": "surprise" },
+        { "name": "surprisePercentage" },
+        { "name": "Margin_Gross" },
+        { "name": "Margin_Operating" },
+        { "name": "Margin_Net_Profit" }
+    ],
+    "technicals": [
+        { "name": "Close_diff_MA_7" },
+        { "name": "Volume_diff_MA_7" },
+        { "name": "Close_diff_MA_30" },
+        { "name": "Volume_diff_MA_30" },
+        { "name": "Close_diff_MA_90" },
+        { "name": "Volume_diff_MA_90" },
+        { "name": "Close_diff_MA_180" },
+        { "name": "Volume_diff_MA_180" },
+        { "name": "price_change_term_7" },
+        { "name": "price_change_term_30" },
+        { "name": "price_change_term_120" },
+        { "name": "price_change_term_240" }
+    ],
+    "core": [
+        { "name": "Symbol" },
+        { "name": "Close" },
+        { "name": "Volume" }
+    ],
+    "macro": [
+        { "name": "VIX" },
+        { "name": "10year" },
+        { "name": "5year" },
+        { "name": "3year" },
+        { "name": "2year" }
+    ]
+}
