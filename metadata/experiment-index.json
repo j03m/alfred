@@ -1,0 +1,1502 @@
+{
+    "1": {
+        "model": "lstm",
+        "size": 128,
+        "data": [
+            "price-only"
+        ]
+    },
+    "2": {
+        "model": "lstm",
+        "size": 128,
+        "data": [
+            "core"
+        ]
+    },
+    "3": {
+        "model": "lstm",
+        "size": 128,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "4": {
+        "model": "lstm",
+        "size": 128,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "5": {
+        "model": "lstm",
+        "size": 128,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "6": {
+        "model": "lstm",
+        "size": 128,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "7": {
+        "model": "lstm",
+        "size": 128,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "8": {
+        "model": "lstm",
+        "size": 128,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "9": {
+        "model": "lstm",
+        "size": 128,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "10": {
+        "model": "lstm",
+        "size": 256,
+        "data": [
+            "price-only"
+        ]
+    },
+    "11": {
+        "model": "lstm",
+        "size": 256,
+        "data": [
+            "core"
+        ]
+    },
+    "12": {
+        "model": "lstm",
+        "size": 256,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "13": {
+        "model": "lstm",
+        "size": 256,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "14": {
+        "model": "lstm",
+        "size": 256,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "15": {
+        "model": "lstm",
+        "size": 256,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "16": {
+        "model": "lstm",
+        "size": 256,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "17": {
+        "model": "lstm",
+        "size": 256,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "18": {
+        "model": "lstm",
+        "size": 256,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "19": {
+        "model": "lstm",
+        "size": 512,
+        "data": [
+            "price-only"
+        ]
+    },
+    "20": {
+        "model": "lstm",
+        "size": 512,
+        "data": [
+            "core"
+        ]
+    },
+    "21": {
+        "model": "lstm",
+        "size": 512,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "22": {
+        "model": "lstm",
+        "size": 512,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "23": {
+        "model": "lstm",
+        "size": 512,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "24": {
+        "model": "lstm",
+        "size": 512,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "25": {
+        "model": "lstm",
+        "size": 512,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "26": {
+        "model": "lstm",
+        "size": 512,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "27": {
+        "model": "lstm",
+        "size": 512,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "28": {
+        "model": "lstm",
+        "size": 1028,
+        "data": [
+            "price-only"
+        ]
+    },
+    "29": {
+        "model": "lstm",
+        "size": 1028,
+        "data": [
+            "core"
+        ]
+    },
+    "30": {
+        "model": "lstm",
+        "size": 1028,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "31": {
+        "model": "lstm",
+        "size": 1028,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "32": {
+        "model": "lstm",
+        "size": 1028,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "33": {
+        "model": "lstm",
+        "size": 1028,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "34": {
+        "model": "lstm",
+        "size": 1028,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "35": {
+        "model": "lstm",
+        "size": 1028,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "36": {
+        "model": "lstm",
+        "size": 1028,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "37": {
+        "model": "lstm",
+        "size": 2056,
+        "data": [
+            "price-only"
+        ]
+    },
+    "38": {
+        "model": "lstm",
+        "size": 2056,
+        "data": [
+            "core"
+        ]
+    },
+    "39": {
+        "model": "lstm",
+        "size": 2056,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "40": {
+        "model": "lstm",
+        "size": 2056,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "41": {
+        "model": "lstm",
+        "size": 2056,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "42": {
+        "model": "lstm",
+        "size": 2056,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "43": {
+        "model": "lstm",
+        "size": 2056,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "44": {
+        "model": "lstm",
+        "size": 2056,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "45": {
+        "model": "lstm",
+        "size": 2056,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "46": {
+        "model": "lstm-conv1d",
+        "size": 128,
+        "data": [
+            "price-only"
+        ]
+    },
+    "47": {
+        "model": "lstm-conv1d",
+        "size": 128,
+        "data": [
+            "core"
+        ]
+    },
+    "48": {
+        "model": "lstm-conv1d",
+        "size": 128,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "49": {
+        "model": "lstm-conv1d",
+        "size": 128,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "50": {
+        "model": "lstm-conv1d",
+        "size": 128,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "51": {
+        "model": "lstm-conv1d",
+        "size": 128,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "52": {
+        "model": "lstm-conv1d",
+        "size": 128,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "53": {
+        "model": "lstm-conv1d",
+        "size": 128,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "54": {
+        "model": "lstm-conv1d",
+        "size": 128,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "55": {
+        "model": "lstm-conv1d",
+        "size": 256,
+        "data": [
+            "price-only"
+        ]
+    },
+    "56": {
+        "model": "lstm-conv1d",
+        "size": 256,
+        "data": [
+            "core"
+        ]
+    },
+    "57": {
+        "model": "lstm-conv1d",
+        "size": 256,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "58": {
+        "model": "lstm-conv1d",
+        "size": 256,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "59": {
+        "model": "lstm-conv1d",
+        "size": 256,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "60": {
+        "model": "lstm-conv1d",
+        "size": 256,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "61": {
+        "model": "lstm-conv1d",
+        "size": 256,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "62": {
+        "model": "lstm-conv1d",
+        "size": 256,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "63": {
+        "model": "lstm-conv1d",
+        "size": 256,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "64": {
+        "model": "lstm-conv1d",
+        "size": 512,
+        "data": [
+            "price-only"
+        ]
+    },
+    "65": {
+        "model": "lstm-conv1d",
+        "size": 512,
+        "data": [
+            "core"
+        ]
+    },
+    "66": {
+        "model": "lstm-conv1d",
+        "size": 512,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "67": {
+        "model": "lstm-conv1d",
+        "size": 512,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "68": {
+        "model": "lstm-conv1d",
+        "size": 512,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "69": {
+        "model": "lstm-conv1d",
+        "size": 512,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "70": {
+        "model": "lstm-conv1d",
+        "size": 512,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "71": {
+        "model": "lstm-conv1d",
+        "size": 512,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "72": {
+        "model": "lstm-conv1d",
+        "size": 512,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "73": {
+        "model": "lstm-conv1d",
+        "size": 1028,
+        "data": [
+            "price-only"
+        ]
+    },
+    "74": {
+        "model": "lstm-conv1d",
+        "size": 1028,
+        "data": [
+            "core"
+        ]
+    },
+    "75": {
+        "model": "lstm-conv1d",
+        "size": 1028,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "76": {
+        "model": "lstm-conv1d",
+        "size": 1028,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "77": {
+        "model": "lstm-conv1d",
+        "size": 1028,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "78": {
+        "model": "lstm-conv1d",
+        "size": 1028,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "79": {
+        "model": "lstm-conv1d",
+        "size": 1028,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "80": {
+        "model": "lstm-conv1d",
+        "size": 1028,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "81": {
+        "model": "lstm-conv1d",
+        "size": 1028,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "82": {
+        "model": "lstm-conv1d",
+        "size": 2056,
+        "data": [
+            "price-only"
+        ]
+    },
+    "83": {
+        "model": "lstm-conv1d",
+        "size": 2056,
+        "data": [
+            "core"
+        ]
+    },
+    "84": {
+        "model": "lstm-conv1d",
+        "size": 2056,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "85": {
+        "model": "lstm-conv1d",
+        "size": 2056,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "86": {
+        "model": "lstm-conv1d",
+        "size": 2056,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "87": {
+        "model": "lstm-conv1d",
+        "size": 2056,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "88": {
+        "model": "lstm-conv1d",
+        "size": 2056,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "89": {
+        "model": "lstm-conv1d",
+        "size": 2056,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "90": {
+        "model": "lstm-conv1d",
+        "size": 2056,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "91": {
+        "model": "advanced-lstm",
+        "size": 128,
+        "data": [
+            "price-only"
+        ]
+    },
+    "92": {
+        "model": "advanced-lstm",
+        "size": 128,
+        "data": [
+            "core"
+        ]
+    },
+    "93": {
+        "model": "advanced-lstm",
+        "size": 128,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "94": {
+        "model": "advanced-lstm",
+        "size": 128,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "95": {
+        "model": "advanced-lstm",
+        "size": 128,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "96": {
+        "model": "advanced-lstm",
+        "size": 128,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "97": {
+        "model": "advanced-lstm",
+        "size": 128,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "98": {
+        "model": "advanced-lstm",
+        "size": 128,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "99": {
+        "model": "advanced-lstm",
+        "size": 128,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "100": {
+        "model": "advanced-lstm",
+        "size": 256,
+        "data": [
+            "price-only"
+        ]
+    },
+    "101": {
+        "model": "advanced-lstm",
+        "size": 256,
+        "data": [
+            "core"
+        ]
+    },
+    "102": {
+        "model": "advanced-lstm",
+        "size": 256,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "103": {
+        "model": "advanced-lstm",
+        "size": 256,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "104": {
+        "model": "advanced-lstm",
+        "size": 256,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "105": {
+        "model": "advanced-lstm",
+        "size": 256,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "106": {
+        "model": "advanced-lstm",
+        "size": 256,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "107": {
+        "model": "advanced-lstm",
+        "size": 256,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "108": {
+        "model": "advanced-lstm",
+        "size": 256,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "109": {
+        "model": "advanced-lstm",
+        "size": 512,
+        "data": [
+            "price-only"
+        ]
+    },
+    "110": {
+        "model": "advanced-lstm",
+        "size": 512,
+        "data": [
+            "core"
+        ]
+    },
+    "111": {
+        "model": "advanced-lstm",
+        "size": 512,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "112": {
+        "model": "advanced-lstm",
+        "size": 512,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "113": {
+        "model": "advanced-lstm",
+        "size": 512,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "114": {
+        "model": "advanced-lstm",
+        "size": 512,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "115": {
+        "model": "advanced-lstm",
+        "size": 512,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "116": {
+        "model": "advanced-lstm",
+        "size": 512,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "117": {
+        "model": "advanced-lstm",
+        "size": 512,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "118": {
+        "model": "advanced-lstm",
+        "size": 1028,
+        "data": [
+            "price-only"
+        ]
+    },
+    "119": {
+        "model": "advanced-lstm",
+        "size": 1028,
+        "data": [
+            "core"
+        ]
+    },
+    "120": {
+        "model": "advanced-lstm",
+        "size": 1028,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "121": {
+        "model": "advanced-lstm",
+        "size": 1028,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "122": {
+        "model": "advanced-lstm",
+        "size": 1028,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "123": {
+        "model": "advanced-lstm",
+        "size": 1028,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "124": {
+        "model": "advanced-lstm",
+        "size": 1028,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "125": {
+        "model": "advanced-lstm",
+        "size": 1028,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "126": {
+        "model": "advanced-lstm",
+        "size": 1028,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "127": {
+        "model": "advanced-lstm",
+        "size": 2056,
+        "data": [
+            "price-only"
+        ]
+    },
+    "128": {
+        "model": "advanced-lstm",
+        "size": 2056,
+        "data": [
+            "core"
+        ]
+    },
+    "129": {
+        "model": "advanced-lstm",
+        "size": 2056,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "130": {
+        "model": "advanced-lstm",
+        "size": 2056,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "131": {
+        "model": "advanced-lstm",
+        "size": 2056,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "132": {
+        "model": "advanced-lstm",
+        "size": 2056,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "133": {
+        "model": "advanced-lstm",
+        "size": 2056,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "134": {
+        "model": "advanced-lstm",
+        "size": 2056,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "135": {
+        "model": "advanced-lstm",
+        "size": 2056,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "136": {
+        "model": "trans-am",
+        "size": 128,
+        "data": [
+            "price-only"
+        ]
+    },
+    "137": {
+        "model": "trans-am",
+        "size": 128,
+        "data": [
+            "core"
+        ]
+    },
+    "138": {
+        "model": "trans-am",
+        "size": 128,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "139": {
+        "model": "trans-am",
+        "size": 128,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "140": {
+        "model": "trans-am",
+        "size": 128,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "141": {
+        "model": "trans-am",
+        "size": 128,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "142": {
+        "model": "trans-am",
+        "size": 128,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "143": {
+        "model": "trans-am",
+        "size": 128,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "144": {
+        "model": "trans-am",
+        "size": 128,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "145": {
+        "model": "trans-am",
+        "size": 256,
+        "data": [
+            "price-only"
+        ]
+    },
+    "146": {
+        "model": "trans-am",
+        "size": 256,
+        "data": [
+            "core"
+        ]
+    },
+    "147": {
+        "model": "trans-am",
+        "size": 256,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "148": {
+        "model": "trans-am",
+        "size": 256,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "149": {
+        "model": "trans-am",
+        "size": 256,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "150": {
+        "model": "trans-am",
+        "size": 256,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "151": {
+        "model": "trans-am",
+        "size": 256,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "152": {
+        "model": "trans-am",
+        "size": 256,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "153": {
+        "model": "trans-am",
+        "size": 256,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "154": {
+        "model": "trans-am",
+        "size": 512,
+        "data": [
+            "price-only"
+        ]
+    },
+    "155": {
+        "model": "trans-am",
+        "size": 512,
+        "data": [
+            "core"
+        ]
+    },
+    "156": {
+        "model": "trans-am",
+        "size": 512,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "157": {
+        "model": "trans-am",
+        "size": 512,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "158": {
+        "model": "trans-am",
+        "size": 512,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "159": {
+        "model": "trans-am",
+        "size": 512,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "160": {
+        "model": "trans-am",
+        "size": 512,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "161": {
+        "model": "trans-am",
+        "size": 512,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "162": {
+        "model": "trans-am",
+        "size": 512,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "163": {
+        "model": "trans-am",
+        "size": 1028,
+        "data": [
+            "price-only"
+        ]
+    },
+    "164": {
+        "model": "trans-am",
+        "size": 1028,
+        "data": [
+            "core"
+        ]
+    },
+    "165": {
+        "model": "trans-am",
+        "size": 1028,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "166": {
+        "model": "trans-am",
+        "size": 1028,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "167": {
+        "model": "trans-am",
+        "size": 1028,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "168": {
+        "model": "trans-am",
+        "size": 1028,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "169": {
+        "model": "trans-am",
+        "size": 1028,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "170": {
+        "model": "trans-am",
+        "size": 1028,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "171": {
+        "model": "trans-am",
+        "size": 1028,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "172": {
+        "model": "trans-am",
+        "size": 2056,
+        "data": [
+            "price-only"
+        ]
+    },
+    "173": {
+        "model": "trans-am",
+        "size": 2056,
+        "data": [
+            "core"
+        ]
+    },
+    "174": {
+        "model": "trans-am",
+        "size": 2056,
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "175": {
+        "model": "trans-am",
+        "size": 2056,
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "176": {
+        "model": "trans-am",
+        "size": 2056,
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "177": {
+        "model": "trans-am",
+        "size": 2056,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "178": {
+        "model": "trans-am",
+        "size": 2056,
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "179": {
+        "model": "trans-am",
+        "size": 2056,
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "180": {
+        "model": "trans-am",
+        "size": 2056,
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    }
+}

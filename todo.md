@@ -1,8 +1,5 @@
-* Modify the dataloaders and trainers to use the symbol meta data
-* Create an experiment descriptor
-  * models
-  * sizes
-  * column permuations
+* Sketch sacred tests
+* Refactor training and eval functions
 * Implement a 3 tier loop in Sacred
   * Iterate over model type
   * Size
