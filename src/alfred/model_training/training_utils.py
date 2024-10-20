@@ -4,12 +4,12 @@ import torch
 from torch import nn as nn
 
 from alfred.model_persistence import maybe_save_model
-
 from alfred.devices import set_device
 
 device = set_device()
 
-def train_model(model, optimizer, scheduler, train_loader, patience, model_path, model_token, epochs=20,
+
+def train_model(model, optimizer, scheduler, train_loader, patience, model_path, model_token, training_label, epochs=20,
                 loss_function=nn.MSELoss()):
     model.train()
 
@@ -36,10 +36,10 @@ def train_model(model, optimizer, scheduler, train_loader, patience, model_path,
         print(f'Epoch {epoch} loss: {loss_mean}, patience: {patience_count}')
         # todo: maybe save model really needs to take the optimizer and scheduler as well if its going to resume at an optimzied state
         # otherwise we lose like a 100 epochs prior to it getting to the right place again
-        maybe_save_model(model, optimizer, scheduler, loss_mean, model_path, model_token)
+        saved = maybe_save_model(model, optimizer, scheduler, loss_mean, model_path, model_token, training_label)
 
-        if last_mean_loss != None:
-            if loss_mean >= last_mean_loss:
+        if last_mean_loss is not None:
+            if not saved:
                 patience_count += 1
             else:
                 patience_count = 0

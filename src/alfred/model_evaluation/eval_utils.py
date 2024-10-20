@@ -53,14 +53,11 @@ def analyze_ledger(ledger_df):
     # Calculate important metrics
     total_trades = len(ledger_df)
     total_profit_percentage = ledger_df['actual_profit_percentage'].sum()
-    profit_factor = ledger_df[ledger_df['actual_profit_percentage'] > 0]['actual_profit_percentage'].sum() / abs(
-        ledger_df[ledger_df['actual_profit_percentage'] < 0]['actual_profit_percentage'].sum())
     win_rate = len(ledger_df[ledger_df['actual_profit_percentage'] > 0]) / total_trades if total_trades > 0 else 0
 
     metrics = {
         'total_trades': total_trades,
         'total_profit_percentage': total_profit_percentage,
-        'profit_factor': profit_factor,
         'win_rate': win_rate
     }
 

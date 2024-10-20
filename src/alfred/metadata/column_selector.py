@@ -14,6 +14,7 @@ class ColumnSelector:
         # todo: this crashes, something off about config.
         for category in categories:
             if category in self.data:
-                combined_list.extend(self.data[category["name"]])
+                names = list(map(lambda item: item['name'], self.data[category]))
+                combined_list.extend(names)
 
         return combined_list

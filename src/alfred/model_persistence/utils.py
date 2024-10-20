@@ -13,12 +13,12 @@ def maybe_save_model_with_evaluator(epoch, evaluator, eval_save, model, model_pa
         return True
 
 
-def maybe_save_model(model, optimizer, scheduler, eval_loss, model_path, model_prefix, token="all"):
-    best_loss = get_best_loss(model_path, model_prefix, token)
+def maybe_save_model(model, optimizer, scheduler, eval_loss, model_path, model_prefix, training_label="all"):
+    best_loss = get_best_loss(model_path, model_prefix, training_label)
     if eval_loss < best_loss:
         print(f"New best model: {eval_loss} vs {best_loss}: saving")
         save_next_model(model, optimizer, scheduler, model_path, model_prefix)
-        set_best_loss(model_path, model_prefix, eval_loss, token)
+        set_best_loss(model_path, model_prefix, eval_loss, training_label)
         return True
     else:
         print(f"{eval_loss} vs {best_loss}: declining save")

@@ -163,7 +163,7 @@ def main():
             plot(dataset.df.index[:len(dataset.data)], dataset.data)
 
         # Train the model
-        train_model(model, optimizer, scheduler, train_loader, patience=args.patience, model_token=model_token,
+        train_model(model, optimizer, scheduler, train_loader, args.patience, training_label=ticker, model_token=model_token,
                     model_path=args.model_path, epochs=args.epochs, loss_function=loss_function)
 
     if args.action == 'eval' or args.action == 'both':

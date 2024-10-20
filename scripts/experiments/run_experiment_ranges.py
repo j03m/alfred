@@ -5,13 +5,16 @@ import argparse
 import zlib
 
 from alfred.metadata import ExperimentSelector, TickerCategories, ColumnSelector
-from alfred.models import model_config
 from alfred.devices import set_device, build_model_token
 from alfred.data import CachedStockDataSet
 from alfred.model_persistence import get_latest_model
 from alfred.model_evaluation import simple_profit_measure, analyze_ledger, evaluate_model
 from alfred.model_training import train_model
+from alfred.models import LSTMModel, AdvancedLSTM, LSTMConv1d, TransAm
+from alfred.utils import plot_multi_series, plot_evaluation
 from sklearn.metrics import mean_squared_error
+
+import matplotlib.pyplot as plt
 
 import numpy as np
 
@@ -64,14 +67,27 @@ def crc32_columns(strings):
 
 
 def model_from_config(config_token,
+                      num_features,
                       sequence_length,
                       size,
                       output,
                       descriptors,
-                      model_path):
-    Model = model_config[config_token]
-
-    model = Model(sequence_length=sequence_length, hidden_size=size, output=output)
+                      model_path, layers=2):
+    if config_token == 'lstm':
+        model = LSTMModel(features=num_features, hidden_dim=size, output_size=output,
+                          num_layers=layers)
+    elif config_token == 'advanced-lstm':
+        model = AdvancedLSTM(features=num_features, hidden_dim=size, output_dim=output)
+    elif config_token == 'lstm-conv1d':
+        # size 10 kernel should smooth about 2 weeks of data
+        model = LSTMConv1d(features=num_features, seq_len=sequence_length, hidden_dim=size, output_size=output,
+                           kernel_size=10)
+    elif config_token == 'trans-am':
+        raise Exception("Trans am not supported yet. Fix me!")
+        # model = TransAm(feature_size=250,
+        #                 last_bar=True)  # not apples to apples, size needs to be div by heads so larger number from transam exp
+    else:
+        raise Exception("Model type not supported")
     model.to(DEVICE)
 
     model_token = build_model_token(descriptors)
@@ -87,7 +103,7 @@ def model_from_config(config_token,
         optimizer.load_state_dict(model_checkpoint['optimizer_state_dict'])
         scheduler.load_state_dict(model_checkpoint['scheduler_state_dict'])
 
-    return model, optimizer, scheduler
+    return model, optimizer, scheduler, model_token
 
 
 # Main function to run the experiment
@@ -105,7 +121,8 @@ def run_experiment(model_token, size, sequence_length, projection, data):
     columns = column_selector.get(data)
 
     output = 1
-    model, optimizer, scheduler = model_from_config(
+    model, optimizer, scheduler, real_model_token = model_from_config(
+        num_features=len(columns),
         config_token=model_token,
         sequence_length=sequence_length, size=size, output=output,
         descriptors=[
@@ -117,7 +134,7 @@ def run_experiment(model_token, size, sequence_length, projection, data):
     model.train()
 
     # train on all training tickers
-    for ticker in ticker_categories["training"]:
+    for ticker in ticker_categories.get(["training"]):
         dataset = CachedStockDataSet(symbol=ticker,
                                      seed=_args.seed,
                                      scaler_config=scaler_config,
@@ -127,16 +144,25 @@ def run_experiment(model_token, size, sequence_length, projection, data):
                                      target_columns=["Close"])  # todo ... hmmm will need to mature this past just Close
         train_loader = DataLoader(dataset, batch_size=_args.batch_size, shuffle=False, drop_last=True)
 
-        train_model(model, optimizer, scheduler, train_loader, _args.patience, _args.model_path, model_token,
-                    _args.epochs)
+        if _args.plot:
+            fig = plot_multi_series([
+                (dataset.df.index, dataset.df["Close"], "Close Price", "blue"),
+                (dataset.df.index[:len(dataset.data)], dataset.data, "Dataset Data", "orange")
+            ], f"{ticker} data")
+            fig.savefig(f"{_args.model_path}/{model_token}_{ticker}_raw.png", dpi=600, bbox_inches='tight',
+                        transparent=True)
+
+        train_model(model, optimizer, scheduler, train_loader, _args.patience, _args.model_path, real_model_token,
+                    epochs=_args.epochs, training_label=ticker)
 
     # Initialize variables to accumulate values
     total_mse = 0
     total_profit = 0
     ledger_metrics_aggregate = {}  # To accumulate metrics like win rate, trades count, etc.
-    ticker_count = len(ticker_categories["evaluation"])
+    eval_tickers = ticker_categories.get(["evaluation"])
+    ticker_count = len(eval_tickers)
 
-    for ticker in ticker_categories["evaluation"]:
+    for ticker in eval_tickers:
         dataset = CachedStockDataSet(symbol=ticker,
                                      seed=_args.seed,
                                      scaler_config=scaler_config,
@@ -148,6 +174,11 @@ def run_experiment(model_token, size, sequence_length, projection, data):
 
         # Get predictions and actual values
         predictions, actuals = evaluate_model(model, eval_loader)
+
+        if _args.plot:
+            fig = plot_evaluation(actuals, predictions)
+            fig.savefig(f"{_args.model_path}/{model_token}_{ticker}_eval.png", dpi=600, bbox_inches='tight',
+                        transparent=True)
 
         # Calculate Mean Squared Error (MSE)
         mse = mean_squared_error(actuals, predictions)
@@ -222,11 +253,12 @@ if __name__ == "__main__":
                         help="seed is combined with a ticker to produce a consistent random training and eval period")
     parser.add_argument("--period", type=int, default=365 * 2,
                         help="length of training data")
-    parser.add_argument("--epochs", type=int, default=5000,
+    parser.add_argument("--epochs", type=int, default=1500,
                         help="number of epochs to train")
-    parser.add_argument("--patience", type=int, default=250,
+    parser.add_argument("--patience", type=int, default=50,
                         help="when to stop training after patience epochs of no improvements")
     parser.add_argument("--model-path", type=str, default='./models', help="where to store models and best loss data")
     parser.add_argument("--metadata-path", type=str, default='./metadata', help="experiment descriptors live here")
+    parser.add_argument("--plot", action="store_true", help="make plots")
     gbl_args = parser.parse_args()
     main(gbl_args)
