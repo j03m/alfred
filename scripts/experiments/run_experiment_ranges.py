@@ -19,6 +19,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 DEVICE = set_device()
+gbl_args = None
 
 scaler_config = [
     {'regex': r'^Close$', 'type': 'yeo-johnson'},
@@ -33,6 +34,16 @@ scaler_config = [
 # Initialize Sacred experiment
 ex = Experiment("experiment_runner")
 ex.observers.append(FileStorageObserver.create('sacred_runs'))
+
+
+# Experiment configuration (default values)
+@ex.config
+def config():
+    model_token = None,
+    size = None,
+    sequence_length = None
+    projection = None
+    data = None
 
 
 def crc32_columns(strings):
@@ -79,23 +90,17 @@ def model_from_config(config_token,
     return model, optimizer, scheduler
 
 
-# Experiment configuration (default values)
-@ex.config
-def config():
-    models = None,
-    size = None,
-    sequence_length = None
-    projections = None
-    data = None
-
-
 # Main function to run the experiment
-@ex.automain
-def run_experiment(model_token, size, sequence_length, projections, data, args):
+@ex.main
+def run_experiment(model_token, size, sequence_length, projection, data):
     print(
-        f"Running experiment: Model={model_token}, Size={size}, Sequence length={sequence_length}, projections={projections}, Data={data}")
+        f"Running experiment: Model={model_token}, Size={size}, Sequence length={sequence_length}, projections={projection}, Data={data}")
 
-    column_selector = ColumnSelector(f"{args.metadata_path}/column-descriptors.json")
+    _args = gbl_args
+    assert gbl_args, "additional args required"
+    print(f"Additional args: ", _args)
+
+    column_selector = ColumnSelector(f"{_args.metadata_path}/column-descriptors.json")
 
     columns = column_selector.get(data)
 
@@ -105,25 +110,25 @@ def run_experiment(model_token, size, sequence_length, projections, data, args):
         sequence_length=sequence_length, size=size, output=output,
         descriptors=[
             model_token, sequence_length, size, output, crc32_columns(columns)
-        ], model_path=args.model_path)
+        ], model_path=_args.model_path)
 
-    ticker_categories = TickerCategories(f"{args.metadata_path}/ticker-categorization.json")
+    ticker_categories = TickerCategories(f"{_args.metadata_path}/ticker-categorization.json")
 
     model.train()
 
     # train on all training tickers
     for ticker in ticker_categories["training"]:
         dataset = CachedStockDataSet(symbol=ticker,
-                                     seed=args.seed,
+                                     seed=_args.seed,
                                      scaler_config=scaler_config,
-                                     period_length=args.period,
+                                     period_length=_args.period,
                                      sequence_length=sequence_length,
                                      feature_columns=columns,
                                      target_columns=["Close"])  # todo ... hmmm will need to mature this past just Close
-        train_loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False, drop_last=True)
+        train_loader = DataLoader(dataset, batch_size=_args.batch_size, shuffle=False, drop_last=True)
 
-        train_model(model, optimizer, scheduler, train_loader, args.patience, args.model_path, model_token,
-                    args.epochs)
+        train_model(model, optimizer, scheduler, train_loader, _args.patience, _args.model_path, model_token,
+                    _args.epochs)
 
     # Initialize variables to accumulate values
     total_mse = 0
@@ -133,13 +138,13 @@ def run_experiment(model_token, size, sequence_length, projections, data, args):
 
     for ticker in ticker_categories["evaluation"]:
         dataset = CachedStockDataSet(symbol=ticker,
-                                     seed=args.seed,
+                                     seed=_args.seed,
                                      scaler_config=scaler_config,
-                                     period_length=args.period,
+                                     period_length=_args.period,
                                      sequence_length=sequence_length,
                                      feature_columns=columns,
                                      target_columns=["Close"])
-        eval_loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False, drop_last=True)
+        eval_loader = DataLoader(dataset, batch_size=_args.batch_size, shuffle=False, drop_last=True)
 
         # Get predictions and actual values
         predictions, actuals = evaluate_model(model, eval_loader)
@@ -200,7 +205,7 @@ def main(args):
     # Run the experiments using Sacred
     for experiment in experiments:
         if experiment:
-            ex.run(config_updates=experiment, additional_args=args)
+            ex.run(config_updates=experiment)
 
 
 if __name__ == "__main__":
@@ -217,11 +222,11 @@ if __name__ == "__main__":
                         help="seed is combined with a ticker to produce a consistent random training and eval period")
     parser.add_argument("--period", type=int, default=365 * 2,
                         help="length of training data")
-    parser.add_argument("--eopchs", type=int, default=5000,
+    parser.add_argument("--epochs", type=int, default=5000,
                         help="number of epochs to train")
     parser.add_argument("--patience", type=int, default=250,
                         help="when to stop training after patience epochs of no improvements")
     parser.add_argument("--model-path", type=str, default='./models', help="where to store models and best loss data")
     parser.add_argument("--metadata-path", type=str, default='./metadata', help="experiment descriptors live here")
-    args = parser.parse_args()
-    main(args)
+    gbl_args = parser.parse_args()
+    main(gbl_args)

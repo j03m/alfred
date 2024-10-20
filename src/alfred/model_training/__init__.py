@@ -1,1 +1,1 @@
-from training_utils import train_model
+from .training_utils import train_model

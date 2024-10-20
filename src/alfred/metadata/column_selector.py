@@ -11,6 +11,7 @@ class ColumnSelector:
         combined_list = []
 
         # Loop through each category and extend the combined_list
+        # todo: this crashes, something off about config.
         for category in categories:
             if category in self.data:
                 combined_list.extend(self.data[category["name"]])

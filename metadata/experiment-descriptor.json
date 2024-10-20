@@ -1,5 +1,5 @@
 {
-  "models": [
+  "model_token": [
     "lstm",
     "lstm-conv1d",
     "advanced-lstm",
@@ -19,7 +19,7 @@
     180,
     365
   ],
-  "projections": [
+  "projection": [
     1,
     5,
     30
