@@ -7,15 +7,14 @@ def main(file, output):
     with open(file, 'r') as file:
         experiment_descriptor = json.load(file)
 
-    combinations = list(product(
-        experiment_descriptor["models"],
-        experiment_descriptor["size"],
-        experiment_descriptor["data"]
-    ))
+    keys = list(experiment_descriptor.keys())
+    values = [experiment_descriptor[key] for key in keys]
+
+    combinations = list(product(*values))
 
     # Create a dictionary with indexed combinations
-    indexed_combinations = {i + 1: {"model": combo[0], "size": combo[1], "data": combo[2]}
-                            for i, combo in enumerate(combinations)}
+    indexed_combinations = {i + 1: dict(zip(keys, combo)) for i, combo in enumerate(combinations)}
+
 
     # Save the indexed combinations to a JSON file
     with open(output, 'w') as outfile:

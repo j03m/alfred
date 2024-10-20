@@ -1,12 +1,13 @@
-import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
+
+from alfred.model_evaluation.eval_utils import evaluate_model
+from alfred.model_training import train_model
 from alfred.models import LSTMModel, Stockformer, AdvancedLSTM, LinearSeries, LinearConv1dSeries, LSTMConv1d, TransAm
 from alfred.data import YahooNextCloseWindowDataSet, CachedStockDataSet
-from alfred.model_persistence import maybe_save_model, get_latest_model
+from alfred.model_persistence import get_latest_model
 from alfred.model_evaluation import simple_profit_measure, analyze_ledger
-from statistics import mean
 from sklearn.metrics import mean_squared_error
 import argparse
 import warnings
@@ -48,61 +49,9 @@ def get_simple_yahoo_data_loader(ticker, start, end, seq_length, predict_type, w
 
 
 # Step 4: Training Loop
-def train_model(model, optimizer, scheduler, train_loader, patience, model_path, model_token, epochs=20,
-                loss_function=nn.MSELoss()):
-    model.train()
-
-    single_loss = None
-    patience_count = 0
-    last_mean_loss = None
-    for epoch in range(epochs):
-        epoch_losses = []
-        for seq, labels in train_loader:
-            seq, labels = seq.to(device), labels.to(device)
-            optimizer.zero_grad()
-            y_pred = model(seq)
-            single_loss = loss_function(y_pred, labels)
-            if torch.isnan(single_loss):
-                raise Exception("Found NaN!")
-
-            single_loss.backward()
-            optimizer.step()
-            loss_value = single_loss.item()
-            epoch_losses.append(loss_value)
-
-        loss_mean = mean(epoch_losses)
-
-        print(f'Epoch {epoch} loss: {loss_mean}, patience: {patience_count}')
-        # todo: maybe save model really needs to take the optimizer and scheduler as well if its going to resume at an optimzied state
-        # otherwise we lose like a 100 epochs prior to it getting to the right place again
-        maybe_save_model(model, optimizer, scheduler, loss_mean, model_path, model_token)
-
-        if last_mean_loss != None:
-            if loss_mean >= last_mean_loss:
-                patience_count += 1
-            else:
-                patience_count = 0
-        last_mean_loss = loss_mean
-        if patience_count > patience:
-            print(f'Out of patience at epoch {epoch}. Patience count: {patience_count}. Limit: {patience}')
-            return
-        scheduler.step(loss_mean)
 
 
 # Step 5: Evaluation and Prediction
-def evaluate_model(model, loader):
-    model.eval()
-    predictions = []
-    actuals = []
-    for seq, labels in loader:
-        seq = seq.to(device)
-        labels = labels.to(device)
-        with torch.no_grad():
-            output = model(seq).squeeze(-1)
-            predictions.extend(output.cpu().tolist())
-            actuals.extend(labels.squeeze().cpu().tolist())
-
-    return predictions, actuals
 
 
 def plot(index, x):

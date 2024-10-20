@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 import pandas as pd
 import argparse
-from alfred.data import download_ticker_list, TickerCategories
+from alfred.data import download_ticker_list
+from alfred.metadata import TickerCategories
 import os
 import json
 

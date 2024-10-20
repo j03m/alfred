@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-from alfred.data import attach_moving_average_diffs, read_file, TickerCategories
+from alfred.data import attach_moving_average_diffs, read_file
+from alfred.metadata import TickerCategories
 import argparse
 import os
 

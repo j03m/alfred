@@ -12,6 +12,18 @@
     1028,
     2056
   ],
+  "sequence_length": [
+    30,
+    60,
+    90,
+    180,
+    365
+  ],
+  "projections": [
+    1,
+    5,
+    30
+  ],
   "data": [
     [
       "price-only"

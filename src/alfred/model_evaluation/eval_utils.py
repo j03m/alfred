@@ -1,4 +1,10 @@
 import pandas as pd
+import torch
+from alfred.devices import set_device
+
+# todo change this to a device manager singleton that things call into instead of gbls in each file :/
+
+device = set_device()
 
 def simple_profit_measure(predictions, actuals):
     ledger = []
@@ -59,3 +65,18 @@ def analyze_ledger(ledger_df):
     }
 
     return metrics
+
+
+def evaluate_model(model, loader):
+    model.eval()
+    predictions = []
+    actuals = []
+    for seq, labels in loader:
+        seq = seq.to(device)
+        labels = labels.to(device)
+        with torch.no_grad():
+            output = model(seq).squeeze(-1)
+            predictions.extend(output.cpu().tolist())
+            actuals.extend(labels.squeeze().cpu().tolist())
+
+    return predictions, actuals

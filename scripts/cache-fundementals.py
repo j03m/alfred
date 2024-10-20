@@ -1,7 +1,8 @@
 import pandas as pd
 import os
 import argparse
-from alfred.data import AlphaDownloader, TickerCategories
+from alfred.data import AlphaDownloader
+from alfred.metadata import TickerCategories
 
 def main(symbols_file, data_dir):
     ticker_categories = TickerCategories(symbols_file)
