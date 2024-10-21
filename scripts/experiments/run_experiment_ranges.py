@@ -1,5 +1,6 @@
 from sacred import Experiment
-from sacred.observers import FileStorageObserver
+from sacred.observers import MongoObserver
+#from sacred.observers import FileStorageObserver
 
 import argparse
 import zlib
@@ -36,8 +37,11 @@ scaler_config = [
 
 # Initialize Sacred experiment
 ex = Experiment("experiment_runner")
-ex.observers.append(FileStorageObserver.create('sacred_runs'))
-
+#ex.observers.append(FileStorageObserver.create('sacred_runs'))
+ex.observers.append(MongoObserver(
+    url='mongodb://localhost:27017/sacred_db',
+    db_name='sacred_db'
+))
 
 # Experiment configuration (default values)
 @ex.config
@@ -83,11 +87,10 @@ def model_from_config(config_token,
         model = LSTMConv1d(features=num_features, seq_len=sequence_length, hidden_dim=size, output_size=output,
                            kernel_size=10)
     elif config_token == 'trans-am':
-        raise Exception("Trans am not supported yet. Fix me!")
-        # model = TransAm(feature_size=250,
-        #                 last_bar=True)  # not apples to apples, size needs to be div by heads so larger number from transam exp
+         model = TransAm(features=num_features, model_size=size, heads=size/16, output=output, last_bar=True)
     else:
         raise Exception("Model type not supported")
+
     model.to(DEVICE)
 
     model_token = build_model_token(descriptors)
@@ -158,6 +161,7 @@ def run_experiment(model_token, size, sequence_length, projection, data):
     # Initialize variables to accumulate values
     total_mse = 0
     total_profit = 0
+    total_bhp = 0
     ledger_metrics_aggregate = {}  # To accumulate metrics like win rate, trades count, etc.
     eval_tickers = ticker_categories.get(["evaluation"])
     ticker_count = len(eval_tickers)
@@ -189,7 +193,8 @@ def run_experiment(model_token, size, sequence_length, projection, data):
         unscaled_actuals = dataset.scaler.inverse_transform_column("Close", np.array(actuals).reshape(-1, 1))
 
         # Calculate simple profit and ledger
-        profit, ledger_df = simple_profit_measure(unscaled_predictions.squeeze(), unscaled_actuals.squeeze())
+        profit, ledger_df, bhp = simple_profit_measure(unscaled_predictions.squeeze(), unscaled_actuals.squeeze())
+        total_bhp += bhp
         total_profit += profit
 
         # Analyze the ledger for key metrics
@@ -216,12 +221,14 @@ def run_experiment(model_token, size, sequence_length, projection, data):
     aggregate_results = {
         'average_mse': average_mse,
         'total_profit': total_profit,
+        'trade_vs_bhp': total_profit - total_bhp,
         'ledger_metrics': ledger_metrics_aggregate
     }
 
     # Optionally, log the aggregate results to Sacred
     ex.log_scalar('average_mse', average_mse)
     ex.log_scalar('total_profit', total_profit)
+    ex.log_scalar('trade_vs_bhp', total_profit - total_bhp)
     for key, value in ledger_metrics_aggregate.items():
         ex.log_scalar(f'aggregate_{key}', value)
 

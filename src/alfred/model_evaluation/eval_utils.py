@@ -11,7 +11,6 @@ def simple_profit_measure(predictions, actuals):
     cumulative_profit_percentage = 0
 
     for i in range(len(predictions) - 1):
-        predicted_price_current = predictions[i]
         predicted_price_next = predictions[i + 1]
         actual_price_current = actuals[i]
         actual_price_next = actuals[i + 1]
@@ -46,8 +45,8 @@ def simple_profit_measure(predictions, actuals):
 
     # Convert ledger to DataFrame
     ledger_df = pd.DataFrame(ledger)
-
-    return cumulative_profit_percentage, ledger_df
+    buy_hold_profit = (actuals[-1] - actuals[0]) / actuals[0] * 100
+    return cumulative_profit_percentage, ledger_df, buy_hold_profit
 
 def analyze_ledger(ledger_df):
     # Calculate important metrics

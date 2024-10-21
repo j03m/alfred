@@ -33,3 +33,4 @@ pytest
 bocd
 financetoolkit
 sacred
+pymongo

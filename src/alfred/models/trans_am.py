@@ -2,7 +2,6 @@
 import torch
 import torch.nn as nn
 import math
-from alfred.utils import generate_square_subsequent_mask
 
 class PositionalEncoding(nn.Module):
 
@@ -29,16 +28,17 @@ class TransAm(nn.Module):
     Pos encoding projects
 
     '''
-    def __init__(self, feature_size=250, num_layers=1, dropout=0.1, last_bar=False):
+    def __init__(self, features=1, output=1, model_size=250, heads=10, num_layers=1, dropout=0.1, last_bar=False):
         super(TransAm, self).__init__()
         self.model_type = 'Transformer'
 
         self.src_mask = None
-        # todo: Should we add an explicit linear embedding to expand 1->feature_size rather than let broadcasting do it?
-        self.pos_encoder = PositionalEncoding(feature_size)
-        self.encoder_layer = nn.TransformerEncoderLayer(d_model=feature_size, nhead=10, dropout=dropout, batch_first=True)
+        self.heads = int(heads)
+        self.embed = nn.Linear(features, model_size)
+        self.pos_encoder = PositionalEncoding(model_size)
+        self.encoder_layer = nn.TransformerEncoderLayer(d_model=model_size, nhead=self.heads, dropout=dropout, batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=num_layers)
-        self.decoder = nn.Linear(feature_size, 1)
+        self.decoder = nn.Linear(model_size, output)
         self.last_bar = last_bar # return the last bar or the whole sequence
         self.init_weights()
 
@@ -50,11 +50,16 @@ class TransAm(nn.Module):
     def forward(self, src):
         if self.src_mask is None or self.src_mask.size(0) != len(src):
             device = src.device
-            mask = generate_square_subsequent_mask(src.shape[1]).to(device)
-            self.src_mask = mask
+            seq_length = int(src.shape[1])
+            batch = src.shape[0] * self.heads
+            mask = nn.Transformer.generate_square_subsequent_mask(seq_length)
+            mask = mask.unsqueeze(0)  # Shape: [1, seq_length, seq_length]
+            mask = mask.expand(batch, seq_length, seq_length).to(device)
 
-        src = self.pos_encoder(src)
-        output = self.transformer_encoder(src, self.src_mask)
+            self.src_mask = mask
+        x = self.embed(src)
+        x = self.pos_encoder(x)
+        output = self.transformer_encoder(x, self.src_mask)
         output = self.decoder(output)
         if self.last_bar:
             return output[:,-1,:]

@@ -2,9 +2,14 @@
 import torch
 
 
-def generate_square_subsequent_mask(sz):
+def generate_square_subsequent_mask(sz, batch_size):
+    # Generate the [sz, sz] causal mask as you did before
     mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
     mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+
+    # Now expand the mask to include the batch dimension [batch_size, sz, sz]
+    mask = mask.unsqueeze(0).expand(batch_size, -1, -1)
+
     return mask
 
 class TriangularCausalMask():

@@ -30,7 +30,10 @@
         { "name": "Volume" }
     ],
     "macro": [
-        { "name": "VIX" },
+        { "name": "^VIX" },
+        { "name": "SPY" },
+        { "name": "CL=F" },
+        { "name": "BZ=F" },
         { "name": "10year" },
         { "name": "5year" },
         { "name": "3year" },
