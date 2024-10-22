@@ -21,3 +21,4 @@ models/*
 *.egg-info/*
 *__pycache__*
 sacred_runs/*
+results/*

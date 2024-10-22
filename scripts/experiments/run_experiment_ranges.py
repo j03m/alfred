@@ -4,6 +4,7 @@ from sacred.observers import MongoObserver
 
 import argparse
 import zlib
+import random
 
 from alfred.metadata import ExperimentSelector, TickerCategories, ColumnSelector
 from alfred.devices import set_device, build_model_token
@@ -14,8 +15,6 @@ from alfred.model_training import train_model
 from alfred.models import LSTMModel, AdvancedLSTM, LSTMConv1d, TransAm
 from alfred.utils import plot_multi_series, plot_evaluation
 from sklearn.metrics import mean_squared_error
-
-import matplotlib.pyplot as plt
 
 import numpy as np
 
@@ -39,7 +38,7 @@ scaler_config = [
 ex = Experiment("experiment_runner")
 #ex.observers.append(FileStorageObserver.create('sacred_runs'))
 ex.observers.append(MongoObserver(
-    url='mongodb://localhost:27017/sacred_db',
+    url='mongodb://localhost:27017/',
     db_name='sacred_db'
 ))
 
@@ -147,14 +146,6 @@ def run_experiment(model_token, size, sequence_length, projection, data):
                                      target_columns=["Close"])  # todo ... hmmm will need to mature this past just Close
         train_loader = DataLoader(dataset, batch_size=_args.batch_size, shuffle=False, drop_last=True)
 
-        if _args.plot:
-            fig = plot_multi_series([
-                (dataset.df.index, dataset.df["Close"], "Close Price", "blue"),
-                (dataset.df.index[:len(dataset.data)], dataset.data, "Dataset Data", "orange")
-            ], f"{ticker} data")
-            fig.savefig(f"{_args.model_path}/{model_token}_{ticker}_raw.png", dpi=600, bbox_inches='tight',
-                        transparent=True)
-
         train_model(model, optimizer, scheduler, train_loader, _args.patience, _args.model_path, real_model_token,
                     epochs=_args.epochs, training_label=ticker)
 
@@ -181,7 +172,7 @@ def run_experiment(model_token, size, sequence_length, projection, data):
 
         if _args.plot:
             fig = plot_evaluation(actuals, predictions)
-            fig.savefig(f"{_args.model_path}/{model_token}_{ticker}_eval.png", dpi=600, bbox_inches='tight',
+            fig.savefig(f"{_args.model_path}/{real_model_token}_{ticker}_eval.png", dpi=600, bbox_inches='tight',
                         transparent=True)
 
         # Calculate Mean Squared Error (MSE)
@@ -239,6 +230,7 @@ def main(args):
     # Use ExperimentSelector to select experiments based on ranges
     selector = ExperimentSelector(args.index_file)
     experiments = selector.get(include_ranges=args.include, exclude_ranges=args.exclude)
+    random.shuffle(experiments)
 
     # Run the experiments using Sacred
     for experiment in experiments:
