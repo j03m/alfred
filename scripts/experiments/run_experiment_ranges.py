@@ -249,7 +249,7 @@ if __name__ == "__main__":
                         help="Ranges of experiments to include (e.g., 1-5,10-15)")
     parser.add_argument("--exclude", type=str, default="",
                         help="Ranges of experiments to exclude (e.g., 4-5,8)")
-    parser.add_argument("--batch-size", type=int, default=64,
+    parser.add_argument("--batch-size", type=int, default=512,
                         help="batch size")
     parser.add_argument("--seed", type=int, default=42,
                         help="seed is combined with a ticker to produce a consistent random training and eval period")
