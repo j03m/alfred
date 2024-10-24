@@ -45,10 +45,11 @@ ex.observers.append(MongoObserver(
 # Experiment configuration (default values)
 @ex.config
 def config():
+    ex.captured_out_filter = False
     model_token = None,
     size = None,
     sequence_length = None
-    projection = None
+    bar_type = None
     data = None
 
 
@@ -110,9 +111,9 @@ def model_from_config(config_token,
 
 # Main function to run the experiment
 @ex.main
-def run_experiment(model_token, size, sequence_length, projection, data):
+def run_experiment(model_token, size, sequence_length, bar_type, data):
     print(
-        f"Running experiment: Model={model_token}, Size={size}, Sequence length={sequence_length}, projections={projection}, Data={data}")
+        f"Running experiment: Model={model_token}, Size={size}, Sequence length={sequence_length}, bar_type={bar_type}, Data={data}")
 
     _args = gbl_args
     assert gbl_args, "additional args required"
@@ -137,6 +138,7 @@ def run_experiment(model_token, size, sequence_length, projection, data):
 
     # train on all training tickers
     for ticker in ticker_categories.get(["training"]):
+        print("training against: ", ticker)
         dataset = CachedStockDataSet(symbol=ticker,
                                      seed=_args.seed,
                                      scaler_config=scaler_config,
@@ -164,6 +166,7 @@ def run_experiment(model_token, size, sequence_length, projection, data):
                                      period_length=_args.period,
                                      sequence_length=sequence_length,
                                      feature_columns=columns,
+                                     bar_type=bar_type,
                                      target_columns=["Close"])
         eval_loader = DataLoader(dataset, batch_size=_args.batch_size, shuffle=False, drop_last=True)
 
@@ -252,9 +255,9 @@ if __name__ == "__main__":
                         help="seed is combined with a ticker to produce a consistent random training and eval period")
     parser.add_argument("--period", type=int, default=365 * 2,
                         help="length of training data")
-    parser.add_argument("--epochs", type=int, default=1500,
+    parser.add_argument("--epochs", type=int, default=2500,
                         help="number of epochs to train")
-    parser.add_argument("--patience", type=int, default=50,
+    parser.add_argument("--patience", type=int, default=125,
                         help="when to stop training after patience epochs of no improvements")
     parser.add_argument("--model-path", type=str, default='./models', help="where to store models and best loss data")
     parser.add_argument("--metadata-path", type=str, default='./metadata', help="experiment descriptors live here")

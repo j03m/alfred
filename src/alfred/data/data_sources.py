@@ -13,6 +13,38 @@ from .range_selection import load_csv_files_and_apply_range
 LIVE = false
 TICKER = "AAPL"
 
+column_aggregation_config = {
+    'Close_diff_MA_7': 'last',
+    'Volume_diff_MA_7': 'last',
+    'Close_diff_MA_30': 'last',
+    'Volume_diff_MA_30': 'last',
+    'Close_diff_MA_90': 'last',
+    'Volume_diff_MA_90': 'last',
+    'Close_diff_MA_180': 'last',
+    'Volume_diff_MA_180': 'last',
+    'price_change_term_7': 'last',
+    'price_change_term_30': 'last',
+    'price_change_term_120': 'last',
+    'price_change_term_240': 'last',
+    'Close': 'last',
+    'Volume': 'sum',
+    'reportedEPS': 'last',
+    'estimatedEPS': 'last',
+    'surprise': 'last',
+    'surprisePercentage': 'last',
+    'Margin_Gross': 'last',
+    'Margin_Operating': 'last',
+    'Margin_Net_Profit': 'last',
+    '^VIX': 'last',
+    'SPY': 'last',
+    'CL=F': 'last',
+    'BZ=F': 'last',
+    '10year': 'last',
+    '5year': 'last',
+    '3year': 'last',
+    '2year': 'last'
+}
+
 
 def filter_by_date_range(df, start_date, end_date):
     # Ensure the index is a DatetimeIndex
@@ -90,7 +122,7 @@ class YahooNextCloseWindowDataSet(Dataset):
 
 class CachedStockDataSet(Dataset):
     def __init__(self, symbol, seed, period_length, sequence_length, feature_columns, target_columns,
-                 scaler_config, change=1,
+                 scaler_config, bar_type="d", change=1,
                  date_column="Unnamed: 0", data_path="./data"):
         '''
         symbol - ticker
@@ -105,14 +137,16 @@ class CachedStockDataSet(Dataset):
         data_path - where the data files are
         '''
 
-
         # I wrote this to get many files, but then decided I would only train one series at a time
         # so the input is a single symbol
         training_set = list(load_csv_files_and_apply_range(symbols=[symbol],
-                                                       data_path=data_path,
-                                                       period_length=period_length,
-                                                       seed=seed,
-                                                       date_column=date_column).values())[0]
+                                                           data_path=data_path,
+                                                           period_length=period_length,
+                                                           seed=seed,
+                                                           bar_type=bar_type,
+                                                           aggregation_config=column_aggregation_config,
+                                                           date_column=date_column).values())[0]
+
         self.scaler = CustomScaler(scaler_config, training_set)
         self.df = self.scaler.fit_transform(training_set)
         assert not self.df.isnull().any().any(), f"scaled df has null after transform"

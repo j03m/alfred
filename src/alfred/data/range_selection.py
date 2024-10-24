@@ -22,7 +22,7 @@ def choose_train_range(symbol, seed, data_length, training_length):
     return consistent_rand_for_symbol(symbol, seed, 0, data_length - training_length)
 
 # todo, implement this into sacred
-def load_csv_files_and_apply_range(symbols, data_path, period_length, seed, date_column):
+def load_csv_files_and_apply_range(symbols, data_path, period_length, seed, bar_type, aggregation_config, date_column):
     train_data = {}
 
     # Iterate over all CSV files
@@ -32,10 +32,24 @@ def load_csv_files_and_apply_range(symbols, data_path, period_length, seed, date
         df[date_column] = pd.to_datetime(df[date_column])
         df = df.set_index(date_column)
 
+        # prior to range selection, if we have a value that isn't d (the assumption) we need to
+        # the bars into groups for w or m.
+        if bar_type == "w":
+            training_set = df.resample('W-FRI').agg(aggregation_config)
+        elif bar_type == "m":
+            training_set = df.resample('ME').agg(aggregation_config)
+        elif bar_type == "d":
+            pass  # no aggregate
+        else:
+            raise Exception(f"{bar_type} is not supported.")
+
+        # once we have the total length post aggregation we can proceed with range selection
         total_length = len(df)
 
         # Choose consistent train and eval start dates based on the seed and lengths
         start = choose_train_range(symbol, seed, total_length, period_length)
+
+        assert (total_length > start + period_length)
 
         # Subset the DataFrame to the train and eval ranges
         train_df = df.iloc[start:start + period_length]
