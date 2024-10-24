@@ -1,6 +1,8 @@
 from sacred import Experiment
 from sacred.observers import MongoObserver
-#from sacred.observers import FileStorageObserver
+from sacred import SETTINGS
+
+SETTINGS["CAPTURE_MODE"]="no"
 
 import argparse
 import zlib
@@ -45,7 +47,7 @@ ex.observers.append(MongoObserver(
 # Experiment configuration (default values)
 @ex.config
 def config():
-    ex.captured_out_filter = False
+
     model_token = None,
     size = None,
     sequence_length = None
