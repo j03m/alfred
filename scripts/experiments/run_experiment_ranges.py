@@ -54,7 +54,7 @@ def build_experiment_descriptor_key(config):
     model_token = config["sequence_length"]
     size = config["sequence_length"]
     sequence_length = config["sequence_length"]
-    bar_type = config["bar_type"]
+    bar_type = config.get("bar_type", None)
     data = crc32_columns(config["data"])
     return f"{model_token}:{size}:{sequence_length}:{bar_type}:{data}"
 

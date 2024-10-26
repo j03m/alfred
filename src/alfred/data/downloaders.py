@@ -4,6 +4,9 @@ import yfinance as yf
 import time
 import requests
 import ssl
+from datetime import datetime
+import json
+import binascii
 
 ssl.create_default_https_context = ssl._create_unverified_context
 
@@ -159,7 +162,150 @@ class AlphaDownloader:
         # Save the yield data to a CSV file
         yield_data.to_csv(csv_file)
 
+    def balance_sheet(self, symbol):
+        url = f'https://www.alphavantage.co/query?function=BALANCE_SHEET&symbol={symbol}&apikey={self.api_key}'
+        response = requests.get(url)
+        data = response.json()
+
+        # Convert balance sheet data to DataFrame
+        quarterly_balance_sheet = pd.DataFrame(data['quarterlyReports'])
+        quarterly_balance_sheet['fiscalDateEnding'] = pd.to_datetime(quarterly_balance_sheet['fiscalDateEnding'])
+        quarterly_balance_sheet.set_index('fiscalDateEnding', inplace=True)
+
+        return quarterly_balance_sheet
+
+    def cash_flow(self, symbol):
+        url = f'https://www.alphavantage.co/query?function=CASH_FLOW&symbol={symbol}&apikey={self.api_key}'
+        response = requests.get(url)
+        data = response.json()
+
+        # Convert cash flow data to DataFrame
+        quarterly_cash_flow = pd.DataFrame(data['quarterlyReports'])
+        quarterly_cash_flow['fiscalDateEnding'] = pd.to_datetime(quarterly_cash_flow['fiscalDateEnding'])
+        quarterly_cash_flow.set_index('fiscalDateEnding', inplace=True)
+
+        return quarterly_cash_flow
+
+    def historical_prices(self, symbol):
+        url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol={symbol}&outputsize=full&apikey={self.api_key}'
+        response = requests.get(url)
+        data = response.json()
+
+        # Convert the time series data to a DataFrame
+        prices_df = pd.DataFrame.from_dict(data['Time Series (Daily)'], orient='index')
+        prices_df.index = pd.to_datetime(prices_df.index)
+        prices_df = prices_df.rename(columns={'5. adjusted close': 'close'})
+
+        return prices_df[['close']].astype(float)
+
+    def news_sentiment(self, symbol, time_from):
+        formatted_from = time_from.strftime('%Y%m%dT%H%M')
+        url = f"https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers={symbol}&time_from={formatted_from}&limit=10000&apikey={self.api_key}"
+        response = requests.get(url)
+        return response.json()
+
+    def news_sentiment_for_window_and_symbol(self, symbol, time_from, time_to):
+        # Fetch the news sentiment data
+        data = self.news_sentiment(symbol, time_from)
+
+        # Ensure dates are in datetime format for comparison
+        time_from = datetime.strptime(time_from, "%Y%m%dT%H%M%S")
+        time_to = datetime.strptime(time_to, "%Y%m%dT%H%M%S")
+
+        # Prepare the output list
+        filtered_articles = []
+
+        # Iterate through each article in the feed
+        for article in data.get("feed", []):
+            # Convert time_published to datetime for comparison
+            time_published = datetime.strptime(article["time_published"], "%Y%m%dT%H%M%S")
+
+            # Check if the article's published time is within the specified range
+            if time_from <= time_published <= time_to:
+                # Iterate through each ticker sentiment in the article
+                for ticker_sentiment in article.get("ticker_sentiment", []):
+                    # Check if the ticker matches the specified symbol
+                    if ticker_sentiment["ticker"] == symbol:
+                        # Extract and format the desired information
+                        article_info = {
+                            "title": article["title"],
+                            "url": article["url"],
+                            "summary": article["summary"],
+                            "relevance_score": float(ticker_sentiment["relevance_score"]),
+                            "ticker_sentiment_score": float(ticker_sentiment["ticker_sentiment_score"]),
+                            "ticker_sentiment_label": ticker_sentiment["ticker_sentiment_label"]
+                        }
+                        # Add the formatted information to the results list
+                        filtered_articles.append(article_info)
+                        break  # Stop further checking once the relevant ticker is found
+
+        return filtered_articles
+
 # Example usage:
 # downloader = AlphaDownloader(key_file='./keys/alpha.txt')
 # treasury_df = downloader.treasury_yields()
 # downloader.treasury_yields_to_csv(csv_file='treasury_yields.csv')
+
+
+class ArticleDownloader:
+    def __init__(self, cache_dir='./news'):
+        self.cache_dir = cache_dir
+        self.api = AlphaDownloader()
+        if not os.path.exists(cache_dir):
+            os.makedirs(cache_dir)
+
+    def fetch_article_body(self, url):
+        """Fetch the article body from the given URL."""
+        response = requests.get(url)
+        response.raise_for_status()  # Ensure we handle errors
+        return response.text
+
+    def generate_article_id(self, url):
+        """Generate a unique article ID based on the CRC32 hash of the URL."""
+        return format(binascii.crc32(url.encode()), '08x')
+
+    def cache_article(self, ticker, date, article_id, metadata, body):
+        """Cache article metadata and body to disk."""
+        # Directory structure based on ticker and date
+        ticker_dir = os.path.join(self.cache_dir, ticker)
+        date_dir = os.path.join(ticker_dir, date)
+        os.makedirs(date_dir, exist_ok=True)
+
+        # Save metadata
+        metadata_path = os.path.join(date_dir, f"{article_id}.json")
+        with open(metadata_path, 'w') as meta_file:
+            json.dump(metadata, meta_file, indent=2)
+
+        # Save article body
+        body_path = os.path.join(date_dir, f"{article_id}.txt")
+        with open(body_path, 'w') as body_file:
+            body_file.write(body)
+
+    def download_and_cache_article(self, ticker, time_from, time_to):
+        """Fetch articles for a ticker and cache the metadata and bodies."""
+
+        # Fetch articles using `news_sentiment_for_window`
+        articles = self.api.news_sentiment_for_window_and_symbol(ticker, time_from, time_to)
+
+        for i, article in enumerate(articles):
+            # Convert time_published to a date string for directory naming
+            date = datetime.strptime(article['time_published'], "%Y%m%dT%H%M%S").strftime('%Y%m%d')
+
+            # Check if article is already cached by URL
+            article_id = self.generate_article_id(article["url"])
+            ticker_dir = os.path.join(self.cache_dir, ticker)
+            date_dir = os.path.join(ticker_dir, date)
+            body_path = os.path.join(date_dir, f"{article_id}.txt")
+
+            # Skip fetching if already cached
+            if os.path.exists(body_path):
+                print(f"Article already cached: {ticker} - {date} - {article_id}")
+                continue
+
+            # Fetch and cache the article body
+            try:
+                print(f"Fetching article: {article['title']}")
+                body = self.fetch_article_body(article["url"])
+                self.cache_article(ticker, date, article_id, article, body)
+            except requests.RequestException as e:
+                print(f"Failed to fetch article {article['title']}: {e}")

@@ -1,17 +1,13 @@
-* Sketch sacred tests
-* Refactor training and eval functions
-* Implement a 3 tier loop in Sacred
-  * Iterate over model type
-  * Size
-  * Column permuations (from another meta file)
-  * Train against training symbols
-  * Eval against eval symbols
+Next:
+* find research feed
+  * push research into llm with constructed prompts to break down research into some sort of score
+* add gold and futures to fundemental tdata
+* you can calculate expected earnings using alphavantage surprise - might be interesting to look at projections of price reflected in expected earnings
 
 Analyst Ideas
 * series translation to trend
 * Bigger models?
 * fold in more datapoints
-  * you can calculate expected earnings using alphavantage surprise - might be interesting to look at projections of price reflected in expected earnings
 * Can we project earnings instead of price?
 * Research + news feed analyst 
   * should be able digest research and news into datapoints that the portfolio manager can leverage
