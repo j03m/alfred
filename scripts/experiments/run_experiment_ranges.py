@@ -298,9 +298,9 @@ if __name__ == "__main__":
                         help="seed is combined with a ticker to produce a consistent random training and eval period")
     parser.add_argument("--period", type=int, default=365 * 2,
                         help="length of training data")
-    parser.add_argument("--epochs", type=int, default=2500,
+    parser.add_argument("--epochs", type=int, default=1500,
                         help="number of epochs to train")
-    parser.add_argument("--patience", type=int, default=125,
+    parser.add_argument("--patience", type=int, default=75,
                         help="when to stop training after patience epochs of no improvements")
     parser.add_argument("--model-path", type=str, default='./models', help="where to store models and best loss data")
     parser.add_argument("--metadata-path", type=str, default='./metadata', help="experiment descriptors live here")
