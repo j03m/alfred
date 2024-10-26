@@ -1,3 +1,5 @@
+from distutils.command.build import build
+
 from sacred import Experiment
 from sacred.observers import MongoObserver
 from sacred import SETTINGS
@@ -19,6 +21,7 @@ from alfred.utils import plot_multi_series, plot_evaluation
 from sklearn.metrics import mean_squared_error
 
 import numpy as np
+import pymongo
 
 import torch.optim as optim
 from torch.utils.data import DataLoader
@@ -36,13 +39,47 @@ scaler_config = [
     {'regex': r'\d+year', 'type': 'standard'}
 ]
 
+MONGO='mongodb://localhost:27017/'
+DB='sacred_db'
+
 # Initialize Sacred experiment
 ex = Experiment("experiment_runner")
 #ex.observers.append(FileStorageObserver.create('sacred_runs'))
 ex.observers.append(MongoObserver(
-    url='mongodb://localhost:27017/',
-    db_name='sacred_db'
+    url=MONGO,
+    db_name=DB
 ))
+
+def build_experiment_descriptor_key(config):
+    model_token = config["sequence_length"]
+    size = config["sequence_length"]
+    sequence_length = config["sequence_length"]
+    bar_type = config["bar_type"]
+    data = crc32_columns(config["data"])
+    return f"{model_token}:{size}:{sequence_length}:{bar_type}:{data}"
+
+
+def pull_past_experiments():
+    # MongoDB connection parameters
+    mongo_client = pymongo.MongoClient(MONGO)
+    db = mongo_client[DB]
+    collection = db['runs']
+
+    # Query to retrieve all 'COMPLETED' experiments
+    cursor = collection.find({'status': 'COMPLETED'}, {
+        '_id': 1,  # Experiment ID
+        'experiment.name': 1,  # Experiment name
+        'config': 1,  # Configuration parameters
+    })
+
+    completed = {}
+
+    # Iterate through the cursor to flatten and extract fields
+    for doc in cursor:
+        config = doc.get('config', {})
+        key = build_experiment_descriptor_key(config)
+        completed[key] = True
+    return completed
 
 # Experiment configuration (default values)
 @ex.config
@@ -237,10 +274,14 @@ def main(args):
     experiments = selector.get(include_ranges=args.include, exclude_ranges=args.exclude)
     random.shuffle(experiments)
 
+    past_experiments = pull_past_experiments()
+
     # Run the experiments using Sacred
     for experiment in experiments:
         if experiment:
-            ex.run(config_updates=experiment)
+            key = build_experiment_descriptor_key(experiment)
+            if key not in past_experiments:
+                ex.run(config_updates=experiment)
 
 
 if __name__ == "__main__":
