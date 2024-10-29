@@ -1,5 +1,3 @@
-from distutils.command.build import build
-
 from sacred import Experiment
 from sacred.observers import MongoObserver
 from sacred import SETTINGS
@@ -13,7 +11,7 @@ import random
 from alfred.metadata import ExperimentSelector, TickerCategories, ColumnSelector
 from alfred.devices import set_device, build_model_token
 from alfred.data import CachedStockDataSet
-from alfred.model_persistence import get_latest_model
+from alfred.model_persistence import get_latest_model, prune_old_versions
 from alfred.model_evaluation import simple_profit_measure, analyze_ledger, evaluate_model
 from alfred.model_training import train_model
 from alfred.models import LSTMModel, AdvancedLSTM, LSTMConv1d, TransAm
@@ -160,7 +158,7 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
 
     column_selector = ColumnSelector(f"{_args.metadata_path}/column-descriptors.json")
 
-    columns = column_selector.get(data)
+    columns = sorted(column_selector.get(data))
 
     output = 1
     model, optimizer, scheduler, real_model_token = model_from_config(
@@ -168,7 +166,7 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
         config_token=model_token,
         sequence_length=sequence_length, size=size, output=output,
         descriptors=[
-            model_token, sequence_length, size, output, crc32_columns(columns)
+            model_token, sequence_length, size, output, crc32_columns(columns), bar_type
         ], model_path=_args.model_path)
 
     ticker_categories = TickerCategories(f"{_args.metadata_path}/ticker-categorization.json")
@@ -189,6 +187,7 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
 
         train_model(model, optimizer, scheduler, train_loader, _args.patience, _args.model_path, real_model_token,
                     epochs=_args.epochs, training_label=ticker)
+        prune_old_versions(_args.model_path) # keep disk under control, keep only the best models
 
     # Initialize variables to accumulate values
     total_mse = 0
@@ -260,6 +259,7 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
 
     # Optionally, log the aggregate results to Sacred
     ex.log_scalar('average_mse', average_mse)
+    ex.info["model_token"] = real_model_token
     ex.log_scalar('total_profit', total_profit)
     ex.log_scalar('trade_vs_bhp', total_profit - total_bhp)
     for key, value in ledger_metrics_aggregate.items():

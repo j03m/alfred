@@ -14,7 +14,8 @@ cursor = collection.find({'status': 'COMPLETED'}, {
     'result': 1,                   # Results
     'status': 1,                   # Status
     'start_time': 1,               # Start time
-    'stop_time': 1                 # Stop time
+    'stop_time': 1,                # Stop time
+    'info': 1
 })
 
 # List to hold each row of the data
@@ -48,6 +49,8 @@ for doc in cursor:
         else:
             row[f'{key}'] = value
 
+    mt = doc.get('info', {}).get('model_token', "unknown")
+    row[f'model_token'] = mt
     # Append the row to the data list
     data_list.append(row)
 

@@ -198,19 +198,16 @@ class AlphaDownloader:
 
         return prices_df[['close']].astype(float)
 
-    def news_sentiment(self, symbol, time_from):
+    def news_sentiment(self, symbol, time_from, time_to):
         formatted_from = time_from.strftime('%Y%m%dT%H%M')
-        url = f"https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers={symbol}&time_from={formatted_from}&limit=10000&apikey={self.api_key}"
+        formatted_to = time_to.strftime('%Y%m%dT%H%M')
+        url = f"https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers={symbol}&time_from={formatted_from}&time_to={formatted_to}&limit=10000&apikey={self.api_key}"
         response = requests.get(url)
         return response.json()
 
     def news_sentiment_for_window_and_symbol(self, symbol, time_from, time_to):
         # Fetch the news sentiment data
-        data = self.news_sentiment(symbol, time_from)
-
-        # Ensure dates are in datetime format for comparison
-        time_from = datetime.strptime(time_from, "%Y%m%dT%H%M%S")
-        time_to = datetime.strptime(time_to, "%Y%m%dT%H%M%S")
+        data = self.news_sentiment(symbol, time_from, time_to)
 
         # Prepare the output list
         filtered_articles = []
@@ -218,10 +215,12 @@ class AlphaDownloader:
         # Iterate through each article in the feed
         for article in data.get("feed", []):
             # Convert time_published to datetime for comparison
-            time_published = datetime.strptime(article["time_published"], "%Y%m%dT%H%M%S")
+            time_published_str = article.get("time_published", None)
+            if time_published_str is not None:
+                time_published = datetime.strptime(time_published_str, "%Y%m%dT%H%M%S").date()
 
             # Check if the article's published time is within the specified range
-            if time_from <= time_published <= time_to:
+            if time_published_str is None or time_from <= time_published <= time_to:
                 # Iterate through each ticker sentiment in the article
                 for ticker_sentiment in article.get("ticker_sentiment", []):
                     # Check if the ticker matches the specified symbol
@@ -289,23 +288,26 @@ class ArticleDownloader:
 
         for i, article in enumerate(articles):
             # Convert time_published to a date string for directory naming
-            date = datetime.strptime(article['time_published'], "%Y%m%dT%H%M%S").strftime('%Y%m%d')
+            publish_str = article.get('time_published', None)
+            if publish_str is None:
+                date = datetime.today().date()
+                publish_str = date.strftime("%Y%m%d")
 
             # Check if article is already cached by URL
             article_id = self.generate_article_id(article["url"])
             ticker_dir = os.path.join(self.cache_dir, ticker)
-            date_dir = os.path.join(ticker_dir, date)
+            date_dir = os.path.join(ticker_dir, publish_str)
             body_path = os.path.join(date_dir, f"{article_id}.txt")
 
             # Skip fetching if already cached
             if os.path.exists(body_path):
-                print(f"Article already cached: {ticker} - {date} - {article_id}")
+                print(f"Article already cached: {ticker} - {publish_str} - {article_id}")
                 continue
 
             # Fetch and cache the article body
             try:
                 print(f"Fetching article: {article['title']}")
                 body = self.fetch_article_body(article["url"])
-                self.cache_article(ticker, date, article_id, article, body)
+                self.cache_article(ticker, publish_str, article_id, article, body)
             except requests.RequestException as e:
                 print(f"Failed to fetch article {article['title']}: {e}")
