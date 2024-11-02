@@ -59,28 +59,22 @@ def load_csv_files_and_apply_range(symbols, data_path, period_length, seed, bar_
     return train_data
 
 
-def load_csv_file(symbols, data_path, bar_type, aggregation_config, date_column):
-    train_data = {}
+def load_csv_file(symbol, data_path, bar_type, aggregation_config, date_column):
 
-    # Iterate over all CSV files
-    for symbol in symbols:
-        # Load each CSV file into a DataFrame
-        df = pd.read_csv(f"{data_path}/{symbol}_unscaled.csv")
-        df[date_column] = pd.to_datetime(df[date_column])
-        df = df.set_index(date_column)
+    # Load each CSV file into a DataFrame
+    df = pd.read_csv(f"{data_path}/{symbol}_unscaled.csv")
+    df[date_column] = pd.to_datetime(df[date_column])
+    df = df.set_index(date_column)
 
-        # prior to range selection, if we have a value that isn't d (the assumption) we need to
-        # the bars into groups for w or m.
-        if bar_type == "w":
-            training_set = df.resample('W-FRI').agg(aggregation_config)
-        elif bar_type == "m":
-            training_set = df.resample('ME').agg(aggregation_config)
-        elif bar_type == "d":
-            pass  # no aggregate
-        else:
-            raise Exception(f"{bar_type} is not supported.")
+    # prior to range selection, if we have a value that isn't d (the assumption) we need to
+    # the bars into groups for w or m.
+    if bar_type == "w":
+        training_set = df.resample('W-FRI').agg(aggregation_config)
+    elif bar_type == "m":
+        training_set = df.resample('ME').agg(aggregation_config)
+    elif bar_type == "d":
+        pass  # no aggregate
+    else:
+        raise Exception(f"{bar_type} is not supported.")
 
-
-        train_data[symbol] = df
-
-    return train_data
+    return df

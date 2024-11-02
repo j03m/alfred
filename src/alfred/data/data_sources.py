@@ -148,9 +148,9 @@ class CachedStockDataSet(Dataset):
                                                                aggregation_config=column_aggregation_config,
                                                                date_column=date_column).values())[0]
         else:
-            training_set = list(load_csv_file(symbols=[symbol],
-                                              data_path=data_path, bar_type=bar_type,
-                                              aggregation_config=column_aggregation_config, date_column=date_column))[0]
+            training_set = load_csv_file(symbol=symbol,
+                                         data_path=data_path, bar_type=bar_type,
+                                         aggregation_config=column_aggregation_config, date_column=date_column)
 
         self.scaler = CustomScaler(scaler_config, training_set)
         self.df = self.scaler.fit_transform(training_set)

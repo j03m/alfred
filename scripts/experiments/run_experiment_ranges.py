@@ -183,7 +183,8 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
                                      sequence_length=sequence_length,
                                      feature_columns=columns,
                                      target_columns=["Close"])  # todo ... hmmm will need to mature this past just Close
-        train_loader = DataLoader(dataset, batch_size=_args.batch_size, shuffle=False, drop_last=True)
+        batch_size = min(_args.batch_size, len(dataset))
+        train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
         train_model(model, optimizer, scheduler, train_loader, _args.patience, _args.model_path, real_model_token,
                     epochs=_args.epochs, training_label=ticker)
