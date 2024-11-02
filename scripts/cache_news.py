@@ -11,8 +11,7 @@ def load_symbols_from_file(file):
     return tickers.get(["training", "evaluation", "data"])
 
 def main(args):
-    #tickers = load_symbols_from_file(args.symbol_file)
-    tickers  = ["AAPL"]
+    tickers = load_symbols_from_file(args.symbol_file)
     dl = ArticleDownloader(cache_dir=args.cache)
     for ticker in tickers:
 
@@ -31,6 +30,8 @@ def main(args):
             start_date = end_date - timedelta(days=730)
         # cache the data
         dl.download_and_cache_article(ticker, start_date, end_date)
+
+
 
         #todo: run and test me
 

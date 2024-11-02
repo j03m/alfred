@@ -7,6 +7,7 @@ import ssl
 from datetime import datetime
 import json
 import binascii
+from .openai_query import OpenAiQuery
 
 ssl.create_default_https_context = ssl._create_unverified_context
 
@@ -250,6 +251,7 @@ class ArticleDownloader:
     def __init__(self, cache_dir='./news'):
         self.cache_dir = cache_dir
         self.api = AlphaDownloader()
+        self.openai = OpenAiQuery()
         if not os.path.exists(cache_dir):
             os.makedirs(cache_dir)
 
@@ -304,10 +306,19 @@ class ArticleDownloader:
                 print(f"Article already cached: {ticker} - {publish_str} - {article_id}")
                 continue
 
+
+
+
             # Fetch and cache the article body
             try:
                 print(f"Fetching article: {article['title']}")
                 body = self.fetch_article_body(article["url"])
+                article = self.enrich_metadata(ticker, article, body)
                 self.cache_article(ticker, publish_str, article_id, article, body)
             except requests.RequestException as e:
                 print(f"Failed to fetch article {article['title']}: {e}")
+
+    def enrich_metadata(self, ticker, article, body):
+        response = self.openai.news_query(body, ticker)
+        article.update(response)
+        return article
