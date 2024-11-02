@@ -7,7 +7,7 @@ import numpy as np
 import yfinance as yf
 from sklearn.preprocessing import MinMaxScaler
 from alfred.data.scalers import LogReturnScaler, CustomScaler
-from .range_selection import load_csv_files_and_apply_range
+from .range_selection import load_csv_files_and_apply_range, load_csv_file
 
 # added this flag to go live (yahoo) or cache (file) due to network issues
 LIVE = false
@@ -139,13 +139,18 @@ class CachedStockDataSet(Dataset):
 
         # I wrote this to get many files, but then decided I would only train one series at a time
         # so the input is a single symbol
-        training_set = list(load_csv_files_and_apply_range(symbols=[symbol],
-                                                           data_path=data_path,
-                                                           period_length=period_length,
-                                                           seed=seed,
-                                                           bar_type=bar_type,
-                                                           aggregation_config=column_aggregation_config,
-                                                           date_column=date_column).values())[0]
+        if period_length != -1:
+            training_set = list(load_csv_files_and_apply_range(symbols=[symbol],
+                                                               data_path=data_path,
+                                                               period_length=period_length,
+                                                               seed=seed,
+                                                               bar_type=bar_type,
+                                                               aggregation_config=column_aggregation_config,
+                                                               date_column=date_column).values())[0]
+        else:
+            training_set = list(load_csv_file(symbols=[symbol],
+                                              data_path=data_path, bar_type=bar_type,
+                                              aggregation_config=column_aggregation_config, date_column=date_column))[0]
 
         self.scaler = CustomScaler(scaler_config, training_set)
         self.df = self.scaler.fit_transform(training_set)

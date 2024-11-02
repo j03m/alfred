@@ -169,7 +169,7 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
             model_token, sequence_length, size, output, crc32_columns(columns), bar_type
         ], model_path=_args.model_path)
 
-    ticker_categories = TickerCategories(f"{_args.metadata_path}/ticker-categorization.json")
+    ticker_categories = TickerCategories(_args.ticker_categories_file)
 
     model.train()
 
@@ -288,16 +288,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run selected experiments using Sacred.")
     parser.add_argument("--index-file", type=str, default="./metadata/experiment-index.json",
                         help="Path to the JSON file containing indexed experiments")
+    parser.add_argument("--ticker-categories-file", type=str, default="./metadata/ticker-categorization.json",
+                        help="Path to the JSON file containing tickers for the experiments")
     parser.add_argument("--include", type=str, default="",
                         help="Ranges of experiments to include (e.g., 1-5,10-15)")
     parser.add_argument("--exclude", type=str, default="",
                         help="Ranges of experiments to exclude (e.g., 4-5,8)")
-    parser.add_argument("--batch-size", type=int, default=512,
+    parser.add_argument("--batch-size", type=int, default=1024,
                         help="batch size")
     parser.add_argument("--seed", type=int, default=42,
                         help="seed is combined with a ticker to produce a consistent random training and eval period")
     parser.add_argument("--period", type=int, default=365 * 2,
-                        help="length of training data")
+                        help="length of training data, you supply -1 the entire history of the stock will be used for training/eval. If you supply a number, "
+                             "seed will be used with the ticker name to randomly but consistently select a period to train/eval against")
     parser.add_argument("--epochs", type=int, default=1500,
                         help="number of epochs to train")
     parser.add_argument("--patience", type=int, default=75,

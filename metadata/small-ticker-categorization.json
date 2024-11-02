@@ -1,0 +1,30 @@
+{
+  "training": [
+    "PHM",
+    "GE",
+    "VNDA",
+    "MSFT",
+    "TER",
+    "LUMN",
+    "IBM",
+    "AAPL",
+    "TSLA",
+    "T"
+  ],
+  "evaluation": [
+    "PMTS",
+    "BCML",
+    "ERII",
+    "RMAX",
+    "ACET",
+    "BXP",
+    "FVCB",
+    "PBPB"
+  ],
+  "data": [
+    "^VIX",
+    "SPY",
+    "CL=F",
+    "BZ=F"
+  ]
+}
