@@ -9,5 +9,5 @@ fi
 python scripts/cache-prices.py "--symbol-file=$1" &&
 python scripts/cache-rates.py &&
 python scripts/cache-fundementals.py "--symbol-file=$1" &&
-python scripts/create-final-data-set.py "--symbol-file=$1"
+python scripts/create-final-data-set.py "--symbol-file=$1" &&
 python scripts/cache-news.py "--symbol-file=$1"
