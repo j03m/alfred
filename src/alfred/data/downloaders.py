@@ -8,6 +8,7 @@ from datetime import datetime
 import json
 import binascii
 from .openai_query import OpenAiQuery
+from time import sleep
 
 ssl.create_default_https_context = ssl._create_unverified_context
 
@@ -38,16 +39,21 @@ def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=
 
 
 class AlphaDownloader:
-    def __init__(self, key_file='./keys/alpha.txt'):
+    def __init__(self, key_file='./keys/alpha.txt', rate_limit=0.5):
         # Read the API key from the specified file
         with open(key_file, 'r') as file:
             self.api_key = file.readline().strip()
+        self.rate_limit = rate_limit
+
+    def get(self, url):
+        sleep(self.rate_limit)
+        return requests.get(url, verify=False)
 
     def earnings(self, symbol):
         # Construct the URL for the API request
         url = f'https://www.alphavantage.co/query?function=EARNINGS&symbol={symbol}&apikey={self.api_key}'
         # Send the request and get the JSON response
-        response = requests.get(url, verify=False)
+        response = self.get(url)
         data = response.json()
 
         # Convert the earnings data to a DataFrame
@@ -75,11 +81,11 @@ class AlphaDownloader:
     def margins(self, symbol):
         # Construct the URL for the API request
         url = f'https://www.alphavantage.co/query?function=INCOME_STATEMENT&symbol={symbol}&apikey={self.api_key}'
-        response = requests.get(url)
+        response = self.get(url)
         data = response.json()
 
         # Extract relevant margin data
-        quarterly_reports = data['quarterlyReports']
+        quarterly_reports = data.get('quarterlyReports', [])
 
         # Create lists to store the extracted data
         dates = []
@@ -138,7 +144,7 @@ class AlphaDownloader:
         for maturity in maturities:
             # Construct the URL for the Treasury Yield API request
             url = f'https://www.alphavantage.co/query?function=TREASURY_YIELD&interval=monthly&maturity={maturity}&apikey={self.api_key}'
-            response = requests.get(url)
+            response = self.get(url)
             data = response.json()
 
             # Extract the data and create a DataFrame
@@ -166,7 +172,7 @@ class AlphaDownloader:
 
     def balance_sheet(self, symbol):
         url = f'https://www.alphavantage.co/query?function=BALANCE_SHEET&symbol={symbol}&apikey={self.api_key}'
-        response = requests.get(url)
+        response = self.get(url)
         data = response.json()
 
         # Convert balance sheet data to DataFrame
@@ -178,7 +184,7 @@ class AlphaDownloader:
 
     def cash_flow(self, symbol):
         url = f'https://www.alphavantage.co/query?function=CASH_FLOW&symbol={symbol}&apikey={self.api_key}'
-        response = requests.get(url)
+        response = self.get(url)
         data = response.json()
 
         # Convert cash flow data to DataFrame
@@ -190,7 +196,7 @@ class AlphaDownloader:
 
     def historical_prices(self, symbol):
         url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol={symbol}&outputsize=full&apikey={self.api_key}'
-        response = requests.get(url)
+        response = self.get(url)
         data = response.json()
 
         # Convert the time series data to a DataFrame
@@ -204,7 +210,7 @@ class AlphaDownloader:
         formatted_from = time_from.strftime('%Y%m%dT%H%M')
         formatted_to = time_to.strftime('%Y%m%dT%H%M')
         url = f"https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers={symbol}&time_from={formatted_from}&time_to={formatted_to}&limit=10000&apikey={self.api_key}"
-        response = requests.get(url)
+        response = self.get(url)
         return response.json()
 
     def news_sentiment_for_window_and_symbol(self, symbol, time_from, time_to):
@@ -258,7 +264,7 @@ class ArticleDownloader:
 
     def fetch_article_body(self, url):
         """Fetch the article body from the given URL."""
-        response = requests.get(url)
+        response = self.get(url)
         response.raise_for_status()  # Ensure we handle errors
         return response.text
 
