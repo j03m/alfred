@@ -255,12 +255,17 @@ class AlphaDownloader:
 
 
 class ArticleDownloader:
-    def __init__(self, cache_dir='./news'):
+    def __init__(self, cache_dir='./news', rate_limit=0.5):
         self.cache_dir = cache_dir
         self.api = AlphaDownloader()
         self.openai = OpenAiQuery()
+        self.rate_limit = rate_limit
         if not os.path.exists(cache_dir):
             os.makedirs(cache_dir)
+
+    def get(self, url):
+        sleep(self.rate_limit)
+        return requests.get(url, verify=False)
 
     def fetch_article_body(self, url):
         """Fetch the article body from the given URL."""
@@ -312,9 +317,6 @@ class ArticleDownloader:
             if os.path.exists(body_path):
                 print(f"Article already cached: {ticker} - {publish_str} - {article_id}")
                 continue
-
-
-
 
             # Fetch and cache the article body
             try:
