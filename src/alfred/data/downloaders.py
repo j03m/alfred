@@ -104,23 +104,21 @@ class AlphaDownloader:
 
             # Calculate Gross Margin
 
+            total_revenue = float(report['totalRevenue']) if report['totalRevenue'] not in [None, 'None', '', 0] else 0
             if report['grossProfit'] in [None, 'None', '']:
                 gross_margin = 0
             else:
                 # Ensure totalRevenue is a valid float
-                total_revenue = float(report['totalRevenue']) if report['totalRevenue'] not in [None, 'None', '',0] else 0
                 gross_margin = (float(report['grossProfit']) / total_revenue) if total_revenue != 0 else 0
 
             gross_margins.append(gross_margin)
 
             # Calculate Operating Margin
-            operating_margin = (float(report['operatingIncome']) / float(report['totalRevenue'])) if report[
-                                                                                                         'totalRevenue'] != 0 else 0
+            operating_margin = (float(report['operatingIncome']) / total_revenue) if total_revenue != 0 else 0
             operating_margins.append(operating_margin)
 
             # Calculate Net Profit Margin
-            net_profit_margin = (float(report['netIncome']) / float(report['totalRevenue'])) if report[
-                                                                                                    'totalRevenue'] != 0 else 0
+            net_profit_margin = (float(report['netIncome']) / total_revenue) if total_revenue != 0 else 0
             net_profit_margins.append(net_profit_margin)
 
         # Create a DataFrame with the margin data
