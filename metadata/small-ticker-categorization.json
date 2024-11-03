@@ -25,6 +25,7 @@
     "^VIX",
     "SPY",
     "CL=F",
-    "BZ=F"
+    "BZ=F",
+    "GC=F"
   ]
 }
