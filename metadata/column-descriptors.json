@@ -6,7 +6,11 @@
         { "name": "surprisePercentage" },
         { "name": "Margin_Gross" },
         { "name": "Margin_Operating" },
-        { "name": "Margin_Net_Profit" }
+        { "name": "Margin_Net_Profit" },
+        { "name": "insider_acquisitions" },
+        { "name": "insider_disposals" },
+        { "name": "mean_sentiment" },
+        { "name": "mean_outlook" }
     ],
     "technicals": [
         { "name": "Close_diff_MA_7" },
@@ -34,6 +38,8 @@
         { "name": "SPY" },
         { "name": "CL=F" },
         { "name": "BZ=F" },
+        { "name": "GC=F" },
+        { "name": "BTC=F" },
         { "name": "10year" },
         { "name": "5year" },
         { "name": "3year" },

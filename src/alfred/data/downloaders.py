@@ -9,6 +9,8 @@ import json
 import binascii
 from .openai_query import OpenAiQuery
 from time import sleep
+import re
+from spellchecker import SpellChecker
 
 ssl.create_default_https_context = ssl._create_unverified_context
 
@@ -209,7 +211,7 @@ class AlphaDownloader:
     def news_sentiment(self, symbol, time_from, time_to):
         formatted_from = time_from.strftime('%Y%m%dT%H%M')
         formatted_to = time_to.strftime('%Y%m%dT%H%M')
-        url = f"https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers={symbol}&time_from={formatted_from}&time_to={formatted_to}&limit=10000&apikey={self.api_key}"
+        url = f"https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers={symbol}&time_from={formatted_from}&time_to={formatted_to}&sort=RELEVANCE&limit=1000&apikey={self.api_key}"
         response = self.get(url)
         return response.json()
 
@@ -248,6 +250,103 @@ class AlphaDownloader:
                         break  # Stop further checking once the relevant ticker is found
 
         return filtered_articles
+
+    def fetch_insider_transactions(self, ticker):
+        url = f"https://www.alphavantage.co/query?function=INSIDER_TRANSACTIONS&symbol={ticker}&apikey={self.api_key}"
+        return self.get(url).json()
+
+    def get_normalized_insider_transactions(self, ticker):
+        response = self.fetch_insider_transactions(ticker)
+        transactions =  response["data"]
+        security_weights = {
+            "Common": 1.0,
+            "Preferred": 0.8,
+            "Phantom": 0.5,
+            "Class": 0.55,
+            "Option": 0.6,
+            "Options": 0.6,
+            "Series": 0.75,
+            "Forward Purchase Contract": 0.6,
+            "LTIP": 0.65,
+            "Restricted": 0.7,
+            "Subscription": 0.4,
+            "Contingent": 0.3,
+            "Remainder": 0.2,
+            "Stock Appreciation Right": 0.5,
+            "SAR": 0.5,
+            "Dividend": 0.3,
+            "Award": 0.7,
+            "Obligation": 0.4,
+            "Right": 0.6,
+            "Ordinary": 1,
+            "Deferred": 0.5,
+            "Performance": 0.7,
+            "Warrants":0.7,
+            "Debentures":0.5,
+            "Units":0.5
+        }
+        spell = SpellChecker()
+        spell.word_frequency.load_words(security_weights.keys())
+
+        def get_security_score(security_type):
+            corrected_text = security_type.lower()
+            corrected_text = re.sub(r"\W+", " ", corrected_text).strip()
+            tokens = corrected_text.split()
+            corrected = []
+            for word in tokens:
+                correct = spell.correction(word)
+                if correct is not None:
+                    corrected.append(correct)
+
+            corrected_text = ' '.join(corrected)
+            for key, weight in security_weights.items():
+                if key.lower() in corrected_text:  # Check if key is in the security_type string
+                    return weight
+            print("unknown security type:", security_type)
+            return 0.1 # Default weight if no match is found
+
+        data = []
+        share_sizes = [1]
+        for t in transactions:
+            if t["shares"] == "":
+                t["shares"] = 1
+            t["shares"] = float(t["shares"])
+            share_sizes.append(t["shares"])
+
+        biggest_distro = max(share_sizes)
+        for event in transactions:
+            # Parse and extract details
+            try:
+                date = pd.to_datetime(event["transaction_date"])
+            except:
+                continue
+
+            action_type = event["acquisition_or_disposal"]
+            security_type = event["security_type"]
+            shares = event["shares"]
+
+            # Calculate scores based on security type, shares, and executive rank
+
+            security_score = get_security_score(security_type)
+
+            normalized_shares = float(shares) / biggest_distro  # Normalize shares based on max shares in data
+
+            # Total score combines security, rank, and normalized shares scores
+            score = security_score * normalized_shares
+
+            # Append data for the DataFrame
+            if action_type == "A":
+                data.append({"Date": date, "insider_acquisition": score, "insider_disposal": 0})
+            else:
+                data.append({"Date": date, "insider_acquisition": 0, "insider_disposal": score})
+
+        if len(data) == 0:
+            return None
+
+        # Create DataFrame, set index, and group by date to aggregate scores
+        df = pd.DataFrame(data)
+        df = df.groupby("Date").sum()
+        return df
 
 # Example usage:
 # downloader = AlphaDownloader(key_file='./keys/alpha.txt')
