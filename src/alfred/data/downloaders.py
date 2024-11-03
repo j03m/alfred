@@ -10,7 +10,7 @@ import binascii
 from .openai_query import OpenAiQuery
 from time import sleep
 import re
-from spellchecker import SpellChecker
+from fuzzywuzzy import process
 
 ssl.create_default_https_context = ssl._create_unverified_context
 
@@ -259,49 +259,60 @@ class AlphaDownloader:
         response = self.fetch_insider_transactions(ticker)
         transactions =  response["data"]
         security_weights = {
-            "Common": 1.0,
-            "Preferred": 0.8,
-            "Phantom": 0.5,
-            "Class": 0.55,
-            "Option": 0.6,
-            "Options": 0.6,
-            "Series": 0.75,
-            "Forward Purchase Contract": 0.6,
-            "LTIP": 0.65,
-            "Restricted": 0.7,
-            "Subscription": 0.4,
-            "Contingent": 0.3,
-            "Remainder": 0.2,
-            "Stock Appreciation Right": 0.5,
-            "SAR": 0.5,
-            "Dividend": 0.3,
-            "Award": 0.7,
-            "Obligation": 0.4,
-            "Right": 0.6,
-            "Ordinary": 1,
-            "Deferred": 0.5,
-            "Performance": 0.7,
-            "Warrants":0.7,
-            "Debentures":0.5,
-            "Units":0.5
+            "common": 1.0,
+            "preferred": 0.8,
+            "phantom": 0.5,
+            "class": 0.55,
+            "option": 0.6,
+            "options": 0.6,
+            "series": 0.75,
+            "forward purchase contract": 0.6,
+            "ltip": 0.65,
+            "restricted": 0.7,
+            "subscription": 0.4,
+            "contingent": 0.3,
+            "remainder": 0.2,
+            "stock appreciation right": 0.5,
+            "sar": 0.5,
+            "dividend": 0.3,
+            "award": 0.7,
+            "obligation": 0.4,
+            "right": 0.6,
+            "ordinary": 1.0,
+            "deferred": 0.5,
+            "performance": 0.7,
+            "warrants": 0.7,
+            "debentures": 0.5,
+            "units": 0.5,
+            "rsu": 0.7,
+            "psu": 0.7,
+            "rsus": 0.7,
+            "psus": 0.7,
         }
-        spell = SpellChecker()
-        spell.word_frequency.load_words(security_weights.keys())
+
+        words = list(security_weights.keys())
 
         def get_security_score(security_type):
             corrected_text = security_type.lower()
             corrected_text = re.sub(r"\W+", " ", corrected_text).strip()
             tokens = corrected_text.split()
-            corrected = []
-            for word in tokens:
-                correct = spell.correction(word)
-                if correct is not None:
-                    corrected.append(correct)
 
-            corrected_text = ' '.join(corrected)
-            for key, weight in security_weights.items():
-                if key.lower() in corrected_text:  # Check if key is in the security_type string
-                    return weight
+            # any of our hits in the string?
+            for word in words:
+                if word in corrected_text:
+                    return security_weights[word]
+
+            # any of their tokens in our strings?
+            for word in tokens:
+                if word in words:
+                    return security_weights[word]
+
+                # anything mispelled but maybe matching?
+                matched, score = process.extractOne(word, words)
+                threshold = 80
+                if score >= threshold:
+                    return security_weights[matched]
+
             print("unknown security type:", security_type)
             return 0.1 # Default weight if no match is found
 
