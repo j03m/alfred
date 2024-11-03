@@ -79,8 +79,6 @@ for ticker in tickers:
 
     dfs.append(df)
 
-all_data = pd.concat(dfs, axis=0)
-
 all_data = pd.concat(dfs, axis=0).sort_index()
 
 all_data.to_csv("results/portfolio_manager_training.csv")
