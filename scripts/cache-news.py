@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import pandas as pd
+import os
 import argparse
 from alfred.data import ArticleDownloader
 from alfred.metadata import TickerCategories
@@ -28,6 +29,11 @@ def main(args):
         else:
             end_date = datetime.now().date()
             start_date = end_date - timedelta(days=730)
+
+        if args.update_only and os.path.isdir(os.path.join(args.cache, ticker)):
+            print(f"skipping {ticker} cache exists")
+            continue
+
         # cache the data
         dl.download_and_cache_article(ticker, start_date, end_date)
 
@@ -42,6 +48,7 @@ if __name__ == "__main__":
     parser.add_argument('--data', type=str, default="./data", help="market data dir (./data)")
     parser.add_argument('--date-column', type=str, default="Unnamed: 0", help="date column for cache csvs")
     parser.add_argument("--use-seed", action="store_true")
+    parser.add_argument("--update-only", action="store_true")
     parser.add_argument("--seed", type=int, default=42,
                         help="seed is combined with a ticker to produce a consistent random training and eval period")
     parser.add_argument('--period', type=int, default=120, help="window of time")
