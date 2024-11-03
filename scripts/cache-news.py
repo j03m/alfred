@@ -35,6 +35,7 @@ def main(args):
             continue
 
         # cache the data
+        print(f"caching {ticker} {start_date}, {end_date}")
         dl.download_and_cache_article(ticker, start_date, end_date)
 
 
