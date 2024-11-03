@@ -238,6 +238,7 @@ class AlphaDownloader:
                             "title": article["title"],
                             "url": article["url"],
                             "summary": article["summary"],
+                            "time_published": time_published,
                             "relevance_score": float(ticker_sentiment["relevance_score"]),
                             "ticker_sentiment_score": float(ticker_sentiment["ticker_sentiment_score"]),
                             "ticker_sentiment_label": ticker_sentiment["ticker_sentiment_label"]
@@ -268,8 +269,11 @@ class ArticleDownloader:
         return requests.get(url, verify=False)
 
     def fetch_article_body(self, url):
-        """Fetch the article body from the given URL."""
-        response = self.get(url)
+        """Fetch the article body from the given URL. Note we don't rate limit here since we're not hitting AA"""
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+        }
+        response = requests.get(url, headers=headers)
         response.raise_for_status()  # Ensure we handle errors
         return response.text
 
@@ -302,10 +306,13 @@ class ArticleDownloader:
 
         for i, article in enumerate(articles):
             # Convert time_published to a date string for directory naming
-            publish_str = article.get('time_published', None)
-            if publish_str is None:
+            publish = article.get('time_published', None)
+            if publish is None:
                 date = datetime.today().date()
                 publish_str = date.strftime("%Y%m%d")
+            else:
+                publish_str = publish.strftime('%Y%m%d')
+            del article['time_published']
 
             # Check if article is already cached by URL
             article_id = self.generate_article_id(article["url"])
