@@ -1,7 +1,6 @@
 import pandas as pd
 from datetime import datetime, timedelta
 from alfred.metadata import TickerCategories
-from alfred.data.data_sources import column_aggregation_config
 
 def load_symbols_from_file(file):
     tickers = TickerCategories(file)

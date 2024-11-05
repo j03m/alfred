@@ -10,41 +10,7 @@ from alfred.data.scalers import LogReturnScaler, CustomScaler
 from .range_selection import load_csv_files_and_apply_range, load_csv_file
 
 # added this flag to go live (yahoo) or cache (file) due to network issues
-LIVE = false
-TICKER = "AAPL"
-
-column_aggregation_config = {
-    'Close_diff_MA_7': 'last',
-    'Volume_diff_MA_7': 'last',
-    'Close_diff_MA_30': 'last',
-    'Volume_diff_MA_30': 'last',
-    'Close_diff_MA_90': 'last',
-    'Volume_diff_MA_90': 'last',
-    'Close_diff_MA_180': 'last',
-    'Volume_diff_MA_180': 'last',
-    'price_change_term_7': 'last',
-    'price_change_term_30': 'last',
-    'price_change_term_120': 'last',
-    'price_change_term_240': 'last',
-    'Close': 'last',
-    'Volume': 'sum',
-    'reportedEPS': 'last',
-    'estimatedEPS': 'last',
-    'surprise': 'last',
-    'surprisePercentage': 'last',
-    'Margin_Gross': 'last',
-    'Margin_Operating': 'last',
-    'Margin_Net_Profit': 'last',
-    '^VIX': 'last',
-    'SPY': 'last',
-    'CL=F': 'last',
-    'BZ=F': 'last',
-    '10year': 'last',
-    '5year': 'last',
-    '3year': 'last',
-    '2year': 'last'
-}
-
+LIVE = True
 
 def filter_by_date_range(df, start_date, end_date):
     # Ensure the index is a DatetimeIndex
@@ -90,7 +56,7 @@ class YahooNextCloseWindowDataSet(Dataset):
         if LIVE:
             self.df = yf.download(ticker, start=start, end=end)
         else:
-            df = pd.read_csv(f"./data/{TICKER}.csv")
+            df = pd.read_csv(f"./data/{ticker}.csv")
             date_column = "Date"
             df[date_column] = pd.to_datetime(df[date_column])
             df = df.set_index(date_column)
@@ -122,7 +88,7 @@ class YahooNextCloseWindowDataSet(Dataset):
 
 class CachedStockDataSet(Dataset):
     def __init__(self, symbol, seed, period_length, sequence_length, feature_columns, target_columns,
-                 scaler_config, bar_type="d", change=1,
+                 scaler_config, column_aggregation_config, bar_type="d", change=1,
                  date_column="Unnamed: 0", data_path="./data"):
         '''
         symbol - ticker

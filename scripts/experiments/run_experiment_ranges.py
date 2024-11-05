@@ -57,14 +57,14 @@ def build_experiment_descriptor_key(config):
     return f"{model_token}:{size}:{sequence_length}:{bar_type}:{data}"
 
 
-def pull_past_experiments():
+def pull_past_or_running_experiments():
     # MongoDB connection parameters
     mongo_client = pymongo.MongoClient(MONGO)
     db = mongo_client[DB]
     collection = db['runs']
 
     # Query to retrieve all 'COMPLETED' experiments
-    cursor = collection.find({'status': 'COMPLETED'}, {
+    cursor = collection.find({'status': {'$in': ['COMPLETED', 'RUNNING']}}, {
         '_id': 1,  # Experiment ID
         'experiment.name': 1,  # Experiment name
         'config': 1,  # Configuration parameters
@@ -156,8 +156,8 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
     assert gbl_args, "additional args required"
     print(f"Additional args: ", _args)
 
-    column_selector = ColumnSelector(f"{_args.metadata_path}/column-descriptors.json")
-
+    column_selector = ColumnSelector(_args.column_file)
+    agg_config = column_selector.get_aggregation_config()
     columns = sorted(column_selector.get(data))
 
     output = 1
@@ -177,8 +177,10 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
     # train on all training tickers
     for ticker in training:
         print("training against: ", ticker)
+
         dataset = CachedStockDataSet(symbol=ticker,
                                      seed=_args.seed,
+                                     column_aggregation_config=agg_config,
                                      scaler_config=scaler_config,
                                      period_length=_args.period,
                                      sequence_length=sequence_length,
@@ -277,7 +279,8 @@ def main(args):
     experiments = selector.get(include_ranges=args.include, exclude_ranges=args.exclude)
     random.shuffle(experiments)
 
-    past_experiments = pull_past_experiments()
+    # get a list of past or in flight experiments
+    past_experiments = pull_past_or_running_experiments()
 
     # Run the experiments using Sacred
     for experiment in experiments:
@@ -285,11 +288,14 @@ def main(args):
             key = build_experiment_descriptor_key(experiment)
             if key not in past_experiments:
                 ex.run(config_updates=experiment)
-
+                # update the list in case another machine is running (poor man's update)
+                past_experiments = pull_past_or_running_experiments()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run selected experiments using Sacred.")
     parser.add_argument("--index-file", type=str, default="./metadata/experiment-index.json",
+                        help="Path to the JSON file containing indexed experiments")
+    parser.add_argument("--column-file", type=str, default="./metadata/column-descriptors.json",
                         help="Path to the JSON file containing indexed experiments")
     parser.add_argument("--ticker-categories-file", type=str, default="./metadata/ticker-categorization.json",
                         help="Path to the JSON file containing tickers for the experiments")

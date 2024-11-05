@@ -18,3 +18,6 @@ class ColumnSelector:
                 combined_list.extend(names)
 
         return combined_list
+
+    def get_aggregation_config(self):
+        return self.data["aggregation"]
