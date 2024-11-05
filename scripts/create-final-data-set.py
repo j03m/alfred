@@ -4,6 +4,7 @@ from alfred.data import attach_moving_average_diffs, read_file
 from alfred.metadata import TickerCategories
 import argparse
 import os
+import pandas as pd
 
 initial_columns_to_keep = [
     "Symbol",
@@ -57,12 +58,6 @@ def add_treasuries(final_df, args):
     return final_df
 
 
-import pandas as pd
-
-# Assuming 'final_df' has a DatetimeIndex and a column called 'Symbol'
-import pandas as pd
-
-
 def align_date_range(final_df):
     # Step 1: Group by 'Symbol' and find the start date for each symbol
     start_dates = final_df.groupby('Symbol').apply(lambda x: x.index.min())
@@ -97,7 +92,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--symbol-file', type=str, help="List of symbols in a file")
     parser.add_argument('--data', type=str, default="./data", help="data dir (./data)")
-    parser.add_argument('--individual-files', type=bool, default=True, help="write each ticker separately")
+    #parser.add_argument('--individual-files', type=bool, default=True, help="write each ticker separately")
     parser.add_argument('--pred', type=int, nargs="+", default=[7, 30, 120, 240],
                         help="A space separated list of prediction periods in days")
     parser.add_argument('--debug', type=bool, default=True, help="write debug to console")
@@ -137,35 +132,35 @@ def main():
         # prepare to merge all
         ticker_data_frames.append(df)
 
-    if not args.individual_files:
-        finalize_single_data_file(args, ticker_data_frames)
-    else:
-        for frame, symbol in zip(ticker_data_frames, symbols):
-            data_tickers = ticker_categories.get(["data"])
-            # add each data ticker
-            for ticker in data_tickers:
-                frame = add_data_column(frame, args, ticker)
+    # if not args.individual_files:
+    #     finalize_single_data_file(args, ticker_data_frames)
+    # else:
+    for frame, symbol in zip(ticker_data_frames, symbols):
+        data_tickers = ticker_categories.get(["data"])
+        # add each data ticker
+        for ticker in data_tickers:
+            frame = add_data_column(frame, args, ticker)
 
-            frame = add_treasuries(frame, args)
-            new_file_path = os.path.join(args.data, f"{symbol}_unscaled.csv")
-            frame.to_csv(new_file_path)
+        frame = add_treasuries(frame, args)
+        new_file_path = os.path.join(args.data, f"{symbol}_unscaled.csv")
+        frame.to_csv(new_file_path)
 
-def finalize_single_data_file(args, ticker_data_frames):
-    final_df = pd.concat(ticker_data_frames)
-    final_df = add_vix(final_df, args)
-
-    final_df = add_treasuries(final_df, args)
-
-    final_df, _, _ = align_date_range(final_df)
-
-    assert not final_df.isnull().any().any(), f"unscaled df has null after transform"
-
-    # save unscaled interim path
-    base_name = os.path.basename(args.symbol_file)
-    file_name, file_extension = os.path.splitext(base_name)
-    new_file_name = f"{file_name}_processed_unscaled{file_extension}"
-    new_file_path = os.path.join(args.data, new_file_name)
-    final_df.to_csv(new_file_path)
+# def finalize_single_data_file(args, ticker_data_frames):
+#     final_df = pd.concat(ticker_data_frames)
+#     final_df = add_vix(final_df, args)
+#
+#     final_df = add_treasuries(final_df, args)
+#
+#     final_df, _, _ = align_date_range(final_df)
+#
+#     assert not final_df.isnull().any().any(), f"unscaled df has null after transform"
+#
+#     # save unscaled interim path
+#     base_name = os.path.basename(args.symbol_file)
+#     file_name, file_extension = os.path.splitext(base_name)
+#     new_file_name = f"{file_name}_processed_unscaled{file_extension}"
+#     new_file_path = os.path.join(args.data, new_file_name)
+#     final_df.to_csv(new_file_path)
 
 if __name__ == "__main__":
     main()

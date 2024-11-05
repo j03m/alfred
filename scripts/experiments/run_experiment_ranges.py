@@ -170,11 +170,12 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
         ], model_path=_args.model_path)
 
     ticker_categories = TickerCategories(_args.ticker_categories_file)
-
+    training = ticker_categories.get(["training"])
+    random.shuffle(training)
     model.train()
 
     # train on all training tickers
-    for ticker in ticker_categories.get(["training"]):
+    for ticker in training:
         print("training against: ", ticker)
         dataset = CachedStockDataSet(symbol=ticker,
                                      seed=_args.seed,
@@ -196,6 +197,7 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
     total_bhp = 0
     ledger_metrics_aggregate = {}  # To accumulate metrics like win rate, trades count, etc.
     eval_tickers = ticker_categories.get(["evaluation"])
+    random.shuffle(eval_tickers)
     ticker_count = len(eval_tickers)
 
     for ticker in eval_tickers:
