@@ -7,8 +7,8 @@
         { "name": "Margin_Gross" },
         { "name": "Margin_Operating" },
         { "name": "Margin_Net_Profit" },
-        { "name": "insider_acquisitions" },
-        { "name": "insider_disposals" },
+        { "name": "insider_acquisition" },
+        { "name": "insider_disposal" },
         { "name": "mean_sentiment" },
         { "name": "mean_outlook" }
     ],

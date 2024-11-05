@@ -16,7 +16,11 @@ initial_columns_to_keep = [
     "surprisePercentage",
     'Margin_Gross',
     'Margin_Operating',
-    'Margin_Net_Profit'
+    'Margin_Net_Profit',
+    'insider_acquisition',
+    'insider_disposal',
+    'mean_sentiment',
+    'mean_outlook'
 ]
 
 def add_data_column(final_df, args, ticker):
