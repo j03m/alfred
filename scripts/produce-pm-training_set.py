@@ -57,7 +57,10 @@ for ticker in tickers:
     df = pd.read_csv(f"{data_path}/{ticker}_unscaled.csv")
     if len(df) == 0:
         continue
-    df[date_column] = pd.to_datetime(df[date_column])
+    try:
+        df[date_column] = pd.to_datetime(df[date_column])
+    except:
+        pass
     df = df.set_index(date_column)
     # Ensure the index is a DatetimeIndex
     if not isinstance(df.index, pd.DatetimeIndex):

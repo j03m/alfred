@@ -1,3 +1,5 @@
+from logging import exception
+
 import pandas as pd
 import os
 import argparse
@@ -44,17 +46,43 @@ def create_news_indicators(symbol, news_dir="./news", required_rel=0.7):
                     "mean_outlook": mean_outlook
                 })
 
+    if len(data) == 0:
+        return None
+
     # Convert the list to a DataFrame
     df = pd.DataFrame(data)
     df["Date"] = pd.to_datetime(df["Date"])
     df = df.set_index("Date")
     return df
 
-def main(symbols_file, data_dir):
-    ticker_categories = TickerCategories(symbols_file)
+PROCESSED_TICKERS_FILE = 'data/processed_tickers.json'
+
+def load_processed_tickers():
+    if os.path.exists(PROCESSED_TICKERS_FILE):
+        with open(PROCESSED_TICKERS_FILE, 'r') as f:
+            return json.load(f)
+    return []  # Return an empty list if the file doesn't exist
+
+def save_processed_tickers(processed_tickers):
+    with open(PROCESSED_TICKERS_FILE, 'w') as f:
+        json.dump(processed_tickers, f)
+
+def main(symbols_file, data_dir, test_symbol):
+    if test_symbol is not None:
+        symbols = [test_symbol]
+    else:
+        ticker_categories = TickerCategories(symbols_file)
+        symbols = ticker_categories.get(["training", "evaluation"])
+
     alpha = AlphaDownloader()
-    symbols = ticker_categories.get(["training", "evaluation"])
+
+    processed_already = load_processed_tickers()
+
     for symbol in symbols:
+        if symbol in processed_already:
+            print(f"skipping {symbol}")
+            continue
+
         print(f"Processing {symbol}")
         _, quarterly_earnings = alpha.earnings(symbol)
         margins = alpha.margins(symbol)
@@ -101,14 +129,17 @@ def main(symbols_file, data_dir):
             df_combined.to_csv(output_path)
             print(f"Written combined data to {output_path}")
         else:
-            print(f"Pricing data file not found for {symbol}")
+            raise exception(f"{symbol} file not found. Did you cache prices?")
 
+        processed_already.append(symbol)
+        save_processed_tickers(processed_already)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fetch and process stock fundamentals and pricing data.")
     parser.add_argument("--symbol-file", type=str, help="Path to the CSV file containing stock symbols")
+    parser.add_argument("--symbol", type=str, help="one symbol for testing")
     parser.add_argument("--data-dir", default="./data", type=str,
                         help="Directory to look for pricing data and save output")
 
     args = parser.parse_args()
-    main(args.symbol_file, args.data_dir)
+    main(args.symbol_file, args.data_dir, args.symbol)

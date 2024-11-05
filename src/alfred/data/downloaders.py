@@ -288,6 +288,9 @@ class AlphaDownloader:
             "psu": 0.7,
             "rsus": 0.7,
             "psus": 0.7,
+            "dsu": 0.7,
+            "dsus": 0.7,
+            "convertible": 0.5
         }
 
         words = list(security_weights.keys())

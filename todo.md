@@ -1,8 +1,4 @@
 Next:
-* add gold and futures to fundamental data
-* add insider events to data as (has_disposal: [score: 0 -> some max], has_acquisition: etc)
-  * https://www.alphavantage.co/query?function=INSIDER_TRANSACTIONS&symbol=IBM&apikey=demo
-* you can calculate expected earnings using alphavantage surprise - might be interesting to look at projections of price reflected in expected earnings
 * Add analyst predictions to the dataset
 * Add news sentiment aggregate to the dataset
 
