@@ -2,51 +2,41 @@ from sacred import Experiment
 from sacred.observers import MongoObserver
 from sacred import SETTINGS
 
-SETTINGS["CAPTURE_MODE"]="no"
+SETTINGS["CAPTURE_MODE"] = "no"
 
 import argparse
 import zlib
 import random
 
 from alfred.metadata import ExperimentSelector, TickerCategories, ColumnSelector
-from alfred.devices import set_device, build_model_token
-from alfred.data import CachedStockDataSet
-from alfred.model_persistence import get_latest_model, prune_old_versions
+from alfred.data import CachedStockDataSet, DEFAULT_SCALER_CONFIG
+from alfred.model_persistence import model_from_config, prune_old_versions
 from alfred.model_evaluation import simple_profit_measure, analyze_ledger, evaluate_model
 from alfred.model_training import train_model
-from alfred.models import LSTMModel, AdvancedLSTM, LSTMConv1d, TransAm
-from alfred.utils import plot_multi_series, plot_evaluation
+from alfred.utils import plot_evaluation
 from sklearn.metrics import mean_squared_error
 
 import numpy as np
-import pymongo
 
-import torch.optim as optim
 from torch.utils.data import DataLoader
 
-DEVICE = set_device()
 gbl_args = None
 
-scaler_config = [
-    {'regex': r'^Close$', 'type': 'yeo-johnson'},
-    {'columns': ['^VIX'], 'type': 'standard'},
-    {'columns': ['SPY', 'CL=F', 'BZ=F'], 'type': 'yeo-johnson'},
-    {'regex': r'^Margin.*', 'type': 'standard'},
-    {'regex': r'^Volume$', 'type': 'yeo-johnson'},
-    {'columns': ['reportedEPS', 'estimatedEPS', 'surprise', 'surprisePercentage'], 'type': 'standard'},
-    {'regex': r'\d+year', 'type': 'standard'}
-]
+MONGO = 'mongodb://localhost:27017/'
+DB = 'sacred_db'
 
-MONGO='mongodb://localhost:27017/'
-DB='sacred_db'
+scaler_config = DEFAULT_SCALER_CONFIG
 
 # Initialize Sacred experiment
-ex = Experiment("experiment_runner")
-#ex.observers.append(FileStorageObserver.create('sacred_runs'))
+experiment_namespace = "analyst_experiment_set"
+ex = Experiment(experiment_namespace)
+ex.add_config({'token': experiment_namespace})
+# ex.observers.append(FileStorageObserver.create('sacred_runs'))
 ex.observers.append(MongoObserver(
     url=MONGO,
     db_name=DB
 ))
+
 
 def build_experiment_descriptor_key(config):
     model_token = config["sequence_length"]
@@ -57,32 +47,9 @@ def build_experiment_descriptor_key(config):
     return f"{model_token}:{size}:{sequence_length}:{bar_type}:{data}"
 
 
-def pull_past_or_running_experiments():
-    # MongoDB connection parameters
-    mongo_client = pymongo.MongoClient(MONGO)
-    db = mongo_client[DB]
-    collection = db['runs']
-
-    # Query to retrieve all 'COMPLETED' experiments
-    cursor = collection.find({'status': {'$in': ['COMPLETED', 'RUNNING']}}, {
-        '_id': 1,  # Experiment ID
-        'experiment.name': 1,  # Experiment name
-        'config': 1,  # Configuration parameters
-    })
-
-    completed = {}
-
-    # Iterate through the cursor to flatten and extract fields
-    for doc in cursor:
-        config = doc.get('config', {})
-        key = build_experiment_descriptor_key(config)
-        completed[key] = True
-    return completed
-
 # Experiment configuration (default values)
 @ex.config
 def config():
-
     model_token = None,
     size = None,
     sequence_length = None
@@ -105,45 +72,6 @@ def crc32_columns(strings):
 
     # Return the hash in hexadecimal format
     return f"{crc32_hash:#08x}"
-
-
-def model_from_config(config_token,
-                      num_features,
-                      sequence_length,
-                      size,
-                      output,
-                      descriptors,
-                      model_path, layers=2):
-    if config_token == 'lstm':
-        model = LSTMModel(features=num_features, hidden_dim=size, output_size=output,
-                          num_layers=layers)
-    elif config_token == 'advanced-lstm':
-        model = AdvancedLSTM(features=num_features, hidden_dim=size, output_dim=output)
-    elif config_token == 'lstm-conv1d':
-        # size 10 kernel should smooth about 2 weeks of data
-        model = LSTMConv1d(features=num_features, seq_len=sequence_length, hidden_dim=size, output_size=output,
-                           kernel_size=10)
-    elif config_token == 'trans-am':
-         model = TransAm(features=num_features, model_size=size, heads=size/16, output=output, last_bar=True)
-    else:
-        raise Exception("Model type not supported")
-
-    model.to(DEVICE)
-
-    model_token = build_model_token(descriptors)
-
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
-
-    # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.5)
-
-    model_checkpoint = get_latest_model(model_path, model_token)
-    if model_checkpoint is not None:
-        model.load_state_dict(model_checkpoint['model_state_dict'])
-        optimizer.load_state_dict(model_checkpoint['optimizer_state_dict'])
-        scheduler.load_state_dict(model_checkpoint['scheduler_state_dict'])
-
-    return model, optimizer, scheduler, model_token
 
 
 # Main function to run the experiment
@@ -191,7 +119,7 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
 
         train_model(model, optimizer, scheduler, train_loader, _args.patience, _args.model_path, real_model_token,
                     epochs=_args.epochs, training_label=ticker)
-        prune_old_versions(_args.model_path) # keep disk under control, keep only the best models
+        prune_old_versions(_args.model_path)  # keep disk under control, keep only the best models
 
     # Initialize variables to accumulate values
     total_mse = 0
@@ -275,12 +203,12 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
 
 def main(args):
     # Use ExperimentSelector to select experiments based on ranges
-    selector = ExperimentSelector(args.index_file)
+    selector = ExperimentSelector(index_file=args.index_file, mongo=MONGO, db=DB)
     experiments = selector.get(include_ranges=args.include, exclude_ranges=args.exclude)
     random.shuffle(experiments)
 
     # get a list of past or in flight experiments
-    past_experiments = pull_past_or_running_experiments()
+    past_experiments = selector.get_current_state(experiment_namespace, build_experiment_descriptor_key)
 
     # Run the experiments using Sacred
     for experiment in experiments:
@@ -289,7 +217,8 @@ def main(args):
             if key not in past_experiments:
                 ex.run(config_updates=experiment)
                 # update the list in case another machine is running (poor man's update)
-                past_experiments = pull_past_or_running_experiments()
+                past_experiments = selector.get_current_state("analysts", build_experiment_descriptor_key)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run selected experiments using Sacred.")

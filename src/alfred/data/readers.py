@@ -17,6 +17,7 @@ def read_file(data_path_, file, fail_on_missing=False, date_index=True):
         data_df = pd.read_csv(symbol_file)
         if date_index:
             data_df['Date'] = pd.to_datetime(data_df['Date'])
+            #data_df['Date'] = pd.to_datetime(data_df['Date'])
             data_df.set_index('Date', inplace=True)
     except FileNotFoundError as fnfe:
         print(f"The file {symbol_file} was not found.")

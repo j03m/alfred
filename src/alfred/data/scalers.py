@@ -7,6 +7,15 @@ from sklearn.base import BaseEstimator, TransformerMixin
 import numpy as np
 import pandas as pd
 
+DEFAULT_SCALER_CONFIG = [
+    {'regex': r'^Close$', 'type': 'yeo-johnson'},
+    {'columns': ['^VIX'], 'type': 'standard'},
+    {'columns': ['SPY', 'CL=F', 'BZ=F', "BTC=F"], 'type': 'yeo-johnson'},
+    {'regex': r'^Margin.*', 'type': 'standard'},
+    {'regex': r'^Volume$', 'type': 'yeo-johnson'},
+    {'columns': ['reportedEPS', 'estimatedEPS', 'surprise', 'surprisePercentage'], 'type': 'standard'},
+    {'regex': r'\d+year', 'type': 'standard'}
+]
 
 class LogReturnScaler(BaseEstimator, TransformerMixin):
     '''

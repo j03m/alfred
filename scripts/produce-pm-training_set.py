@@ -1,6 +1,6 @@
 import pandas as pd
 from datetime import datetime, timedelta
-from alfred.metadata import TickerCategories
+from alfred.metadata import TickerCategories, ColumnSelector
 
 def load_symbols_from_file(file):
     tickers = TickerCategories(file)
@@ -48,9 +48,12 @@ ranked_df.to_csv("results/returns-ranked.csv")
 ticker_id_df = pd.DataFrame(list(ticker_to_id.items()), columns=["Ticker", "ID"])
 ticker_id_df.to_csv("results/ticker_ids.csv", index=False)
 
+column_descriptor = ColumnSelector(file_name="./metadata/column-descriptors.json")
+agg_config = column_descriptor.get_aggregation_config()
+
 dfs = []
 for ticker in tickers:
-    # load
+    print("processing: ", ticker)
     data_path = "./data"
     date_column = 'Unnamed: 0'
     df = pd.read_csv(f"{data_path}/{ticker}_unscaled.csv")
@@ -58,15 +61,17 @@ for ticker in tickers:
         continue
     try:
         df[date_column] = pd.to_datetime(df[date_column])
-    except:
+    except Exception as e:
         pass
     df = df.set_index(date_column)
     # Ensure the index is a DatetimeIndex
     if not isinstance(df.index, pd.DatetimeIndex):
         df.index = pd.to_datetime(df.index)
 
+
+
     # resample monthly
-    df = df.resample('ME').agg(column_aggregation_config)
+    df = df.resample('ME').agg(agg_config)
     # filter to range:
     df = df[(df.index >= start_date) & (df.index <= end_date)]
     df["ID"] = ticker_to_id[ticker]

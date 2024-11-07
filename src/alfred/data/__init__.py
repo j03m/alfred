@@ -4,4 +4,4 @@ from .processors import attach_moving_average_diffs, scale_relevant_training_col
 from .data_sources import YahooNextCloseWindowDataSet, CachedStockDataSet
 from .features_and_labels import feature_columns, label_columns
 from .range_selection import load_csv_files_and_apply_range, choose_train_range, load_csv_file
-from .scalers import CustomScaler, LogReturnScaler
+from .scalers import CustomScaler, LogReturnScaler, DEFAULT_SCALER_CONFIG

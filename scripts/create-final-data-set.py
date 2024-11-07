@@ -95,6 +95,7 @@ def attach_price_prediction_labels(args, columns, df):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--symbol-file', type=str, help="List of symbols in a file")
+    parser.add_argument('--symbol', type=str, help="Test only if supplied use this and not a list")
     parser.add_argument('--data', type=str, default="./data", help="data dir (./data)")
     #parser.add_argument('--individual-files', type=bool, default=True, help="write each ticker separately")
     parser.add_argument('--pred', type=int, nargs="+", default=[7, 30, 120, 240],
@@ -103,7 +104,10 @@ def main():
 
     args = parser.parse_args()
     ticker_categories = TickerCategories(args.symbol_file)
-    symbols = ticker_categories.get(["training", "evaluation"])
+    if args.symbol:
+        symbols = [args.symbol]
+    else:
+        symbols = ticker_categories.get(["training", "evaluation"])
 
     ticker_data_frames = []
     for symbol in symbols:
@@ -115,11 +119,14 @@ def main():
         # attach moving averages
         df, columns = attach_moving_average_diffs(df)
 
+        # lose some history from the back due to missing moving avg
+        df.dropna(inplace=True)
+
         # attach labels
         attach_price_prediction_labels(args, columns, df)
 
-        # both of these functions will cause NaN to get introduced. We can't predict for labels we don't have with missing data, so we'll trim it all out
-        df.dropna(inplace=True)
+        # fill where we can't predict with 0
+        df.fillna(0, inplace=True)
 
         min_date = df.index.min()
         max_date = df.index.max()
@@ -140,6 +147,7 @@ def main():
     #     finalize_single_data_file(args, ticker_data_frames)
     # else:
     for frame, symbol in zip(ticker_data_frames, symbols):
+        print("adding additional data to :", symbol)
         data_tickers = ticker_categories.get(["data"])
         # add each data ticker
         for ticker in data_tickers:
@@ -147,6 +155,7 @@ def main():
 
         frame = add_treasuries(frame, args)
         new_file_path = os.path.join(args.data, f"{symbol}_unscaled.csv")
+        frame.index = frame.index.normalize()
         frame.to_csv(new_file_path)
 
 # def finalize_single_data_file(args, ticker_data_frames):

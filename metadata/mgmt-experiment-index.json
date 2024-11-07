@@ -1,0 +1,122 @@
+{
+    "1": {
+        "model_token": "lstm",
+        "size": 64,
+        "sequence_length": 60
+    },
+    "2": {
+        "model_token": "lstm",
+        "size": 64,
+        "sequence_length": 90
+    },
+    "3": {
+        "model_token": "lstm",
+        "size": 128,
+        "sequence_length": 60
+    },
+    "4": {
+        "model_token": "lstm",
+        "size": 128,
+        "sequence_length": 90
+    },
+    "5": {
+        "model_token": "lstm",
+        "size": 256,
+        "sequence_length": 60
+    },
+    "6": {
+        "model_token": "lstm",
+        "size": 256,
+        "sequence_length": 90
+    },
+    "7": {
+        "model_token": "lstm-conv1d",
+        "size": 64,
+        "sequence_length": 60
+    },
+    "8": {
+        "model_token": "lstm-conv1d",
+        "size": 64,
+        "sequence_length": 90
+    },
+    "9": {
+        "model_token": "lstm-conv1d",
+        "size": 128,
+        "sequence_length": 60
+    },
+    "10": {
+        "model_token": "lstm-conv1d",
+        "size": 128,
+        "sequence_length": 90
+    },
+    "11": {
+        "model_token": "lstm-conv1d",
+        "size": 256,
+        "sequence_length": 60
+    },
+    "12": {
+        "model_token": "lstm-conv1d",
+        "size": 256,
+        "sequence_length": 90
+    },
+    "13": {
+        "model_token": "advanced-lstm",
+        "size": 64,
+        "sequence_length": 60
+    },
+    "14": {
+        "model_token": "advanced-lstm",
+        "size": 64,
+        "sequence_length": 90
+    },
+    "15": {
+        "model_token": "advanced-lstm",
+        "size": 128,
+        "sequence_length": 60
+    },
+    "16": {
+        "model_token": "advanced-lstm",
+        "size": 128,
+        "sequence_length": 90
+    },
+    "17": {
+        "model_token": "advanced-lstm",
+        "size": 256,
+        "sequence_length": 60
+    },
+    "18": {
+        "model_token": "advanced-lstm",
+        "size": 256,
+        "sequence_length": 90
+    },
+    "19": {
+        "model_token": "trans-am",
+        "size": 64,
+        "sequence_length": 60
+    },
+    "20": {
+        "model_token": "trans-am",
+        "size": 64,
+        "sequence_length": 90
+    },
+    "21": {
+        "model_token": "trans-am",
+        "size": 128,
+        "sequence_length": 60
+    },
+    "22": {
+        "model_token": "trans-am",
+        "size": 128,
+        "sequence_length": 90
+    },
+    "23": {
+        "model_token": "trans-am",
+        "size": 256,
+        "sequence_length": 60
+    },
+    "24": {
+        "model_token": "trans-am",
+        "size": 256,
+        "sequence_length": 90
+    }
+}

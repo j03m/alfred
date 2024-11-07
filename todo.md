@@ -1,6 +1,7 @@
 Next:
-* Add analyst predictions to the dataset
-* Add news sentiment aggregate to the dataset
+* shared drive on mb1
+* mongo ip
+* test from 2nd cuda gpu
 
 Manager:
 

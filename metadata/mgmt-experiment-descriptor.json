@@ -1,0 +1,17 @@
+{
+  "model_token": [
+    "lstm",
+    "lstm-conv1d",
+    "advanced-lstm",
+    "trans-am"
+  ],
+  "size": [
+    64,
+    128,
+    256
+  ],
+  "sequence_length": [
+    60,
+    90
+  ]
+}

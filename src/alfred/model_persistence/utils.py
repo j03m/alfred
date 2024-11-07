@@ -4,6 +4,50 @@ import torch
 import json
 import re
 
+from alfred.devices import build_model_token, set_device
+from alfred.models import LSTMModel, LSTMConv1d, AdvancedLSTM, TransAm
+import torch.optim as optim
+
+DEVICE = set_device()
+
+def model_from_config(config_token,
+                      num_features,
+                      sequence_length,
+                      size,
+                      output,
+                      descriptors,
+                      model_path, layers=2):
+    if config_token == 'lstm':
+        model = LSTMModel(features=num_features, hidden_dim=size, output_size=output,
+                          num_layers=layers)
+    elif config_token == 'advanced-lstm':
+        model = AdvancedLSTM(features=num_features, hidden_dim=size, output_dim=output)
+    elif config_token == 'lstm-conv1d':
+        # size 10 kernel should smooth about 2 weeks of data
+        model = LSTMConv1d(features=num_features, seq_len=sequence_length, hidden_dim=size, output_size=output,
+                           kernel_size=10)
+    elif config_token == 'trans-am':
+        model = TransAm(features=num_features, model_size=size, heads=size / 16, output=output, last_bar=True)
+    else:
+        raise Exception("Model type not supported")
+
+    model.to(DEVICE)
+
+    model_token = build_model_token(descriptors)
+
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+    # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.5)
+
+    model_checkpoint = get_latest_model(model_path, model_token)
+    if model_checkpoint is not None:
+        model.load_state_dict(model_checkpoint['model_state_dict'])
+        optimizer.load_state_dict(model_checkpoint['optimizer_state_dict'])
+        scheduler.load_state_dict(model_checkpoint['scheduler_state_dict'])
+
+    return model, optimizer, scheduler, model_token
+
 
 def maybe_save_model_with_evaluator(epoch, evaluator, eval_save, model, model_path, model_prefix):
     if eval_save:
