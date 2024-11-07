@@ -36,7 +36,7 @@ def create_sequences(data, sequence_length):
     sequences = []
     targets = []
     data_values = data.values
-    target_index = data.columns.get_loc('rank')
+    target_index = data.columns.get_loc('Rank')
     feature_indices = [i for i in range(data.shape[1]) if i != target_index]
 
     for i in range(len(data_values) - sequence_length):
@@ -68,7 +68,9 @@ def run_experiment(model_token, size, sequence_length):
     # Read the training file
 
     df = pd.read_csv(gbl_args.input_file)
-
+    date_column = "Unnamed: 0"
+    df[date_column] = pd.to_datetime(df[date_column])
+    df = df.set_index(date_column)
     scaler = CustomScaler(config=DEFAULT_SCALER_CONFIG, df=df)
     df = scaler.fit_transform(df)
 
@@ -103,13 +105,14 @@ def run_experiment(model_token, size, sequence_length):
     train_loader = DataLoader(train_dataset, batch_size=gbl_args.batch_size, shuffle=False)
     eval_loader = DataLoader(eval_dataset, batch_size=gbl_args.batch_size, shuffle=False)
 
+#params busted here
     train_model(model, optimizer, scheduler, train_loader, gbl_args.patience, epochs=gbl_args.epochs)
     prune_old_versions(gbl_args.model_path)
 
     predictions, actuals = evaluate_model(model, eval_loader)
     mse = mean_squared_error(actuals, predictions)
 
-    # take our predicted ranks for each prediction
+    # take our predicted Ranks for each prediction
     predictions = np.array(predictions)
 
     padding_length = sequence_length
@@ -125,7 +128,7 @@ def run_experiment(model_token, size, sequence_length):
 
 
 def main(args):
-    selector = ExperimentSelector(args.index_file)
+    selector = ExperimentSelector(args.index_file, mongo=MONGO, db=DB)
     experiments = selector.get(include_ranges=args.include, exclude_ranges=args.exclude)
     random.shuffle(experiments)
 
@@ -146,6 +149,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Run selected experiments using Sacred.")
     parser.add_argument("--index-file", type=str, default="./metadata/mgmt-experiment-index.json",
                         help="Path to the JSON file containing indexed experiments")
+    parser.add_argument("--input-file", type=str, default="./results/portfolio_manager_training.csv",
+                        help="Training and eval data for the manager")
     parser.add_argument("--column-file", type=str, default="./metadata/column-descriptors.json",
                         help="Path to the JSON file containing indexed experiments")
     parser.add_argument("--include", type=str, default="",
