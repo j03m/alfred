@@ -93,6 +93,7 @@ def run_experiment(model_token, size, sequence_length):
     date_column = "Date"
     df[date_column] = pd.to_datetime(df[date_column])
     df = df.set_index(date_column)
+
     scaler = CustomScaler(config=DEFAULT_SCALER_CONFIG, df=df)
     df = scaler.fit_transform(df)
 
@@ -106,10 +107,12 @@ def run_experiment(model_token, size, sequence_length):
     eval_df = df.iloc[split_index:]
 
     output = 1
+    ids = len(train_df["ID"].unique()) # number of companies
+    model_sequence_length = ids * sequence_length # sequence length * total companies is the real sequence length
     model, optimizer, scheduler, real_model_token = model_from_config(
         num_features=len(train_df.columns) - 1,  # -1 is dropping Rank which is our predicted column
         config_token=model_token,
-        sequence_length=sequence_length, size=size, output=output,
+        sequence_length=model_sequence_length, size=size, output=output,
         descriptors=[
             "port_mgmt", model_token, sequence_length, size, output
         ], model_path=gbl_args.model_path)
@@ -121,14 +124,6 @@ def run_experiment(model_token, size, sequence_length):
     X_eval, y_eval = generate_sequences(input_df=eval_df, features=features, prediction=prediction,
                                         window_size=sequence_length)
 
-    # Convert to tensors
-    # todo we're crashing here, I suspect because there is no leveling of ids. Ie,
-    '''
-    
-    What I need to compile is a list of all tickers that have been in the s and p 500 for the last 10 years. 
-
-    Realistically, the above problem is solvable because there should be 500 IDs for each historical period. They may be different IDs, but the shape will be consistent.
-    '''
     X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
     y_train_tensor = torch.tensor(y_train, dtype=torch.float32).unsqueeze(-1)
     X_eval_tensor = torch.tensor(X_eval, dtype=torch.float32)
@@ -201,7 +196,7 @@ if __name__ == '__main__':
                         help="Ranges of experiments to include (e.g., 1-5,10-15)")
     parser.add_argument("--exclude", type=str, default="",
                         help="Ranges of experiments to exclude (e.g., 4-5,8)")
-    parser.add_argument("--batch-size", type=int, default=1024,
+    parser.add_argument("--batch-size", type=int, default=1,
                         help="batch size")
     parser.add_argument("--period", type=int, default=60,
                         help="length of training data windows")

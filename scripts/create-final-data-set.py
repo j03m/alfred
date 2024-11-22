@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+from sympy import false
 
 from alfred.data import attach_moving_average_diffs, read_file
 from alfred.metadata import TickerCategories
 import argparse
 import os
 import pandas as pd
+import numpy as np
 
 initial_columns_to_keep = [
     "Symbol",
@@ -90,6 +92,7 @@ def attach_price_prediction_labels(args, columns, df):
         df[label] = df['Close'].pct_change(periods=pred).shift(
             periods=(-1 * pred))
         columns.append(label)
+        df[label] = df[label].replace([np.inf, -np.inf], 0)
 
 
 def main():

@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch
 
 # lstm model borrowed from: https://github.com/jinglescode/time-series-forecasting-pytorch.git
 class LSTMModel(nn.Module):
