@@ -2,121 +2,241 @@
     "1": {
         "model_token": "lstm",
         "size": 64,
-        "sequence_length": 60
+        "sequence_length": 3
     },
     "2": {
         "model_token": "lstm",
         "size": 64,
-        "sequence_length": 90
+        "sequence_length": 6
     },
     "3": {
         "model_token": "lstm",
-        "size": 128,
-        "sequence_length": 60
+        "size": 64,
+        "sequence_length": 9
     },
     "4": {
         "model_token": "lstm",
-        "size": 128,
-        "sequence_length": 90
+        "size": 64,
+        "sequence_length": 12
     },
     "5": {
         "model_token": "lstm",
-        "size": 256,
-        "sequence_length": 60
+        "size": 128,
+        "sequence_length": 3
     },
     "6": {
         "model_token": "lstm",
-        "size": 256,
-        "sequence_length": 90
+        "size": 128,
+        "sequence_length": 6
     },
     "7": {
-        "model_token": "lstm-conv1d",
-        "size": 64,
-        "sequence_length": 60
+        "model_token": "lstm",
+        "size": 128,
+        "sequence_length": 9
     },
     "8": {
-        "model_token": "lstm-conv1d",
-        "size": 64,
-        "sequence_length": 90
+        "model_token": "lstm",
+        "size": 128,
+        "sequence_length": 12
     },
     "9": {
-        "model_token": "lstm-conv1d",
-        "size": 128,
-        "sequence_length": 60
+        "model_token": "lstm",
+        "size": 256,
+        "sequence_length": 3
     },
     "10": {
-        "model_token": "lstm-conv1d",
-        "size": 128,
-        "sequence_length": 90
+        "model_token": "lstm",
+        "size": 256,
+        "sequence_length": 6
     },
     "11": {
-        "model_token": "lstm-conv1d",
+        "model_token": "lstm",
         "size": 256,
-        "sequence_length": 60
+        "sequence_length": 9
     },
     "12": {
-        "model_token": "lstm-conv1d",
+        "model_token": "lstm",
         "size": 256,
-        "sequence_length": 90
+        "sequence_length": 12
     },
     "13": {
-        "model_token": "advanced-lstm",
+        "model_token": "lstm-conv1d",
         "size": 64,
-        "sequence_length": 60
+        "sequence_length": 3
     },
     "14": {
-        "model_token": "advanced-lstm",
+        "model_token": "lstm-conv1d",
         "size": 64,
-        "sequence_length": 90
+        "sequence_length": 6
     },
     "15": {
-        "model_token": "advanced-lstm",
-        "size": 128,
-        "sequence_length": 60
+        "model_token": "lstm-conv1d",
+        "size": 64,
+        "sequence_length": 9
     },
     "16": {
-        "model_token": "advanced-lstm",
-        "size": 128,
-        "sequence_length": 90
+        "model_token": "lstm-conv1d",
+        "size": 64,
+        "sequence_length": 12
     },
     "17": {
-        "model_token": "advanced-lstm",
-        "size": 256,
-        "sequence_length": 60
+        "model_token": "lstm-conv1d",
+        "size": 128,
+        "sequence_length": 3
     },
     "18": {
-        "model_token": "advanced-lstm",
-        "size": 256,
-        "sequence_length": 90
+        "model_token": "lstm-conv1d",
+        "size": 128,
+        "sequence_length": 6
     },
     "19": {
-        "model_token": "trans-am",
-        "size": 64,
-        "sequence_length": 60
+        "model_token": "lstm-conv1d",
+        "size": 128,
+        "sequence_length": 9
     },
     "20": {
-        "model_token": "trans-am",
-        "size": 64,
-        "sequence_length": 90
+        "model_token": "lstm-conv1d",
+        "size": 128,
+        "sequence_length": 12
     },
     "21": {
-        "model_token": "trans-am",
-        "size": 128,
-        "sequence_length": 60
+        "model_token": "lstm-conv1d",
+        "size": 256,
+        "sequence_length": 3
     },
     "22": {
-        "model_token": "trans-am",
-        "size": 128,
-        "sequence_length": 90
+        "model_token": "lstm-conv1d",
+        "size": 256,
+        "sequence_length": 6
     },
     "23": {
-        "model_token": "trans-am",
+        "model_token": "lstm-conv1d",
         "size": 256,
-        "sequence_length": 60
+        "sequence_length": 9
     },
     "24": {
+        "model_token": "lstm-conv1d",
+        "size": 256,
+        "sequence_length": 12
+    },
+    "25": {
+        "model_token": "advanced-lstm",
+        "size": 64,
+        "sequence_length": 3
+    },
+    "26": {
+        "model_token": "advanced-lstm",
+        "size": 64,
+        "sequence_length": 6
+    },
+    "27": {
+        "model_token": "advanced-lstm",
+        "size": 64,
+        "sequence_length": 9
+    },
+    "28": {
+        "model_token": "advanced-lstm",
+        "size": 64,
+        "sequence_length": 12
+    },
+    "29": {
+        "model_token": "advanced-lstm",
+        "size": 128,
+        "sequence_length": 3
+    },
+    "30": {
+        "model_token": "advanced-lstm",
+        "size": 128,
+        "sequence_length": 6
+    },
+    "31": {
+        "model_token": "advanced-lstm",
+        "size": 128,
+        "sequence_length": 9
+    },
+    "32": {
+        "model_token": "advanced-lstm",
+        "size": 128,
+        "sequence_length": 12
+    },
+    "33": {
+        "model_token": "advanced-lstm",
+        "size": 256,
+        "sequence_length": 3
+    },
+    "34": {
+        "model_token": "advanced-lstm",
+        "size": 256,
+        "sequence_length": 6
+    },
+    "35": {
+        "model_token": "advanced-lstm",
+        "size": 256,
+        "sequence_length": 9
+    },
+    "36": {
+        "model_token": "advanced-lstm",
+        "size": 256,
+        "sequence_length": 12
+    },
+    "37": {
+        "model_token": "trans-am",
+        "size": 64,
+        "sequence_length": 3
+    },
+    "38": {
+        "model_token": "trans-am",
+        "size": 64,
+        "sequence_length": 6
+    },
+    "39": {
+        "model_token": "trans-am",
+        "size": 64,
+        "sequence_length": 9
+    },
+    "40": {
+        "model_token": "trans-am",
+        "size": 64,
+        "sequence_length": 12
+    },
+    "41": {
+        "model_token": "trans-am",
+        "size": 128,
+        "sequence_length": 3
+    },
+    "42": {
+        "model_token": "trans-am",
+        "size": 128,
+        "sequence_length": 6
+    },
+    "43": {
+        "model_token": "trans-am",
+        "size": 128,
+        "sequence_length": 9
+    },
+    "44": {
+        "model_token": "trans-am",
+        "size": 128,
+        "sequence_length": 12
+    },
+    "45": {
         "model_token": "trans-am",
         "size": 256,
-        "sequence_length": 90
+        "sequence_length": 3
+    },
+    "46": {
+        "model_token": "trans-am",
+        "size": 256,
+        "sequence_length": 6
+    },
+    "47": {
+        "model_token": "trans-am",
+        "size": 256,
+        "sequence_length": 9
+    },
+    "48": {
+        "model_token": "trans-am",
+        "size": 256,
+        "sequence_length": 12
     }
 }

@@ -68,32 +68,38 @@ def save_processed_tickers(processed_tickers):
         json.dump(processed_tickers, f)
 
 def main(symbols_file, data_dir, test_symbol):
+    ticker_categories = TickerCategories(symbols_file)
     if test_symbol is not None:
         symbols = [test_symbol]
     else:
-        ticker_categories = TickerCategories(symbols_file)
         symbols = ticker_categories.get(["training", "evaluation"])
 
     alpha = AlphaDownloader()
 
     processed_already = load_processed_tickers()
-
+    bad_tickers = []
     for symbol in symbols:
         if symbol in processed_already:
             print(f"skipping {symbol}")
             continue
 
         print(f"Processing {symbol}")
-        _, quarterly_earnings = alpha.earnings(symbol)
+        quarterly_earnings = alpha.earnings(symbol)
         margins = alpha.margins(symbol)
         insiders = alpha.get_normalized_insider_transactions(symbol)
         df_news = create_news_indicators(symbol)
         price_file_path = os.path.join(data_dir, f"{symbol}.csv")
 
         if os.path.exists(price_file_path):
+            if quarterly_earnings is None:
+                bad_tickers.append(symbol)
+                continue
+
             df_prices = pd.read_csv(price_file_path)
+
             quarterly_earnings.index = pd.to_datetime(quarterly_earnings["Date"])
             quarterly_earnings = quarterly_earnings.drop(columns=['Date'])
+
             df_prices.index = pd.to_datetime(df_prices['Date'])
             df_prices = df_prices.drop(columns=['Date'])
 
@@ -133,6 +139,9 @@ def main(symbols_file, data_dir, test_symbol):
 
         processed_already.append(symbol)
         save_processed_tickers(processed_already)
+
+    ticker_categories.purge(bad_tickers)
+    ticker_categories.save()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fetch and process stock fundamentals and pricing data.")

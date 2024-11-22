@@ -32,21 +32,43 @@ ex.observers.append(MongoObserver(
 gbl_args = None
 
 
-def create_sequences(data, sequence_length):
+def generate_sequences(input_df, features, prediction, window_size, date_column="Date"):
+    unique_dates = input_df.index.unique()
+    no_index_df = input_df.reset_index()
+    num_windows = len(unique_dates) - window_size + 1
     sequences = []
-    targets = []
-    data_values = data.values
-    target_index = data.columns.get_loc('Rank')
-    feature_indices = [i for i in range(data.shape[1]) if i != target_index]
+    consistent_ids = None
+    consistent_dates = None
+    for i in range(num_windows):
+        # Get dates for the current window
+        window_dates = unique_dates[i:i + window_size]
+        # Get data for these dates
+        window_data = no_index_df[no_index_df[date_column].isin(window_dates)].copy()
+        # Ensure data is sorted by Date and ID
+        window_data.sort_values(by=[date_column, 'ID'], inplace=True)
+        window_data.reset_index(drop=True, inplace=True)
+        # every window we create should have the number of IDs and Dates
+        # if we don't the tensor shape will be jagged.
+        if consistent_ids is None:
+            consistent_ids = len(window_data["ID"].unique())
+        else:
+            # still choking here. We need the final data to be for
+            assert consistent_ids == len(window_data["ID"].unique())
 
-    for i in range(len(data_values) - sequence_length):
-        # Extract sequence of features
-        seq = data_values[i:i + sequence_length, feature_indices]
-        # Extract target value at the next time step
-        target = data_values[i + sequence_length, target_index]
-        sequences.append(seq)
-        targets.append(target)
-    return np.array(sequences), np.array(targets)
+        if consistent_dates is None:
+            consistent_dates = len(window_data[date_column].unique())
+        else:
+            assert consistent_dates == len(window_data[date_column].unique())
+
+        # Append the sequence
+        sequences.append(window_data)
+
+    # Each sequence is a DataFrame containing data for window_size dates and all IDs
+    # Optionally, convert each DataFrame to a NumPy array
+    x_sequences_array = [seq[features].values for seq in sequences]
+    y_sequences_array = [seq[prediction].values for seq in sequences]
+
+    return x_sequences_array, y_sequences_array
 
 
 def build_experiment_descriptor_key(config):
@@ -68,7 +90,7 @@ def run_experiment(model_token, size, sequence_length):
     # Read the training file
 
     df = pd.read_csv(gbl_args.input_file)
-    date_column = "Unnamed: 0"
+    date_column = "Date"
     df[date_column] = pd.to_datetime(df[date_column])
     df = df.set_index(date_column)
     scaler = CustomScaler(config=DEFAULT_SCALER_CONFIG, df=df)
@@ -78,22 +100,35 @@ def run_experiment(model_token, size, sequence_length):
     split_index = int(len(df) * 2 / 3)
 
     # Split the DataFrame
+    # Todo: Sequences look good, but we don;t have enough data, there is only 41 unique months in the training set. We need to
+    # look back further. Revisit the file producer to see why we limited the date
     train_df = df.iloc[:split_index]
     eval_df = df.iloc[split_index:]
 
     output = 1
     model, optimizer, scheduler, real_model_token = model_from_config(
-        num_features=len(train_df.columns),
+        num_features=len(train_df.columns) - 1,  # -1 is dropping Rank which is our predicted column
         config_token=model_token,
         sequence_length=sequence_length, size=size, output=output,
         descriptors=[
             "port_mgmt", model_token, sequence_length, size, output
         ], model_path=gbl_args.model_path)
 
-    X_train, y_train = create_sequences(train_df, sequence_length)
-    X_eval, y_eval = create_sequences(eval_df, sequence_length)
+    features = df.columns.drop('Rank')
+    prediction = ["Rank"]
+    X_train, y_train = generate_sequences(input_df=train_df, features=features, prediction=prediction,
+                                          window_size=sequence_length)
+    X_eval, y_eval = generate_sequences(input_df=eval_df, features=features, prediction=prediction,
+                                        window_size=sequence_length)
 
     # Convert to tensors
+    # todo we're crashing here, I suspect because there is no leveling of ids. Ie,
+    '''
+    
+    What I need to compile is a list of all tickers that have been in the s and p 500 for the last 10 years. 
+
+    Realistically, the above problem is solvable because there should be 500 IDs for each historical period. They may be different IDs, but the shape will be consistent.
+    '''
     X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
     y_train_tensor = torch.tensor(y_train, dtype=torch.float32).unsqueeze(-1)
     X_eval_tensor = torch.tensor(X_eval, dtype=torch.float32)
@@ -105,8 +140,17 @@ def run_experiment(model_token, size, sequence_length):
     train_loader = DataLoader(train_dataset, batch_size=gbl_args.batch_size, shuffle=False)
     eval_loader = DataLoader(eval_dataset, batch_size=gbl_args.batch_size, shuffle=False)
 
-#params busted here
-    train_model(model, optimizer, scheduler, train_loader, gbl_args.patience, epochs=gbl_args.epochs)
+    # params busted here
+    train_model(model=model,
+                optimizer=optimizer,
+                scheduler=scheduler,
+                train_loader=train_loader,
+                patience=gbl_args.patience,
+                epochs=gbl_args.epochs,
+                model_path=gbl_args.model_path,
+                model_token=real_model_token,
+                training_label="manager")
+
     prune_old_versions(gbl_args.model_path)
 
     predictions, actuals = evaluate_model(model, eval_loader)
@@ -149,7 +193,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Run selected experiments using Sacred.")
     parser.add_argument("--index-file", type=str, default="./metadata/mgmt-experiment-index.json",
                         help="Path to the JSON file containing indexed experiments")
-    parser.add_argument("--input-file", type=str, default="./results/portfolio_manager_training.csv",
+    parser.add_argument("--input-file", type=str, default="./results/pm-training-final.csv",
                         help="Training and eval data for the manager")
     parser.add_argument("--column-file", type=str, default="./metadata/column-descriptors.json",
                         help="Path to the JSON file containing indexed experiments")

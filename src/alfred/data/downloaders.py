@@ -19,6 +19,16 @@ def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=
     for ticker in ticker_list:
         time.sleep(0.25)
         print("ticker: ", ticker)
+        data_file = os.path.join(output_dir, f"{ticker}.csv")
+        if os.path.exists(data_file):
+            df = pd.read_csv(data_file)
+            df['Date'] = pd.to_datetime(df['Date'])
+            today = datetime.today().strftime('%m-%d-%Y')
+            latest_date = df['Date'].max().strftime('%m-%d-%Y')
+            if latest_date == today:
+                print(f"{ticker} prices are up2date")
+                continue
+
         try:
             ticker_obj = yf.download(tickers=ticker, interval=interval)
             df = pd.DataFrame(ticker_obj)
@@ -33,7 +43,7 @@ def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=
                 max_date = df.index.max()
                 print(f"Min date for {ticker}: {min_date}")
                 print(f"Max date for {ticker}: {max_date}")
-                df.to_csv(os.path.join(output_dir, f"{ticker}.csv"))
+                df.to_csv(data_file)
         except (requests.exceptions.HTTPError, ValueError) as e:
             print(f"Failed to download {ticker} due to an HTTP or Value error: {e}")
             bad_tickers.append(ticker)
@@ -59,17 +69,17 @@ class AlphaDownloader:
         data = response.json()
 
         # Convert the earnings data to a DataFrame
-        annual_earnings = pd.DataFrame(data['annualEarnings'])
-        quarterly_earnings = pd.DataFrame(data['quarterlyEarnings'])
-
+        quarterly_earnings = data.get('quarterlyEarnings', None)
+        if quarterly_earnings is None:
+            return None
+        quarterly_earnings = pd.DataFrame(quarterly_earnings)
         quarterly_earnings = quarterly_earnings.drop(columns=['reportTime'])
         quarterly_earnings = quarterly_earnings.drop(columns=['fiscalDateEnding'])
         quarterly_earnings = quarterly_earnings.rename(columns={'reportedDate': 'Date'})
 
-        annual_earnings = annual_earnings.fillna(0)
         quarterly_earnings = quarterly_earnings.fillna(0)
 
-        return annual_earnings, quarterly_earnings
+        return quarterly_earnings
 
     def earnings_to_csv(self, symbol, annual_csv_file='annual_earnings.csv',
                         quarterly_csv_file='quarterly_earnings.csv'):
@@ -257,7 +267,7 @@ class AlphaDownloader:
 
     def get_normalized_insider_transactions(self, ticker):
         response = self.fetch_insider_transactions(ticker)
-        transactions =  response["data"]
+        transactions =  response.get("data", [])
         security_weights = {
             "common": 1.0,
             "preferred": 0.8,

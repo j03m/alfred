@@ -13,9 +13,11 @@ DEFAULT_SCALER_CONFIG = [
     {'columns': ['SPY', 'CL=F', 'BZ=F', "BTC=F"], 'type': 'yeo-johnson'},
     {'regex': r'^Margin.*', 'type': 'standard'},
     {'regex': r'^Volume$', 'type': 'yeo-johnson'},
-    {'columns': ['reportedEPS', 'estimatedEPS', 'surprise', 'surprisePercentage'], 'type': 'standard'},
+    {'columns': ['reportedEPS', 'estimatedEPS', 'surprise', 'surprisePercentage', 'insider_acquisition',
+                 'insider_disposal', 'mean_outlook', 'mean_sentiment', 'ID', 'Rank' ], 'type': 'standard'},
     {'regex': r'\d+year', 'type': 'standard'}
 ]
+
 
 class LogReturnScaler(BaseEstimator, TransformerMixin):
     '''
@@ -64,6 +66,7 @@ class LogReturnScaler(BaseEstimator, TransformerMixin):
 def signed_log1p(x):
     return np.sign(x) * np.log1p(np.abs(x))
 
+
 class SignedLog1pMinMaxScaler(BaseEstimator, TransformerMixin):
     '''
     Why use sign log1p min max? I think log returns might be better, but this was meant to reduce vol numbers
@@ -88,6 +91,7 @@ class SignedLog1pMinMaxScaler(BaseEstimator, TransformerMixin):
         # First inverse the MinMax scaling, then apply the inverse of the signed log1p
         X_inverse_scaled = self.minmax_scaler.inverse_transform(X)
         return np.sign(X_inverse_scaled) * (np.expm1(np.abs(X_inverse_scaled)))
+
 
 class CustomScaler:
     def __init__(self, config, df):
@@ -157,7 +161,6 @@ class CustomScaler:
     def inverse_transform_column(self, column, data):
         scaler = self.scaler_mapping[column]
         return scaler.inverse_transform(data)
-
 
     def serialize(self, path):
         # Save the actual scalers along with the mappings

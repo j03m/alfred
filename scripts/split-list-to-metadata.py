@@ -27,7 +27,11 @@ def main(input_file, output_file, train_percent):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Split tickers for training and evaluation")
-    parser.add_argument("--input_file", default="lists/^GSPC_constituents.csv", help="Path to input CSV file containing tickers")
+    # note to my future self or future readers - symbols.csv is special in that when cache-prices.py is done running
+    # any delisted tickers in a list it received are filtered out and the final list is written to lists/symbols.csv
+    # so, prior to running additional analysis on the metadata use this or you will hit errors where you have missing
+    # pricing data files
+    parser.add_argument("--input_file", default="lists/symbols.csv", help="Path to input CSV file containing tickers")
     parser.add_argument("--output_file", default="metadata/spy-ticker-categorization.json", help="Path to output JSON file")
     parser.add_argument("--train_percent", type=int, default=75, help="Percentage of tickers for training set (default: 75)")
 
