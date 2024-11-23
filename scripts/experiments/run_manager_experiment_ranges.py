@@ -65,10 +65,10 @@ def generate_sequences(input_df, features, prediction, window_size, date_column=
 
     # Each sequence is a DataFrame containing data for window_size dates and all IDs
     # Optionally, convert each DataFrame to a NumPy array
-    x_sequences_array = [seq[features].values for seq in sequences]
-    y_sequences_array = [seq[prediction].values for seq in sequences]
+    x_sequences_array = [np.array(seq[features].values) for seq in sequences]
+    y_sequences_array = [np.array(seq[prediction].values) for seq in sequences]
 
-    return x_sequences_array, y_sequences_array
+    return np.array(x_sequences_array), np.array(y_sequences_array)
 
 
 def build_experiment_descriptor_key(config):
@@ -106,9 +106,10 @@ def run_experiment(model_token, size, sequence_length):
     train_df = df.iloc[:split_index]
     eval_df = df.iloc[split_index:]
 
-    output = 1
-    ids = len(train_df["ID"].unique()) # number of companies
-    model_sequence_length = ids * sequence_length # sequence length * total companies is the real sequence length
+    ids = len(train_df["ID"].unique())  # number of companies
+    output = ids * sequence_length # output should be a prediction of rank for each sequence entry
+    model_sequence_length = ids * sequence_length
+    # sequence length * total companies is the real sequence length
     model, optimizer, scheduler, real_model_token = model_from_config(
         num_features=len(train_df.columns) - 1,  # -1 is dropping Rank which is our predicted column
         config_token=model_token,
@@ -125,9 +126,9 @@ def run_experiment(model_token, size, sequence_length):
                                         window_size=sequence_length)
 
     X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
-    y_train_tensor = torch.tensor(y_train, dtype=torch.float32).unsqueeze(-1)
+    y_train_tensor = torch.tensor(y_train, dtype=torch.float32)
     X_eval_tensor = torch.tensor(X_eval, dtype=torch.float32)
-    y_eval_tensor = torch.tensor(y_eval, dtype=torch.float32).unsqueeze(-1)
+    y_eval_tensor = torch.tensor(y_eval, dtype=torch.float32)
 
     # Create datasets and dataloaders
     train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
@@ -148,20 +149,10 @@ def run_experiment(model_token, size, sequence_length):
 
     prune_old_versions(gbl_args.model_path)
 
-    predictions, actuals = evaluate_model(model, eval_loader)
+    print("Evaluating pm: ")
+    predictions, actuals = evaluate_model(model, eval_loader, prediction_squeeze=None)
     mse = mean_squared_error(actuals, predictions)
-
-    # take our predicted Ranks for each prediction
-    predictions = np.array(predictions)
-
-    padding_length = sequence_length
-
-    # Create the padded predictions array
-    padded_predictions = np.concatenate([np.full((padding_length,), np.nan), predictions])
-
-    # Append as a new column to eval_df
-    eval_df['predicted_rank'] = padded_predictions
-
+    print("pm mse: ", mse)
     ex.log_scalar('mse', mse)
     ex.info["model_token"] = real_model_token
 
@@ -207,6 +198,6 @@ if __name__ == '__main__':
     parser.add_argument("--model-path", type=str, default='./models',
                         help="where to store models and best loss data")
     parser.add_argument("--metadata-path", type=str, default='./metadata', help="experiment descriptors live here")
-    parser.add_argument("--plot", action="store_true", help="make plots")
+    parser.add_argument("--mode", default="both", choices=["train", "eval", "both"], help="train eval or both")
     gbl_args = parser.parse_args()
     main(gbl_args)

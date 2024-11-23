@@ -63,7 +63,7 @@ def analyze_ledger(ledger_df):
     return metrics
 
 
-def evaluate_model(model, loader):
+def evaluate_model(model, loader, prediction_squeeze=-1):
     model.eval()
     predictions = []
     actuals = []
@@ -71,7 +71,10 @@ def evaluate_model(model, loader):
         seq = seq.to(device)
         labels = labels.to(device)
         with torch.no_grad():
-            output = model(seq).squeeze(-1)
+            if prediction_squeeze is not None:
+                output = model(seq).squeeze(prediction_squeeze)
+            else:
+                output = model(seq).squeeze()
             predictions.extend(output.cpu().tolist())
             actuals.extend(labels.squeeze().cpu().tolist())
 

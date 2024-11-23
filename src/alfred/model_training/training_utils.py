@@ -23,7 +23,7 @@ def train_model(model, optimizer, scheduler, train_loader, patience, model_path,
             seq, labels = seq.to(device), labels.to(device)
             optimizer.zero_grad()
             y_pred = model(seq)
-            single_loss = loss_function(y_pred, labels)
+            single_loss = loss_function(y_pred, labels.squeeze(-1))
             if torch.isnan(single_loss):
                 raise Exception("Found NaN!")
 
