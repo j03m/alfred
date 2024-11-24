@@ -1,17 +1,19 @@
 Next:
-* shared drive on mb1
-* mongo ip
-* test from 2nd cuda gpu
+* Public mongo
+* remote run scripts on pc/macbook?
+* Train analysts
+* Integrate analyst predictions into pm dataset
+* Run eval and track against spy
 
-Manager:
-
-* Once the above are added, we can 
-  * rerun the scripts for generating management training data on a 4 year period
-  * split that 3 years train 1 year eval
-* Create another set of sacred experiments that look at the timeseries but tries to predict rank 
-* train those models
-
-* Calculate performance SPY hold vs top 5 rank monthly
+* how to find neglected stocks? Low volume, lack of index and etf inclusion
+* alfred could look at full universes soon
+* institutional volume vs retail volume
+    * finhub
+    * qunadl
+    * sec-edgar
+    * chatgpt
 
 Research:
+* Finish book
+* 
 * How ususable are the tools in https://github.com/AI4Finance-Foundation/FinRL?

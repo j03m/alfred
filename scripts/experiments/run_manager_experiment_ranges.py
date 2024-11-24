@@ -72,8 +72,8 @@ def generate_sequences(input_df, features, prediction, window_size, date_column=
 
 
 def build_experiment_descriptor_key(config):
-    model_token = config["sequence_length"]
-    size = config["sequence_length"]
+    model_token = config["model_token"]
+    size = config["size"]
     sequence_length = config["sequence_length"]
     return f"{model_token}:{size}:{sequence_length}"
 
@@ -149,13 +149,17 @@ def run_experiment(model_token, size, sequence_length):
 
     prune_old_versions(gbl_args.model_path)
 
+    # add something here that looks at profit loss total spy vs top 5 rank predict
     print("Evaluating pm: ")
     predictions, actuals = evaluate_model(model, eval_loader, prediction_squeeze=None)
     mse = mean_squared_error(actuals, predictions)
     print("pm mse: ", mse)
     ex.log_scalar('mse', mse)
     ex.info["model_token"] = real_model_token
-
+    results = {
+        'average_mse': mse
+    }
+    return results
 
 def main(args):
     selector = ExperimentSelector(args.index_file, mongo=MONGO, db=DB)
@@ -170,10 +174,12 @@ def main(args):
         if experiment:
             key = build_experiment_descriptor_key(experiment)
             if key not in past_experiments:
+                print("Running key:", key)
                 ex.run(config_updates=experiment)
                 # update the list in case another machine is running (poor man's update)
-                past_experiments = selector.get_current_state("analysts", build_experiment_descriptor_key)
-
+                past_experiments = selector.get_current_state(experiment_namespace, build_experiment_descriptor_key)
+            else:
+                print("skipping", key)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Run selected experiments using Sacred.")
