@@ -34,3 +34,6 @@ bocd
 financetoolkit
 sacred
 pymongo
+openai
+trafilatura
+fuzzywuzzy
