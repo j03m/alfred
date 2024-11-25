@@ -98,7 +98,7 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
         sequence_length=sequence_length, size=size, output=output,
         descriptors=[
             model_token, sequence_length, size, output, crc32_columns(columns), bar_type
-        ], model_path=_args.model_path)
+        ])
 
     ticker_categories = TickerCategories(_args.ticker_categories_file)
     training = ticker_categories.get(["training"])
@@ -120,9 +120,9 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
         batch_size = min(_args.batch_size, len(dataset))
         train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
-        train_model(model, optimizer, scheduler, train_loader, _args.patience, _args.model_path, real_model_token,
+        train_model(model, optimizer, scheduler, train_loader, _args.patience, real_model_token,
                     epochs=_args.epochs, training_label=ticker)
-        prune_old_versions(_args.model_path)  # keep disk under control, keep only the best models
+        prune_old_versions()  # keep disk under control, keep only the best models
 
     # Initialize variables to accumulate values
     total_mse = 0
@@ -149,7 +149,7 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
 
         if _args.plot:
             fig = plot_evaluation(actuals, predictions)
-            fig.savefig(f"{_args.model_path}/{real_model_token}_{ticker}_eval.png", dpi=600, bbox_inches='tight',
+            fig.savefig(f"{_args.data}/{real_model_token}_{ticker}_eval.png", dpi=600, bbox_inches='tight',
                         transparent=True)
 
         # Calculate Mean Squared Error (MSE)

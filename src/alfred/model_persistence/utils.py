@@ -1,29 +1,29 @@
-import os
-import glob
 import torch
-import json
-import re
-
+import pymongo
+import io
+import gridfs
 from alfred.devices import build_model_token, set_device
 from alfred.models import LSTMModel, LSTMConv1d, AdvancedLSTM, TransAm
+from alfred.utils import MongoConnectionStrings
 import torch.optim as optim
 
 DEVICE = set_device()
 
-def model_from_config(config_token,
-                      num_features,
-                      sequence_length,
-                      size,
-                      output,
-                      descriptors,
-                      model_path, layers=2):
+# MongoDB setup
+connection = MongoConnectionStrings()
+mongo_client = pymongo.MongoClient(connection.connection_string())
+db = mongo_client['model_db']
+fs = gridfs.GridFS(db)
+models_collection = db['models']
+metrics_collection = db['metrics']
+
+
+def model_from_config(config_token, num_features, sequence_length, size, output, descriptors, layers=2):
     if config_token == 'lstm':
-        model = LSTMModel(features=num_features, hidden_dim=size, output_size=output,
-                          num_layers=layers)
+        model = LSTMModel(features=num_features, hidden_dim=size, output_size=output, num_layers=layers)
     elif config_token == 'advanced-lstm':
         model = AdvancedLSTM(features=num_features, hidden_dim=size, output_dim=output)
     elif config_token == 'lstm-conv1d':
-        # size 10 kernel should smooth about 2 weeks of data
         model = LSTMConv1d(features=num_features, seq_len=sequence_length, hidden_dim=size, output_size=output,
                            kernel_size=10)
     elif config_token == 'trans-am':
@@ -34,14 +34,12 @@ def model_from_config(config_token,
     model.to(DEVICE)
 
     model_token = build_model_token(descriptors)
-
     optimizer = optim.Adam(model.parameters(), lr=0.001)
-
-    # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.5)
 
-    model_checkpoint = get_latest_model(model_path, model_token)
-    if model_checkpoint is not None:
+    # Load the latest model from MongoDB
+    model_checkpoint = get_latest_model(model_token)
+    if model_checkpoint:
         model.load_state_dict(model_checkpoint['model_state_dict'])
         optimizer.load_state_dict(model_checkpoint['optimizer_state_dict'])
         scheduler.load_state_dict(model_checkpoint['scheduler_state_dict'])
@@ -49,128 +47,86 @@ def model_from_config(config_token,
     return model, optimizer, scheduler, model_token
 
 
-def maybe_save_model_with_evaluator(epoch, evaluator, eval_save, model, model_path, model_prefix):
-    if eval_save:
-        eval_loss = evaluator()
-        return maybe_save_model(model, eval_loss, model_path, model_prefix)
-    else:
-        print("saving model at: ", epoch)
-        save_next_model(model, model_path, model_prefix)
-        return True
-
-
-def maybe_save_model(model, optimizer, scheduler, eval_loss, model_path, model_prefix, training_label="all"):
-    best_loss = get_best_loss(model_path, model_prefix, training_label)
+def maybe_save_model(model, optimizer, scheduler, eval_loss, model_token, training_label):
+    best_loss = get_best_loss(model_token, training_label)
     if eval_loss < best_loss:
         print(f"New best model: {eval_loss} vs {best_loss}: saving")
-        save_next_model(model, optimizer, scheduler, model_path, model_prefix)
-        set_best_loss(model_path, model_prefix, eval_loss, training_label)
+        save_next_model(model, optimizer, scheduler, model_token, eval_loss)
+        set_best_loss(model_token, training_label, eval_loss)
         return True
     else:
         print(f"{eval_loss} vs {best_loss}: declining save")
         return False
 
 
-def get_best_loss(model_path, model_prefix, token="all"):
-    try:
-        with open(f"{model_path}/{model_prefix}-{token}-metrics.json", 'r') as f:
-            metrics = json.load(f)
-        best_loss = metrics['best_loss']
-    except (FileNotFoundError, KeyError):
-        best_loss = float('inf')
-    return best_loss
+def get_best_loss(model_token, training_label):
+    record = metrics_collection.find_one({'model_token': model_token, 'training_label': training_label})
+    return record['best_loss'] if record else float('inf')
 
 
-def set_best_loss(model_path, model_prefix, loss, token="all"):
-    with open(f"{model_path}/{model_prefix}-{token}-metrics.json", 'w') as f:
-        json.dump({'best_loss': loss}, f)
+def set_best_loss(model_token, training_label, loss):
+    metrics_collection.update_one(
+        {'model_token': model_token, 'training_label': training_label},
+        {'$set': {'best_loss': loss}},
+        upsert=True
+    )
 
 
-def get_latest_model(model_path, model_prefix):
-    search_pattern = os.path.join(model_path, f"{model_prefix}*.pth")
-    model_files = glob.glob(search_pattern)
-    if not model_files:
+def get_latest_model(model_token):
+    record = models_collection.find_one({'model_token': model_token}, sort=[('version', -1)])
+    if not record:
         print("No previous model.")
         return None
-    model_files.sort(key=lambda x: int(os.path.basename(x)[len(model_prefix):-4]), reverse=True)
-    print(f"Found {model_files[0]} for previous model.")
-    latest_model_path = model_files[0]
-    return torch.load(latest_model_path)
+
+    print(f"Found model version {record['version']} for {model_token}.")
+
+    file_id = record['file_id']
+    model_data = fs.get(file_id).read()
+    buffer = io.BytesIO(model_data)
+    return torch.load(buffer)
 
 
-def save_next_model(model, optimizer, scheduler, model_path, model_prefix):
-    if not os.path.exists(model_path):
-        os.makedirs(model_path)
+def save_next_model(model, optimizer, scheduler, model_token, eval_loss):
+    # Determine the next version number
+    last_record = models_collection.find_one({'model_token': model_token}, sort=[('version', -1)])
+    next_version = (last_record['version'] + 1) if last_record else 0
 
-    search_pattern = os.path.join(model_path, f"{model_prefix}*.pth")
-
-    model_files = glob.glob(search_pattern)
-
-    max_counter = -1
-    for model_file in model_files:
-        basename = os.path.basename(model_file)
-        counter = basename[len(model_prefix):-4]
-        try:
-            counter = int(counter)
-            if counter > max_counter:
-                max_counter = counter
-        except ValueError:
-            continue  # Skip files that do not end with a number
-
-    next_counter = max_counter + 1
-    next_model_filename = f"{model_prefix}{next_counter}.pth"
-    next_model_path = os.path.join(model_path, next_model_filename)
-
-    # Save the model
+    # Serialize model to binary
+    buffer = io.BytesIO()
     torch.save({
         'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict() if optimizer is not None else None,
-        'scheduler_state_dict': scheduler.state_dict() if scheduler is not None else None,
-    }, next_model_path)
-    print(f"Model saved to {next_model_path}")
+        'optimizer_state_dict': optimizer.state_dict(),
+        'scheduler_state_dict': scheduler.state_dict()
+    }, buffer)
+    buffer.seek(0)
 
-    return next_model_path
+    # needed due to models being > bson limit (laaaaame)
+    file_id = fs.put(buffer.getvalue(), filename=f"{model_token}_v{next_version}")
 
-def prune_old_versions(directory):
-    # Updated regex pattern to match the device token dynamically (cpu, cuda, mps, etc.)
-    # Matches the format lstm_30_128_1_0x216c6ee9_<device><number>.pth
-    pattern = re.compile(r'(.*_)(cpu|cuda|mps)(\d+)\.pth')
-
-    # Dictionary to store the latest version of each model based on the device token
-    latest_versions = {}
-
-    # Traverse the files in the specified directory
-    for filename in os.listdir(directory):
-        if filename.endswith('.pth'):
-            match = pattern.match(filename)
-            if match:
-                model_name = match.group(1)  # The part before the device token
-                device_token = match.group(2)  # The device token (cpu, cuda, mps)
-                version = int(match.group(3))  # The version number
-
-                # Create a unique key for each model+device combination
-                model_device_key = f"{model_name}{device_token}"
-
-                # Check if it's the latest version for this model+device combination
-                if model_device_key not in latest_versions or version > latest_versions[model_device_key][1]:
-                    latest_versions[model_device_key] = (filename, version)
-
-    # Now we can delete the older versions
-    for filename in os.listdir(directory):
-        if filename.endswith('.pth'):
-            match = pattern.match(filename)
-            if match:
-                model_name = match.group(1)
-                device_token = match.group(2)
-                version = int(match.group(3))
-
-                # Create the key again to check if this is the latest version
-                model_device_key = f"{model_name}{device_token}"
-
-                # If this is not the latest version, delete the file
-                if version != latest_versions[model_device_key][1]:
-                    file_path = os.path.join(directory, filename)
-                    os.remove(file_path)
-                    print(f"Deleted: {file_path}")
+    # Save to MongoDB
+    models_collection.insert_one({
+        'model_token': model_token,
+        'version': next_version,
+        'eval_loss': eval_loss,
+        'file_id': file_id
+    })
+    print(f"Model version {next_version} saved for {model_token}.")
 
 
+def prune_old_versions():
+    # Group models by their `model_token` and find the latest version for each
+    pipeline = [
+        {'$sort': {'version': -1}},  # Sort by version in descending order
+        {'$group': {
+            '_id': '$model_token',  # Group by model_token
+            'latest_id': {'$first': '$_id'}  # Get the _id of the latest version
+        }}
+    ]
+
+    # Get the list of latest versions to keep
+    latest_versions = list(models_collection.aggregate(pipeline))
+    latest_ids = {doc['latest_id'] for doc in latest_versions}
+
+    # Delete all other versions
+    result = models_collection.delete_many({'_id': {'$nin': list(latest_ids)}})
+    print(f"Pruned {result.deleted_count} old model versions.")

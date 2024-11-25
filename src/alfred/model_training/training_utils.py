@@ -9,7 +9,7 @@ from alfred.devices import set_device
 device = set_device()
 
 
-def train_model(model, optimizer, scheduler, train_loader, patience, model_path, model_token, training_label, epochs=20,
+def train_model(model, optimizer, scheduler, train_loader, patience, model_token, training_label, epochs=20,
                 loss_function=nn.MSELoss()):
     model.train()
 
@@ -38,7 +38,7 @@ def train_model(model, optimizer, scheduler, train_loader, patience, model_path,
         print(f'Epoch {epoch} loss: {loss_mean}, training iter: {count}, patience: {patience_count}')
         # todo: maybe save model really needs to take the optimizer and scheduler as well if its going to resume at an optimzied state
         # otherwise we lose like a 100 epochs prior to it getting to the right place again
-        saved = maybe_save_model(model, optimizer, scheduler, loss_mean, model_path, model_token, training_label)
+        saved = maybe_save_model(model, optimizer, scheduler, loss_mean, model_token, training_label)
 
         if last_mean_loss is not None:
             if not saved:

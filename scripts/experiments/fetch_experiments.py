@@ -1,67 +1,86 @@
 import pymongo
 import pandas as pd
+import argparse
 from alfred.utils import MongoConnectionStrings
-connect_data = MongoConnectionStrings()
-MONGO = connect_data.connection_string()
-# MongoDB connection parameters
-mongo_client = pymongo.MongoClient(MONGO)
-db = mongo_client['sacred_db']
-collection = db['runs']
 
-# Query to retrieve all 'COMPLETED' experiments
-cursor = collection.find({'status': 'COMPLETED'}, {
-    '_id': 1,                     # Experiment ID
-    'experiment.name': 1,          # Experiment name
-    'config': 1,                   # Configuration parameters
-    'result': 1,                   # Results
-    'status': 1,                   # Status
-    'start_time': 1,               # Start time
-    'stop_time': 1,                # Stop time
-    'info': 1
-})
+def export_experiments(output_file, namespace):
+    # Connect to MongoDB
+    connect_data = MongoConnectionStrings()
+    MONGO = connect_data.connection_string()
+    mongo_client = pymongo.MongoClient(MONGO)
+    db = mongo_client['sacred_db']
+    collection = db['runs']
 
-# List to hold each row of the data
-data_list = []
+    # Query to retrieve all 'COMPLETED' experiments
+    cursor = collection.find({'status': 'COMPLETED', 'experiment.name': namespace}, {
+        '_id': 1,                     # Experiment ID
+        'experiment.name': 1,         # Experiment name
+        'config': 1,                  # Configuration parameters
+        'result': 1,                  # Results
+        'status': 1,                  # Status
+        'start_time': 1,              # Start time
+        'stop_time': 1,               # Stop time
+        'info': 1
+    })
 
-# Iterate through the cursor to flatten and extract fields
-for doc in cursor:
-    row = {}
+    # List to hold each row of the data
+    data_list = []
 
-    # Basic fields
-    row['_id'] = str(doc['_id'])  # Convert ObjectId to string for CSV compatibility
-    row['start_time'] = doc.get('start_time', None)
-    row['stop_time'] = doc.get('stop_time', None)
+    # Iterate through the cursor to flatten and extract fields
+    for doc in cursor:
+        row = {}
 
-    # Flatten 'config' field: Add each config parameter as a separate column
-    config = doc.get('config', {})
-    for key, value in config.items():
-        row[f'config_{key}'] = value
+        # Basic fields
+        row['_id'] = str(doc['_id'])  # Convert ObjectId to string for CSV compatibility
+        row['start_time'] = doc.get('start_time', None)
+        row['stop_time'] = doc.get('stop_time', None)
 
-    # Flatten 'result' field: Add each result name as a separate column
-    result = doc.get('result', {})
-    if result is None:
-        continue
-    for key, value in result.items():
-        if isinstance(value, dict) and 'value' in value:
-            row[f'{key}'] = value['value']
-        elif isinstance(value, dict):  # If nested dict (e.g., 'ledger_metrics')
-            for sub_key, sub_value in value.items():
-                if isinstance(sub_value, dict) and 'value' in sub_value:
-                    row[f'{sub_key}'] = sub_value['value']
-                else:
-                    row[f'{sub_key}'] = sub_value
-        else:
-            row[f'{key}'] = value
+        # Flatten 'config' field: Add each config parameter as a separate column
+        config = doc.get('config', {})
+        for key, value in config.items():
+            row[f'config_{key}'] = value
 
-    mt = doc.get('info', {}).get('model_token', "unknown")
-    row[f'model_token'] = mt
-    # Append the row to the data list
-    data_list.append(row)
+        # Flatten 'result' field: Add each result name as a separate column
+        result = doc.get('result', {})
+        if result is None:
+            continue
+        for key, value in result.items():
+            if isinstance(value, dict) and 'value' in value:
+                row[f'{key}'] = value['value']
+            elif isinstance(value, dict):  # If nested dict (e.g., 'ledger_metrics')
+                for sub_key, sub_value in value.items():
+                    if isinstance(sub_value, dict) and 'value' in sub_value:
+                        row[f'{sub_key}'] = sub_value['value']
+                    else:
+                        row[f'{sub_key}'] = sub_value
+            else:
+                row[f'{key}'] = value
 
-# Convert the list of rows into a pandas DataFrame
-df = pd.DataFrame(data_list)
+        # Add 'model_token' field from 'info'
+        mt = doc.get('info', {}).get('model_token', "unknown")
+        row[f'model_token'] = mt
 
-# Write the DataFrame to a CSV file
-df.to_csv('./results/completed_experiments.csv', index=False)
+        # Append the row to the data list
+        data_list.append(row)
 
-print("Experiments exported to 'completed_experiments.csv'")
+    # Convert the list of rows into a pandas DataFrame
+    df = pd.DataFrame(data_list)
+
+    # Write the DataFrame to the specified CSV file
+    df.to_csv(output_file, index=False)
+    print(f"Experiments exported to '{output_file}'")
+
+def main():
+    parser = argparse.ArgumentParser(description="Export completed MongoDB experiments to a CSV file.")
+    parser.add_argument(
+        "--output-file",
+        type=str,
+        default="./results/mgmt_completed_experiments.csv",
+        help="Path to the output CSV file (default: ./results/mgmt_completed_experiments.csv)"
+    )
+    parser.add_argument("--token", type=str, default="mgmt_experiment_set", help="namespace for experiment set to render")
+    args = parser.parse_args()
+    export_experiments(args.output_file, args.token)
+
+if __name__ == "__main__":
+    main()

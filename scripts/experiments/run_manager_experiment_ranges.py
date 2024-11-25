@@ -27,6 +27,7 @@ DB = 'sacred_db'
 
 experiment_namespace = "mgmt_experiment_set"
 ex = Experiment(experiment_namespace)
+ex.add_config({'token': experiment_namespace})
 ex.observers.append(MongoObserver(
     url=MONGO,
     db_name=DB
@@ -119,7 +120,7 @@ def run_experiment(model_token, size, sequence_length):
         sequence_length=model_sequence_length, size=size, output=output,
         descriptors=[
             "port_mgmt", model_token, sequence_length, size, output
-        ], model_path=gbl_args.model_path)
+        ])
 
     features = df.columns.drop('Rank')
     prediction = ["Rank"]
@@ -146,11 +147,10 @@ def run_experiment(model_token, size, sequence_length):
                                  train_loader=train_loader,
                                  patience=gbl_args.patience,
                                  epochs=gbl_args.epochs,
-                                 model_path=gbl_args.model_path,
                                  model_token=real_model_token,
                                  training_label="manager")
 
-    prune_old_versions(gbl_args.model_path)
+    prune_old_versions()
 
     # add something here that looks at profit loss total spy vs top 5 rank predict
     print("Evaluating pm: ")
@@ -207,8 +207,6 @@ if __name__ == '__main__':
                         help="number of epochs to train")
     parser.add_argument("--patience", type=int, default=75,
                         help="when to stop training after patience epochs of no improvements")
-    parser.add_argument("--model-path", type=str, default='./models',
-                        help="where to store models and best loss data")
     parser.add_argument("--metadata-path", type=str, default='./metadata', help="experiment descriptors live here")
     parser.add_argument("--mode", default="both", choices=["train", "eval", "both"], help="train eval or both")
     gbl_args = parser.parse_args()
