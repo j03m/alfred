@@ -13,7 +13,7 @@ from alfred.data import CachedStockDataSet, DEFAULT_SCALER_CONFIG
 from alfred.model_persistence import model_from_config, prune_old_versions
 from alfred.model_evaluation import simple_profit_measure, analyze_ledger, evaluate_model
 from alfred.model_training import train_model
-from alfred.utils import plot_evaluation
+from alfred.utils import plot_evaluation, MongoConnectionStrings
 from sklearn.metrics import mean_squared_error
 
 import numpy as np
@@ -22,8 +22,11 @@ from torch.utils.data import DataLoader
 
 gbl_args = None
 
-MONGO = 'mongodb://localhost:27017/'
+connect_data = MongoConnectionStrings()
+
 DB = 'sacred_db'
+MONGO = connect_data.connection_string()
+
 
 scaler_config = DEFAULT_SCALER_CONFIG
 

@@ -1,8 +1,10 @@
 import pymongo
 import pandas as pd
-
+from alfred.utils import MongoConnectionStrings
+connect_data = MongoConnectionStrings()
+MONGO = connect_data.connection_string()
 # MongoDB connection parameters
-mongo_client = pymongo.MongoClient("mongodb://localhost:27017/")
+mongo_client = pymongo.MongoClient(MONGO)
 db = mongo_client['sacred_db']
 collection = db['runs']
 
@@ -37,6 +39,8 @@ for doc in cursor:
 
     # Flatten 'result' field: Add each result name as a separate column
     result = doc.get('result', {})
+    if result is None:
+        continue
     for key, value in result.items():
         if isinstance(value, dict) and 'value' in value:
             row[f'{key}'] = value['value']

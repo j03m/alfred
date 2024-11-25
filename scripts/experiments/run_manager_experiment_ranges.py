@@ -16,10 +16,13 @@ from alfred.metadata import ExperimentSelector
 from alfred.model_persistence import model_from_config, prune_old_versions
 from alfred.model_training import train_model
 from alfred.model_evaluation import evaluate_model
+from alfred.utils import MongoConnectionStrings
 
 from sklearn.metrics import mean_squared_error
 
-MONGO = 'mongodb://localhost:27017/'
+
+connect_data = MongoConnectionStrings()
+MONGO = connect_data.connection_string()
 DB = 'sacred_db'
 
 experiment_namespace = "mgmt_experiment_set"
@@ -107,7 +110,7 @@ def run_experiment(model_token, size, sequence_length):
     eval_df = df.iloc[split_index:]
 
     ids = len(train_df["ID"].unique())  # number of companies
-    output = ids * sequence_length # output should be a prediction of rank for each sequence entry
+    output = ids * sequence_length  # output should be a prediction of rank for each sequence entry
     model_sequence_length = ids * sequence_length
     # sequence length * total companies is the real sequence length
     model, optimizer, scheduler, real_model_token = model_from_config(
@@ -137,15 +140,15 @@ def run_experiment(model_token, size, sequence_length):
     eval_loader = DataLoader(eval_dataset, batch_size=gbl_args.batch_size, shuffle=False)
 
     # params busted here
-    train_model(model=model,
-                optimizer=optimizer,
-                scheduler=scheduler,
-                train_loader=train_loader,
-                patience=gbl_args.patience,
-                epochs=gbl_args.epochs,
-                model_path=gbl_args.model_path,
-                model_token=real_model_token,
-                training_label="manager")
+    last_train_mse = train_model(model=model,
+                                 optimizer=optimizer,
+                                 scheduler=scheduler,
+                                 train_loader=train_loader,
+                                 patience=gbl_args.patience,
+                                 epochs=gbl_args.epochs,
+                                 model_path=gbl_args.model_path,
+                                 model_token=real_model_token,
+                                 training_label="manager")
 
     prune_old_versions(gbl_args.model_path)
 
@@ -157,9 +160,11 @@ def run_experiment(model_token, size, sequence_length):
     ex.log_scalar('mse', mse)
     ex.info["model_token"] = real_model_token
     results = {
-        'average_mse': mse
+        'eval_mse': mse,
+        'train_mse': last_train_mse,
     }
     return results
+
 
 def main(args):
     selector = ExperimentSelector(args.index_file, mongo=MONGO, db=DB)
@@ -180,6 +185,7 @@ def main(args):
                 past_experiments = selector.get_current_state(experiment_namespace, build_experiment_descriptor_key)
             else:
                 print("skipping", key)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Run selected experiments using Sacred.")

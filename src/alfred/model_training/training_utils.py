@@ -50,3 +50,4 @@ def train_model(model, optimizer, scheduler, train_loader, patience, model_path,
             print(f'Out of patience at epoch {epoch}. Patience count: {patience_count}. Limit: {patience}')
             return
         scheduler.step(loss_mean)
+    return last_mean_loss
