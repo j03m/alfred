@@ -18,6 +18,17 @@ DEFAULT_SCALER_CONFIG = [
     {'regex': r'\d+year', 'type': 'standard'}
 ]
 
+ANALYST_SCALER_CONFIG = [
+    {'regex': r'^Close$', 'type': 'yeo-johnson'},
+    {'columns': ['^VIX'], 'type': 'standard'},
+    {'columns': ['SPY', 'CL=F', 'BZ=F', "BTC=F"], 'type': 'yeo-johnson'},
+    {'regex': r'^Margin.*', 'type': 'standard'},
+    {'regex': r'^Volume$', 'type': 'yeo-johnson'},
+    {'columns': ['reportedEPS', 'estimatedEPS', 'surprise', 'surprisePercentage', 'insider_acquisition',
+                 'insider_disposal', 'mean_outlook', 'mean_sentiment'], 'type': 'standard'},
+    {'regex': r'\d+year', 'type': 'standard'}
+]
+
 
 class LogReturnScaler(BaseEstimator, TransformerMixin):
     '''

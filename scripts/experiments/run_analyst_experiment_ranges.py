@@ -9,7 +9,7 @@ import zlib
 import random
 
 from alfred.metadata import ExperimentSelector, TickerCategories, ColumnSelector
-from alfred.data import CachedStockDataSet, DEFAULT_SCALER_CONFIG
+from alfred.data import CachedStockDataSet, ANALYST_SCALER_CONFIG
 from alfred.model_persistence import model_from_config, prune_old_versions
 from alfred.model_evaluation import simple_profit_measure, analyze_ledger, evaluate_model
 from alfred.model_training import train_model
@@ -28,7 +28,7 @@ DB = 'sacred_db'
 MONGO = connect_data.connection_string()
 
 
-scaler_config = DEFAULT_SCALER_CONFIG
+scaler_config = ANALYST_SCALER_CONFIG
 
 # Initialize Sacred experiment
 experiment_namespace = "analyst_experiment_set"
@@ -229,7 +229,7 @@ if __name__ == "__main__":
                         help="Path to the JSON file containing indexed experiments")
     parser.add_argument("--column-file", type=str, default="./metadata/column-descriptors.json",
                         help="Path to the JSON file containing indexed experiments")
-    parser.add_argument("--ticker-categories-file", type=str, default="./metadata/ticker-categorization.json",
+    parser.add_argument("--ticker-categories-file", type=str, default="./metadata/spy-ticker-categorization.json",
                         help="Path to the JSON file containing tickers for the experiments")
     parser.add_argument("--include", type=str, default="",
                         help="Ranges of experiments to include (e.g., 1-5,10-15)")
