@@ -1,0 +1,5 @@
+_id,start_time,stop_time,config_model_token,config_seed,config_sequence_length,config_size,eval_mse,train_mse,model_token
+1,2024-11-24 23:00:37.666,2024-11-24 23:04:57.367,lstm-conv1d,29137640,6,128,1.0806898293921288,,port_mgmt_lstm-conv1d_6_128_3372_mps
+2,2024-11-24 23:04:57.456,2024-11-25 00:26:05.656,trans-am,459954720,9,64,1.4177304264967658,,port_mgmt_trans-am_9_64_5058_mps
+3,2024-11-25 00:26:05.762,2024-11-25 00:33:12.984,lstm-conv1d,460548818,12,64,1.3733530422678237,,port_mgmt_lstm-conv1d_12_64_6744_mps
+4,2024-11-25 00:33:13.129,2024-11-25 03:26:25.409,lstm,878174819,9,64,1.499103681707014,,port_mgmt_lstm_9_64_5058_mps

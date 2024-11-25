@@ -13,14 +13,11 @@ backtests/*
 *videos*
 *__pycache__*
 tensorboard-logs
-data/*.csv
-data/*
 tensorboard-logs*/*
 train_CHEF/*
 models/*
 *.egg-info/*
 *__pycache__*
 sacred_runs/*
-results/*
 news/*
 db/*
