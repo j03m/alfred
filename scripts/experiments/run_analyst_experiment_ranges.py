@@ -109,14 +109,19 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
     for ticker in training:
         print("training against: ", ticker)
 
-        dataset = CachedStockDataSet(symbol=ticker,
-                                     seed=_args.seed,
-                                     column_aggregation_config=agg_config,
-                                     scaler_config=scaler_config,
-                                     period_length=_args.period,
-                                     sequence_length=sequence_length,
-                                     feature_columns=columns,
-                                     target_columns=["Close"])  # todo ... hmmm will need to mature this past just Close
+        try:
+            dataset = CachedStockDataSet(symbol=ticker,
+                                         seed=_args.seed,
+                                         column_aggregation_config=agg_config,
+                                         scaler_config=scaler_config,
+                                         period_length=_args.period,
+                                         sequence_length=sequence_length,
+                                         feature_columns=columns,
+                                         target_columns=["Close"])  # todo ... hmmm will need to mature this past just Close
+        except (ValueError, KeyError) as e:
+            print("ERROR: failed to run experiment: ", model_token, " on ", ticker, " due to: ", e)
+            continue
+
         batch_size = min(_args.batch_size, len(dataset))
         train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
@@ -218,11 +223,7 @@ def main(args):
         if experiment:
             key = build_experiment_descriptor_key(experiment)
             if key not in past_experiments:
-                try:
-                    ex.run(config_updates=experiment)
-                except (ValueError, KeyError) as e:
-                    print("ERROR: failed to run experiment:", experiment, " due to: ", e)
-
+                ex.run(config_updates=experiment)
                 # update the list in case another machine is running (poor man's update)
                 past_experiments = selector.get_current_state("analysts", build_experiment_descriptor_key)
 
