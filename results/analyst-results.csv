@@ -1,1 +1,2 @@
-
+_id,start_time,stop_time,config_bar_type,config_data,config_model_token,config_seed,config_sequence_length,config_size,config_token,average_mse,total_profit_percentage,total_trades,win_rate,total_profit,trade_vs_bhp,model_token
+62,2024-11-26 13:20:32.030,2024-11-26 13:20:44.461,d,['price-only'],lstm,349698762,30,64,analyst_experiment_set,0.8151304340751022,-1943925621134.6592,68474,0.4710693109793498,-1943925621134.6604,-1943925625163.8518,lstm_30_64_1_0xd2c0aec0_d_cpu

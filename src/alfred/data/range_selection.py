@@ -46,6 +46,10 @@ def load_csv_files_and_apply_range(symbols, data_path, period_length, seed, bar_
         # once we have the total length post aggregation we can proceed with range selection
         total_length = len(df)
 
+        assert period_length <= total_length, f"Total available data for {symbol} is too short."
+
+
+
         # Choose consistent train and eval start dates based on the seed and lengths
         start = choose_train_range(symbol, seed, total_length, period_length)
 

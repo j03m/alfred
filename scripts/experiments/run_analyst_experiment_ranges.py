@@ -105,6 +105,9 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
     random.shuffle(training)
     model.train()
 
+    if _args.test_symbol is not None:
+        training = [_args.test_symbol]
+
     # train on all training tickers
     for ticker in training:
         print("training against: ", ticker)
@@ -146,7 +149,8 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
                                      sequence_length=sequence_length,
                                      feature_columns=columns,
                                      bar_type=bar_type,
-                                     target_columns=["Close"])
+                                     target_columns=["Close"],
+                                     column_aggregation_config=agg_config)
         eval_loader = DataLoader(dataset, batch_size=_args.batch_size, shuffle=False, drop_last=True)
 
         # Get predictions and actual values
@@ -232,6 +236,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run selected experiments using Sacred.")
     parser.add_argument("--index-file", type=str, default="./metadata/experiment-index.json",
                         help="Path to the JSON file containing indexed experiments")
+    parser.add_argument("--test-symbol", type=str,
+                        help="If supplied, will circumvent the metadate file and only test this symbol")
     parser.add_argument("--column-file", type=str, default="./metadata/column-descriptors.json",
                         help="Path to the JSON file containing indexed experiments")
     parser.add_argument("--ticker-categories-file", type=str, default="./metadata/spy-ticker-categorization.json",
@@ -240,7 +246,7 @@ if __name__ == "__main__":
                         help="Ranges of experiments to include (e.g., 1-5,10-15)")
     parser.add_argument("--exclude", type=str, default="",
                         help="Ranges of experiments to exclude (e.g., 4-5,8)")
-    parser.add_argument("--batch-size", type=int, default=1024,
+    parser.add_argument("--batch-size", type=int, default=256,
                         help="batch size")
     parser.add_argument("--seed", type=int, default=42,
                         help="seed is combined with a ticker to produce a consistent random training and eval period")
