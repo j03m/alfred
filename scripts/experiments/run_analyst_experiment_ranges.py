@@ -218,7 +218,11 @@ def main(args):
         if experiment:
             key = build_experiment_descriptor_key(experiment)
             if key not in past_experiments:
-                ex.run(config_updates=experiment)
+                try:
+                    ex.run(config_updates=experiment)
+                except ValueError as e:
+                    print("ERROR: failed to run experiment:", experiment, " due to: ", e)
+
                 # update the list in case another machine is running (poor man's update)
                 past_experiments = selector.get_current_state("analysts", build_experiment_descriptor_key)
 
