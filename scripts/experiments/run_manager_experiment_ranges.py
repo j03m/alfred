@@ -137,8 +137,8 @@ def run_experiment(model_token, size, sequence_length):
     y_eval_tensor = torch.tensor(y_eval, dtype=torch.float32)
 
     # Create datasets and dataloaders
-    train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
-    eval_dataset = TensorDataset(X_eval_tensor, y_eval_tensor)
+    train_dataset = TensorDataset(X_train_tensor, y_train_tensor.squeeze(-1))
+    eval_dataset = TensorDataset(X_eval_tensor, y_eval_tensor.squeeze(-1))
     train_loader = DataLoader(train_dataset, batch_size=gbl_args.batch_size, shuffle=False)
     eval_loader = DataLoader(eval_dataset, batch_size=gbl_args.batch_size, shuffle=False)
 
