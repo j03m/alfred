@@ -220,7 +220,7 @@ def main(args):
             if key not in past_experiments:
                 try:
                     ex.run(config_updates=experiment)
-                except ValueError as e:
+                except (ValueError, KeyError) as e:
                     print("ERROR: failed to run experiment:", experiment, " due to: ", e)
 
                 # update the list in case another machine is running (poor man's update)
