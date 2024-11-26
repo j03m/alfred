@@ -2,6 +2,8 @@ from sacred import Experiment
 from sacred.observers import MongoObserver
 from sacred import SETTINGS
 
+SETTINGS["CAPTURE_MODE"] = "no"
+
 import pandas as pd
 import numpy as np
 

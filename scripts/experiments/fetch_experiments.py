@@ -12,7 +12,7 @@ def export_experiments(output_file, namespace):
     collection = db['runs']
 
     # Query to retrieve all 'COMPLETED' experiments
-    cursor = collection.find({'status': 'COMPLETED', 'experiment.name-': namespace}, {
+    cursor = collection.find({'status': 'COMPLETED', 'experiment.name': namespace}, {
         '_id': 1,                     # Experiment ID
         'experiment.name': 1,         # Experiment name
         'config': 1,                  # Configuration parameters
