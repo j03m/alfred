@@ -1,11 +1,11 @@
 Next:
-* Public mongo
-* remote run scripts on pc/macbook?
-* Train analysts
+* Train(ing) analysts
 * Integrate analyst predictions into pm dataset
 * Run eval and track against spy
 
 * how to find neglected stocks? Low volume, lack of index and etf inclusion
+  * Get our data feed to include a list of ALL tickers on US indexes
+  * Devise algo for "overlooked"
 * alfred could look at full universes soon
 * institutional volume vs retail volume
     * finhub

@@ -1,2 +1,3 @@
 _id,start_time,stop_time,config_bar_type,config_data,config_model_token,config_seed,config_sequence_length,config_size,config_token,average_mse,total_profit_percentage,total_trades,win_rate,total_profit,trade_vs_bhp,model_token
 62,2024-11-26 13:20:32.030,2024-11-26 13:20:44.461,d,['price-only'],lstm,349698762,30,64,analyst_experiment_set,0.8151304340751022,-1943925621134.6592,68474,0.4710693109793498,-1943925621134.6604,-1943925625163.8518,lstm_30_64_1_0xd2c0aec0_d_cpu
+70,2024-11-27 00:12:56.356,2024-11-27 10:29:47.010,m,"['core', 'technicals', 'macro']",advanced-lstm,855970166,30,128,analyst_experiment_set,0.1451788824397658,-1943925605608.777,68474,0.4866810760288575,-1943925605608.7795,-1943925609637.971,advanced-lstm_30_128_1_0x47f50f78_m_mps

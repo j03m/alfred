@@ -21,3 +21,4 @@ models/*
 sacred_runs/*
 news/*
 db/*
+filings/*
