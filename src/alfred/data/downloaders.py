@@ -11,10 +11,8 @@ from .openai_query import OpenAiQuery
 from time import sleep
 import re
 from fuzzywuzzy import process
-from edgar import Company
 
 ssl.create_default_https_context = ssl._create_unverified_context
-
 
 def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=-1, head=-1):
     bad_tickers = []
@@ -374,6 +372,14 @@ class AlphaDownloader:
         df = df.groupby("Date").sum()
         return df
 
+    def get_ticker_from_name(self, company_name):
+        """Retrieve ticker using Alpha Vantage."""
+        url = f"https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords={company_name}&apikey={self.api_key}"
+        response = requests.get(url)
+        data = response.json()
+        if "bestMatches" in data:
+            return data["bestMatches"][0]["1. symbol"]
+        return None
 
 # Example usage:
 # downloader = AlphaDownloader(key_file='./keys/alpha.txt')
@@ -465,84 +471,3 @@ class ArticleDownloader:
         article.update(response)
         return article
 
-def make_sec_header(key_file="./keys/id.txt"):
-    with open(key_file, 'r') as file:
-        id = file.readline().strip()
-
-    return {
-        "User-Agent": id
-    }
-
-def get_company_info(ticker):
-    url = "https://www.sec.gov/files/company_tickers.json"
-    headers = make_sec_header()
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        data = response.json()
-        ticker = ticker.upper()
-        for item in data.values():
-            if item['ticker'] == ticker:
-                cik = str(item['cik_str']).zfill(10)
-                return item['title'], cik
-    else:
-        raise Exception(f"Failed to retrieve company info: {response.status_code}")
-
-
-def dump_filing(filing, output_path):
-    headers = make_sec_header()
-    response = requests.get(filing.full_url, headers=headers)
-    if response.status_code == 200:
-        with open(output_path, "wb") as f:
-            f.write(response.content)
-        return True
-    else:
-        print(f"Failed to download filing: {filing.full_url} (status: {response.status_code})")
-        return False
-
-def download_13f_filings(ticker, years, output_folder="./filings"):
-    # Ensure output folder exists
-    os.makedirs(output_folder, exist_ok=True)
-
-    # Look up the company name and CIK
-    company_name, cik = get_company_info(ticker)
-    if not cik:
-        raise ValueError(f"Unable to find CIK for ticker {ticker}")
-
-    print(f"Found company: {company_name} (CIK: {cik})")
-
-    # Initialize the EDGAR Company object
-    company = Company(company_name, cik)
-
-    # Manifest to keep track of saved files
-    manifest = []
-
-    for year in years:
-        start_date = f"{year}-01-01"
-        end_date = f"{year}-12-31"
-        print(f"Fetching filings for {ticker} ({start_date} to {end_date})...")
-
-        try:
-            filings = company.get_filings(filing_type="13F-HR", datea=start_date, dateb=end_date)
-            if not filings:
-                print(f"No filings found for {ticker} in {year}.")
-                continue
-
-            for filing in filings:
-                # Build file name and output path
-                date = filing.date_filed.replace("-", "")
-                file_type = filing.file_type.lower()  # e.g., 'html', 'xml', etc.
-                filename = f"{ticker}-{date}-13F-HR.{file_type}"
-                output_path = os.path.join(output_folder, filename)
-
-                # Download and save the filing
-                if dump_filing(filing, output_path):
-                    manifest.append({"filename": filename, "url": filing.full_url, "date": filing.date_filed})
-        except Exception as e:
-            print(f"Error fetching filings for {ticker} in {year}: {e}")
-
-    # Save manifest to a JSON file
-    manifest_path = os.path.join(output_folder, f"{ticker}-manifest.json")
-    with open(manifest_path, "w") as f:
-        json.dump(manifest, f, indent=4)
-
-    print(f"Manifest saved: {manifest_path}")
