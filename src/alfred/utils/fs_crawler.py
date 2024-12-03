@@ -20,10 +20,8 @@ class FileSystemCrawler:
         for root, _, files in os.walk(self.directory):  # Traverse the directory
             for file_name in files:
                 file_path = os.path.join(root, file_name)
-                try:
-                    self._process_file(file_path)
-                except Exception as e:
-                    print(f"Error processing {file_path}: {e}")
+                self._process_file(file_path)
+
 
     def _process_file(self, file_path):
         """

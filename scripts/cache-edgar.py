@@ -44,13 +44,16 @@ def parse_indexes(output_folder, form_types=['13F-HR']):
                 filing_file_path = os.path.join(output_folder, filing_file_name)
                 if not os.path.exists(filing_file_path):
                     filing_url = f"https://www.sec.gov/Archives/{filing_file_name}"
+                    sleep(0.05)
                     print(f"Filing URL: {filing_url}")
                     content = generic_sec_fetch(filing_url)
-                    sleep(0.25)
-                    os.makedirs(os.path.dirname(filing_file_path), exist_ok=True)
-                    with open(filing_file_path, "w", encoding="latin-1") as filing_file:
-                        filing_file.write(content)
 
+                    if content is not None:
+                        os.makedirs(os.path.dirname(filing_file_path), exist_ok=True)
+                        with open(filing_file_path, "w", encoding="latin-1") as filing_file:
+                            filing_file.write(content)
+                else:
+                    print(f"Filing file already exists: {filing_file_path}")
 
 def main(output_folder="./filings", range_file="./results/pm-training-final.csv", download=False, parse=False):
     pm_df = pd.read_csv(range_file)

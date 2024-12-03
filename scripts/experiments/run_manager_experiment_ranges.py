@@ -14,12 +14,11 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 from alfred.data import CustomScaler, DEFAULT_SCALER_CONFIG
-from alfred.metadata import ExperimentSelector
+from alfred.metadata import ExperimentSelector, ColumnSelector
 from alfred.model_persistence import model_from_config, prune_old_versions
 from alfred.model_training import train_model
 from alfred.model_evaluation import evaluate_model
 from alfred.utils import MongoConnectionStrings
-
 from sklearn.metrics import mean_squared_error
 
 
@@ -36,7 +35,6 @@ ex.observers.append(MongoObserver(
 ))
 
 gbl_args = None
-
 
 def generate_sequences(input_df, features, prediction, window_size, date_column="Date"):
     unique_dates = input_df.index.unique()
@@ -171,7 +169,6 @@ def run_experiment(model_token, size, sequence_length):
 def main(args):
     selector = ExperimentSelector(args.index_file, mongo=MONGO, db=DB)
     experiments = selector.get(include_ranges=args.include, exclude_ranges=args.exclude)
-    random.shuffle(experiments)
 
     # get a list of past or in flight experiments
     past_experiments = selector.get_current_state(experiment_namespace, build_experiment_descriptor_key)

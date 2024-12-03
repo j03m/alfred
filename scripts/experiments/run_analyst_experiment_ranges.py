@@ -5,12 +5,11 @@ from sacred import SETTINGS
 SETTINGS["CAPTURE_MODE"] = "no"
 
 import argparse
-import zlib
 import random
 
 from alfred.metadata import ExperimentSelector, TickerCategories, ColumnSelector
 from alfred.data import CachedStockDataSet, ANALYST_SCALER_CONFIG
-from alfred.model_persistence import model_from_config, prune_old_versions
+from alfred.model_persistence import model_from_config, prune_old_versions, crc32_columns
 from alfred.model_evaluation import simple_profit_measure, analyze_ledger, evaluate_model
 from alfred.model_training import train_model
 from alfred.utils import plot_evaluation, MongoConnectionStrings
@@ -58,24 +57,6 @@ def config():
     sequence_length = None
     bar_type = None
     data = None
-
-
-def crc32_columns(strings):
-    # Sort the array of strings
-    sorted_strings = sorted(strings)
-
-    # Concatenate the sorted strings into one string
-    concatenated_string = ''.join(sorted_strings)
-
-    # Convert the concatenated string to bytes
-    concatenated_bytes = concatenated_string.encode('utf-8')
-
-    # Compute the CRC32 hash
-    crc32_hash = zlib.crc32(concatenated_bytes)
-
-    # Return the hash in hexadecimal format
-    return f"{crc32_hash:#08x}"
-
 
 # Main function to run the experiment
 @ex.main
@@ -217,7 +198,6 @@ def main(args):
     # Use ExperimentSelector to select experiments based on ranges
     selector = ExperimentSelector(index_file=args.index_file, mongo=MONGO, db=DB)
     experiments = selector.get(include_ranges=args.include, exclude_ranges=args.exclude)
-    random.shuffle(experiments)
 
     # get a list of past or in flight experiments
     past_experiments = selector.get_current_state(experiment_namespace, build_experiment_descriptor_key)

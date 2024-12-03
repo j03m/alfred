@@ -1,0 +1,50 @@
+[
+  {
+      "model_token": "trans-am",
+      "size": 256,
+      "sequence_length": 60,
+      "bar_type": "m",
+      "data": [
+          "core",
+          "fundamentals",
+          "technicals",
+          "macro"
+      ]
+  },
+  {
+      "model_token": "lstm",
+      "size": 256,
+      "sequence_length": 60,
+      "bar_type": "m",
+      "data": [
+          "core",
+          "fundamentals",
+          "technicals",
+          "macro"
+      ]
+  },
+  {
+      "model_token": "lstm-conv1d",
+      "size": 256,
+      "sequence_length": 60,
+      "bar_type": "m",
+      "data": [
+          "core",
+          "fundamentals",
+          "technicals",
+          "macro"
+      ]
+  },
+  {
+      "model_token": "advanced-lstm",
+      "size": 256,
+      "sequence_length": 60,
+      "bar_type": "m",
+      "data": [
+          "core",
+          "fundamentals",
+          "technicals",
+          "macro"
+      ]
+  }
+]

@@ -5,6 +5,7 @@ import gridfs
 from alfred.devices import build_model_token, set_device
 from alfred.models import LSTMModel, LSTMConv1d, AdvancedLSTM, TransAm
 from alfred.utils import MongoConnectionStrings
+import zlib
 import torch.optim as optim
 
 DEVICE = set_device()
@@ -17,6 +18,39 @@ fs = gridfs.GridFS(db)
 models_collection = db['models']
 metrics_collection = db['metrics']
 
+def crc32_columns(strings):
+    # Sort the array of strings
+    sorted_strings = sorted(strings)
+
+    # Concatenate the sorted strings into one string
+    concatenated_string = ''.join(sorted_strings)
+
+    # Convert the concatenated string to bytes
+    concatenated_bytes = concatenated_string.encode('utf-8')
+
+    # Compute the CRC32 hash
+    crc32_hash = zlib.crc32(concatenated_bytes)
+
+    # Return the hash in hexadecimal format
+    return f"{crc32_hash:#08x}"
+
+def eval_model_selector(model_descriptor, column_selector):
+    model_token = model_descriptor["model_token"]
+    sequence_length = model_descriptor["sequence_length"]
+    data = model_descriptor["data"] # columns
+    bar_type = model_descriptor["bar_type"]
+    size = model_descriptor["size"]
+    columns = sorted(column_selector.get(data))
+
+    output = 1
+    model, _, _, real_model_token = model_from_config(
+        num_features=len(columns),
+        config_token=model_token,
+        sequence_length=sequence_length, size=size, output=output,
+        descriptors=[
+            model_token, sequence_length, size, output, crc32_columns(columns), bar_type
+        ])
+    return model, real_model_token, columns
 
 def model_from_config(config_token, num_features, sequence_length, size, output, descriptors, layers=2):
     if config_token == 'lstm':

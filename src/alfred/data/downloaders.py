@@ -7,12 +7,15 @@ import ssl
 from datetime import datetime
 import json
 import binascii
+from requests import HTTPError
+
 from .openai_query import OpenAiQuery
 from time import sleep
 import re
 from fuzzywuzzy import process
 
 ssl.create_default_https_context = ssl._create_unverified_context
+
 
 def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=-1, head=-1):
     bad_tickers = []
@@ -50,8 +53,85 @@ def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=
     return bad_tickers
 
 
+import json
+import requests
+from time import sleep
+
+
+class OpenFigiDownloader:
+    def __init__(self, key_file="./keys/openfigi.txt", rate_limit=0.25, cache_file="./data/cusip_cache.json"):
+        with open(key_file, 'r') as file:
+            self.api_key = file.readline().strip()
+
+        self.rate_limit = rate_limit
+        self.cache_file = cache_file
+        if os.path.exists(cache_file):
+            with open(cache_file, "r") as file:
+                self.cache = json.load(file)
+        else:
+            self.cache = {}
+
+    def fetch(self, url, data):
+        max_retries = 3
+        for attempt in range(1, max_retries + 1):
+            try:
+                sleep(self.rate_limit)
+                headers = {
+                    "Content-Type": "application/json",
+                    "X-OPENFIGI-APIKEY": self.api_key
+                }
+                response = requests.post(url, json=data, headers=headers, verify=False)
+                response.raise_for_status()
+                return response.json()
+
+            except requests.exceptions.HTTPError as err:
+                if response.status_code == 429 or response.status_code >= 500:
+                    retry_after = int(response.headers.get("Retry-After", 0))
+                    if retry_after == 0:
+                        retry_after = self.rate_limit * attempt * 2
+                    print(f"Error {response.status_code}. Retrying after {retry_after} seconds...")
+                    sleep(retry_after)
+                else:
+                    raise
+            except ConnectionError as err:
+                retry_after = self.rate_limit * attempt * 60
+                print(f"ConnectionError. Retrying after {retry_after} seconds...")
+                sleep(retry_after)
+        else:
+            raise RuntimeError(f"Failed to fetch data after {max_retries} attempts")
+
+    def get_data_for_cusip(self, cusip, exchange="US"):
+        """
+        Fetches data from OpenFIGI for the given CUSIP and exchange code.
+        """
+        mapping_request = [
+            {"idType": "ID_CUSIP", "idValue": cusip, "exchCode": exchange},
+        ]
+        result = self.fetch("https://api.openfigi.com/v3/mapping", mapping_request)
+        if result[0].get("warning", None) is not None:
+            return None
+        return result[0]["data"][0]
+
+    # caches
+    def get_ticker_for_cusip(self, cusip):
+        if cusip in self.cache:
+            return self.cache[cusip]
+
+        data = self.get_data_for_cusip(cusip)
+        if data is not None and "ticker" in data:
+            self.cache[cusip] = data["ticker"]
+            return data["ticker"]
+        else:
+            self.cache[cusip] = "Unknown"
+            return None
+
+    def dump_cache(self):
+        with open(self.cache_file, "w") as file:
+            json.dump(self.cache, file)
+
+
 class AlphaDownloader:
-    def __init__(self, key_file='./keys/alpha.txt', rate_limit=0.5):
+    def __init__(self, key_file='./keys/alpha.txt', rate_limit=0.2):
         # Read the API key from the specified file
         with open(key_file, 'r') as file:
             self.api_key = file.readline().strip()
@@ -377,9 +457,10 @@ class AlphaDownloader:
         url = f"https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords={company_name}&apikey={self.api_key}"
         response = requests.get(url)
         data = response.json()
-        if "bestMatches" in data:
+        if "bestMatches" in data and len(data["bestMatches"]) > 0:
             return data["bestMatches"][0]["1. symbol"]
         return None
+
 
 # Example usage:
 # downloader = AlphaDownloader(key_file='./keys/alpha.txt')
@@ -470,4 +551,3 @@ class ArticleDownloader:
         response = self.openai.news_query(body, ticker)
         article.update(response)
         return article
-
