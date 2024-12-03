@@ -2,6 +2,7 @@ import argparse
 import pandas as pd
 from datetime import datetime, timedelta
 from alfred.metadata import TickerCategories, ColumnSelector, ExperimentSelector
+from alfred.model_evaluation import evaluate_model
 from alfred.model_persistence import eval_model_selector
 from alfred.data import CachedStockDataSet, ANALYST_SCALER_CONFIG
 
@@ -30,24 +31,22 @@ def load_symbols_from_file(file):
 # todo - this isn't going to work because we don't want a random seed now
 # we want the last N bars and we want 1 prediction off that to put into a column
 # with df (analyst 1, 2, 3, 4)
-def calculate_analyst_projections(ticker,batch_size, period):
-    # TODO: This needs to change
-    # CachedStockDataSet loads from file, but we want to take our dataframe as its been trimmed to time
-    # then we want analyst predictions for each 30 day bar with some look back based on sequence length
-    analyst_projections = {}
+def calculate_analyst_projections(pm_df, ticker, batch_size, start, end):
     for key, value in model_descriptors.items():
         model, columns, descriptor = value
         dataset = CachedStockDataSet(symbol=ticker,
-                                     seed=42,
                                      scaler_config=ANALYST_SCALER_CONFIG,
-                                     period_length=period,
                                      sequence_length=descriptor["sequence_length"],
                                      feature_columns=columns,
                                      bar_type=descriptor["bar_type"],
                                      target_columns=["Close"],
-                                     column_aggregation_config=agg_config)
+                                     column_aggregation_config=agg_config,
+                                     start_date=start,
+                                     end_date=end)
         eval_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=True)
-        result = predict(model, eval_loader)
+        predictions, actuals = evaluate_model(model, eval_loader)
+
+        # augment pf_df with predictions for each bar
 
 
 def calculate_30_day_returns(ticker, data_dir):
@@ -74,7 +73,10 @@ def main(args):
     for ticker in tickers:
         df = calculate_30_day_returns(ticker, args.data_dir)
         df = df[(df.index >= start_date) & (df.index <= end_date)]
-        df = calculate_analyst_projections(ticker, df)
+        print("calculting anlyst predictions - this could take a bit....")
+        # this reloads the same prices from disk :( however, diskio isn't the bottleneck
+        # my time is the bottle neck. Todo: fix this at some future date
+        df = calculate_analyst_projections(df, ticker, start_date, end_date)
         returns[ticker] = df
 
     # Combine all tickers' returns into a single DataFrame

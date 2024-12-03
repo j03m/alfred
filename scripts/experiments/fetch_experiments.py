@@ -5,9 +5,8 @@ from alfred.utils import MongoConnectionStrings
 
 def export_experiments(output_file, namespace):
     # Connect to MongoDB
-    connect_data = MongoConnectionStrings()
-    MONGO = connect_data.connection_string()
-    mongo_client = pymongo.MongoClient(MONGO)
+    connection = MongoConnectionStrings()
+    mongo_client = connection.get_mongo_client()
     db = mongo_client['sacred_db']
     collection = db['runs']
 

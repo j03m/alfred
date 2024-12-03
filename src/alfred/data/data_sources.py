@@ -87,9 +87,9 @@ class YahooNextCloseWindowDataSet(Dataset):
 
 
 class CachedStockDataSet(Dataset):
-    def __init__(self, symbol, seed, period_length, sequence_length, feature_columns, target_columns,
-                 scaler_config, column_aggregation_config, bar_type="d", change=1,
-                 date_column="Unnamed: 0", data_path="./data"):
+    def __init__(self, symbol, sequence_length, feature_columns, target_columns,
+                 scaler_config, column_aggregation_config, period_length=-1, seed=42, bar_type="d", change=1,
+                 date_column="Unnamed: 0", data_path="./data", start_date=None, end_date=None):
         '''
         symbol - ticker
         seed - random seed
@@ -117,6 +117,12 @@ class CachedStockDataSet(Dataset):
             training_set = load_csv_file(symbol=symbol,
                                          data_path=data_path, bar_type=bar_type,
                                          aggregation_config=column_aggregation_config, date_column=date_column)
+
+            # if range is not none, filter the date range
+            if start_date is not None:
+                training_set = training_set[(training_set.index >= start_date)]
+            if end_date is not None:
+                training_set = training_set[(training_set.index <= end_date)]
 
         self.scaler = CustomScaler(scaler_config, training_set)
         self.df = self.scaler.fit_transform(training_set)

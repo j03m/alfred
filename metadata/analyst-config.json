@@ -1,50 +1,50 @@
-[
-  {
-      "model_token": "trans-am",
-      "size": 256,
-      "sequence_length": 60,
-      "bar_type": "m",
-      "data": [
-          "core",
-          "fundamentals",
-          "technicals",
-          "macro"
-      ]
+{
+  "1": {
+    "model_token": "trans-am",
+    "size": 256,
+    "sequence_length": 60,
+    "bar_type": "m",
+    "data": [
+      "core",
+      "fundamentals",
+      "technicals",
+      "macro"
+    ]
   },
-  {
-      "model_token": "lstm",
-      "size": 256,
-      "sequence_length": 60,
-      "bar_type": "m",
-      "data": [
-          "core",
-          "fundamentals",
-          "technicals",
-          "macro"
-      ]
+  "2": {
+    "model_token": "lstm",
+    "size": 256,
+    "sequence_length": 60,
+    "bar_type": "m",
+    "data": [
+      "core",
+      "fundamentals",
+      "technicals",
+      "macro"
+    ]
   },
-  {
-      "model_token": "lstm-conv1d",
-      "size": 256,
-      "sequence_length": 60,
-      "bar_type": "m",
-      "data": [
-          "core",
-          "fundamentals",
-          "technicals",
-          "macro"
-      ]
+  "3": {
+    "model_token": "lstm-conv1d",
+    "size": 256,
+    "sequence_length": 60,
+    "bar_type": "m",
+    "data": [
+      "core",
+      "fundamentals",
+      "technicals",
+      "macro"
+    ]
   },
-  {
-      "model_token": "advanced-lstm",
-      "size": 256,
-      "sequence_length": 60,
-      "bar_type": "m",
-      "data": [
-          "core",
-          "fundamentals",
-          "technicals",
-          "macro"
-      ]
+  "4": {
+    "model_token": "advanced-lstm",
+    "size": 256,
+    "sequence_length": 60,
+    "bar_type": "m",
+    "data": [
+      "core",
+      "fundamentals",
+      "technicals",
+      "macro"
+    ]
   }
-]
+}

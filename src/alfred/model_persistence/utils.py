@@ -1,5 +1,4 @@
 import torch
-import pymongo
 import io
 import gridfs
 from alfred.devices import build_model_token, set_device
@@ -12,11 +11,12 @@ DEVICE = set_device()
 
 # MongoDB setup
 connection = MongoConnectionStrings()
-mongo_client = pymongo.MongoClient(connection.connection_string())
+mongo_client = connection.get_mongo_client()
 db = mongo_client['model_db']
 fs = gridfs.GridFS(db)
 models_collection = db['models']
 metrics_collection = db['metrics']
+
 
 def crc32_columns(strings):
     # Sort the array of strings
@@ -107,6 +107,7 @@ def set_best_loss(model_token, training_label, loss):
 
 
 def get_latest_model(model_token):
+    # todo this is broken off wifi, we need to fallback to localhost
     record = models_collection.find_one({'model_token': model_token}, sort=[('version', -1)])
     if not record:
         print("No previous model.")

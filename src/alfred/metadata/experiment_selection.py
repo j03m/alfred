@@ -1,5 +1,7 @@
 import json
-import pymongo
+from alfred.utils import MongoConnectionStrings
+
+connection = MongoConnectionStrings()
 
 
 def parse_ranges(ranges_str):
@@ -16,16 +18,18 @@ def parse_ranges(ranges_str):
 
 
 class ExperimentSelector:
-    def __init__(self, index_file, mongo, db):
+    def __init__(self, index_file, mongo=None, db=None):
         # Load JSON data from the provided file
         with open(index_file, 'r') as file:
             self.experiments = json.load(file)
-        self.mongo_client = pymongo.MongoClient(mongo)
-        _db = self.mongo_client[db]
-        self.collection = _db['runs']
+        if mongo and db:
+            self.mongo_client = connection.get_mongo_client()
+            _db = self.mongo_client[db]
+            self.collection = _db['runs']
 
-    # todo we're going have to have a think about how to namespace these experiments
     def get_current_state(self, namespace, build_descriptor_key):
+        if self.mongo_client is None:
+            raise Exception('MongoClient is not initialized. Supply mongo params to constructor')
         # Query to retrieve all 'COMPLETED' experiments
         cursor = self.collection.find({
             'status': {'$in': ['COMPLETED', 'RUNNING']},
