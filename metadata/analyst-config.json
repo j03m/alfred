@@ -2,7 +2,7 @@
   "1": {
     "model_token": "trans-am",
     "size": 256,
-    "sequence_length": 60,
+    "sequence_length": 24,
     "bar_type": "m",
     "data": [
       "core",
@@ -14,7 +14,7 @@
   "2": {
     "model_token": "lstm",
     "size": 256,
-    "sequence_length": 60,
+    "sequence_length": 24,
     "bar_type": "m",
     "data": [
       "core",
@@ -26,7 +26,7 @@
   "3": {
     "model_token": "lstm-conv1d",
     "size": 256,
-    "sequence_length": 60,
+    "sequence_length": 24,
     "bar_type": "m",
     "data": [
       "core",
@@ -38,7 +38,7 @@
   "4": {
     "model_token": "advanced-lstm",
     "size": 256,
-    "sequence_length": 60,
+    "sequence_length": 24,
     "bar_type": "m",
     "data": [
       "core",

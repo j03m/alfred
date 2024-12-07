@@ -35,9 +35,9 @@ def load_csv_files_and_apply_range(symbols, data_path, period_length, seed, bar_
         # prior to range selection, if we have a value that isn't d (the assumption) we need to
         # the bars into groups for w or m.
         if bar_type == "w":
-            training_set = df.resample('W-FRI').agg(aggregation_config)
+            df = df.resample('W-FRI').agg(aggregation_config)
         elif bar_type == "m":
-            training_set = df.resample('ME').agg(aggregation_config)
+            df = df.resample('ME').agg(aggregation_config)
         elif bar_type == "d":
             pass  # no aggregate
         else:
@@ -75,8 +75,8 @@ def load_csv_file(symbol, data_path, bar_type, aggregation_config, date_column):
     elif bar_type == "m":
         training_set = df.resample('ME').agg(aggregation_config)
     elif bar_type == "d":
-        pass  # no aggregate
+        training_set = df
     else:
         raise Exception(f"{bar_type} is not supported.")
 
-    return df
+    return training_set

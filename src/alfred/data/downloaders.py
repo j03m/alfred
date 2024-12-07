@@ -35,18 +35,8 @@ def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=
         try:
             ticker_obj = yf.download(tickers=ticker, interval=interval)
             df = pd.DataFrame(ticker_obj)
-            if tail != -1:
-                df = df.tail(tail)
-            if head != -1:
-                df = df.head(head)
-            if len(df) == 0:
-                bad_tickers.append(ticker)
-            else:
-                min_date = df.index.min()
-                max_date = df.index.max()
-                print(f"Min date for {ticker}: {min_date}")
-                print(f"Max date for {ticker}: {max_date}")
-                df.to_csv(data_file)
+            df = df.apply(lambda col: col.mask((col <= 0) | col.isna()).ffill())
+            df.to_csv(data_file)
         except (requests.exceptions.HTTPError, ValueError) as e:
             print(f"Failed to download {ticker} due to an HTTP or Value error: {e}")
             bad_tickers.append(ticker)

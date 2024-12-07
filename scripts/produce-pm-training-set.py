@@ -5,6 +5,8 @@ from alfred.metadata import TickerCategories, ColumnSelector, ExperimentSelector
 from alfred.model_evaluation import evaluate_model
 from alfred.model_persistence import eval_model_selector
 from alfred.data import CachedStockDataSet, ANALYST_SCALER_CONFIG
+from alfred.utils import make_datetime_index
+import numpy as np
 
 from torch.utils.data import DataLoader
 
@@ -28,34 +30,53 @@ def load_symbols_from_file(file):
     tickers = TickerCategories(file)
     return tickers.get(["training", "evaluation"])
 
-# todo - this isn't going to work because we don't want a random seed now
-# we want the last N bars and we want 1 prediction off that to put into a column
-# with df (analyst 1, 2, 3, 4)
-def calculate_analyst_projections(pm_df, ticker, batch_size, start, end):
-    for key, value in model_descriptors.items():
+
+def calculate_analyst_projections(df, ticker, batch_size, start, end, sequence_length=24):
+    # why? we're going to lose the first sequence_length records of the df during prediction
+    # this will be the dataset we return
+    df_trimmed = df.iloc[sequence_length:].copy()
+    for model_token, value in analysts.items():
         model, columns, descriptor = value
+        assert sequence_length == descriptor["sequence_length"], "model sequence lengths must be uniform"
+
+        # todo: we need to fix this function and make its parameter set sensible
+        # it doesn't need agg_config if a df is passed etc
         dataset = CachedStockDataSet(symbol=ticker,
                                      scaler_config=ANALYST_SCALER_CONFIG,
-                                     sequence_length=descriptor["sequence_length"],
+                                     sequence_length=sequence_length,
                                      feature_columns=columns,
                                      bar_type=descriptor["bar_type"],
                                      target_columns=["Close"],
                                      column_aggregation_config=agg_config,
-                                     start_date=start,
-                                     end_date=end)
-        eval_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=True)
+                                     df=df_trimmed)
+
+        eval_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=False)
         predictions, actuals = evaluate_model(model, eval_loader)
+        print(f"Processed analyst: {ticker} {model_token} ({len(predictions)} predictions)")
 
-        # augment pf_df with predictions for each bar
+        # problem 2 - this should never happen but it does!
+        if len(predictions) < len(df_trimmed):
+            diff = len(df_trimmed) - len(predictions)
+            predictions = np.pad(predictions, (diff, 0), constant_values=np.nan)
+        else:
+            pass
+        # Add the predictions column
+        df_trimmed[f"analyst_{model_token}"] = predictions
+
+        # backfill nans, get the first non-nan value and back fill that
+        first_value = df_trimmed[f"analyst_{model_token}"].dropna().iloc[0]
+        df_trimmed[f"analyst_{model_token}"] = df_trimmed[f"analyst_{model_token}"].fillna(first_value)
+
+    return df_trimmed
 
 
-def calculate_30_day_returns(ticker, data_dir):
+def calculate_30_day_returns(ticker, data_dir, date_column="Unnamed: 0"):
     # Load the price data for the ticker
-    df = pd.read_csv(f'{data_dir}/{ticker}.csv', parse_dates=['Date'], index_col='Date')
-    df = df.sort_index()  # Ensure it's sorted by date
-    df = df.resample('ME').agg({"Close": "last"})
-    df['30d_return'] = df['Close'].pct_change(1)  # Calculate 30-day return
-    return df[['30d_return']]
+    df = pd.read_csv(f'{data_dir}/{ticker}_unscaled.csv')
+    df = make_datetime_index(df, date_column)
+    agg_df = df.resample('ME').agg(agg_config)
+    agg_df['30d_return'] = agg_df['Close'].pct_change(1)  # Calculate 30-day return
+    return agg_df
 
 
 def main(args):
@@ -66,18 +87,23 @@ def main(args):
 
     # Define the date range for two years
     end_date = datetime.today()
-    start_date = end_date - timedelta(days=10 * 365)
+    start_date = end_date - timedelta(days=12 * 365)
 
     # Calculate returns for each ticker
     returns = {}
     for ticker in tickers:
         df = calculate_30_day_returns(ticker, args.data_dir)
-        df = df[(df.index >= start_date) & (df.index <= end_date)]
-        print("calculting anlyst predictions - this could take a bit....")
+        if df.index.min() > start_date:
+            print("Not enough data to include: ", ticker, " in training")
+            continue
+        df_time_range = df[(df.index >= start_date) & (df.index <= end_date)]
+        if len(df_time_range) != 144:
+            pass
+        print("calculating analyst predictions - this could take a bit....")
         # this reloads the same prices from disk :( however, diskio isn't the bottleneck
         # my time is the bottle neck. Todo: fix this at some future date
-        df = calculate_analyst_projections(df, ticker, start_date, end_date)
-        returns[ticker] = df
+        df_final = calculate_analyst_projections(df_time_range, ticker, 256, start_date, end_date)
+        returns[ticker] = df_final
 
     # Combine all tickers' returns into a single DataFrame
     combined_df = pd.concat(returns, axis=1)

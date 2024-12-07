@@ -130,6 +130,9 @@ def main(symbols_file, data_dir, test_symbol):
                 df_combined["mean_sentiment"] = 0
                 df_combined["mean_outlook"] = 0
 
+            # final fill out of bad values
+            df_combined = df_combined.apply(lambda col: col.mask((col <= 0) | col.isna()).ffill())
+
             # Writing to CSV
             output_path = os.path.join(data_dir, f"{symbol}_fundamentals.csv")
             df_combined.to_csv(output_path)

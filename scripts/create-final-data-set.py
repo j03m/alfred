@@ -119,6 +119,8 @@ def main():
         df = read_file(args.data, f"{symbol}_fundamentals.csv")
         assert (df is not None)
 
+        df = df.apply(lambda col: col.mask((col <= 0) | col.isna()).ffill())
+
         # attach moving averages
         df, columns = attach_moving_average_diffs(df)
 

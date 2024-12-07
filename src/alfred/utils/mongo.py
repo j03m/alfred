@@ -10,7 +10,7 @@ class MongoConnectionStrings:
     def connection_string(self):
         return f"mongodb://{self.data['host']}:{self.data['port']}"
 
-    def get_mongo_client(self):
+    def get_mongo_client(self, timeout=3000):
         """
         Attempts to connect to MongoDB using the provided connection string.
         Falls back to localhost if the primary connection fails.
@@ -18,7 +18,7 @@ class MongoConnectionStrings:
         connection = MongoConnectionStrings()
         try:
             # Attempt primary connection
-            client = pymongo.MongoClient(connection.connection_string())
+            client = pymongo.MongoClient(connection.connection_string(), serverSelectionTimeoutMS=timeout)
             # Test connection
             client.admin.command("ping")
             print("Connected to MongoDB (primary).")
