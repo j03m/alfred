@@ -93,7 +93,7 @@ def main(args):
     returns = {}
     for ticker in tickers:
         df = calculate_30_day_returns(ticker, args.data_dir)
-        if df.index.min() > start_date:
+        if df.index.min() > start_date or len(df) == 0:
             print("Not enough data to include: ", ticker, " in training")
             continue
         df_time_range = df[(df.index >= start_date) & (df.index <= end_date)]

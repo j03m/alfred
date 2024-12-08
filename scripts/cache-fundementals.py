@@ -1,12 +1,17 @@
 from logging import exception
 
-import pandas as pd
 import os
 import argparse
-from alfred.data import AlphaDownloader
-from alfred.metadata import TickerCategories
 from pathlib import Path
 import json
+
+import pandas as pd
+
+from alfred.data import AlphaDownloader
+from alfred.metadata import TickerCategories
+from alfred.utils import reindex_dataframes
+
+PROCESSED_TICKERS_FILE = 'data/processed_tickers.json'
 
 def create_news_indicators(symbol, news_dir="./news", required_rel=0.7):
     ticker_dir = Path(news_dir) / symbol
@@ -55,23 +60,23 @@ def create_news_indicators(symbol, news_dir="./news", required_rel=0.7):
     df = df.set_index("Date")
     return df
 
-PROCESSED_TICKERS_FILE = 'data/processed_tickers.json'
-
 def load_processed_tickers():
     if os.path.exists(PROCESSED_TICKERS_FILE):
         with open(PROCESSED_TICKERS_FILE, 'r') as f:
             return json.load(f)
     return []  # Return an empty list if the file doesn't exist
 
+
 def save_processed_tickers(processed_tickers):
     with open(PROCESSED_TICKERS_FILE, 'w') as f:
         json.dump(processed_tickers, f)
 
+
 def main(symbols_file, data_dir, test_symbol):
-    ticker_categories = TickerCategories(symbols_file)
     if test_symbol is not None:
         symbols = [test_symbol]
     else:
+        ticker_categories = TickerCategories(symbols_file)
         symbols = ticker_categories.get(["training", "evaluation"])
 
     alpha = AlphaDownloader()
@@ -97,18 +102,31 @@ def main(symbols_file, data_dir, test_symbol):
 
             df_prices = pd.read_csv(price_file_path)
 
+            close_zeros = len(df_prices[df_prices['Close'] == 0])
+            assert (close_zeros == 0)
+
             quarterly_earnings.index = pd.to_datetime(quarterly_earnings["Date"])
             quarterly_earnings = quarterly_earnings.drop(columns=['Date'])
+            quarterly_earnings.sort_index(inplace=True)
+            quarterly_earnings = quarterly_earnings[~quarterly_earnings.index.duplicated(keep='first')]
 
             df_prices.index = pd.to_datetime(df_prices['Date'])
             df_prices = df_prices.drop(columns=['Date'])
+            df_prices.sort_index(inplace=True)
 
             margins.index = pd.to_datetime(margins['Date'])
             margins = margins.drop(columns=['Date'])
+            margins = margins[~margins.index.duplicated(keep='first')]
+            margins.sort_index(inplace=True)
+
+            # before we combine anything, prices is the main date range, we need to trim everything
+            # else to align with prices otherwise combine will give us 0's for Close price etc
+            # Determine date range from prices
+            quarterly_earnings, margins = reindex_dataframes(df_prices, quarterly_earnings, margins)
 
             # Merging data
-            df_combined = df_prices.join(quarterly_earnings, how='outer')
-            df_combined = df_combined.join(margins, how='outer')
+            df_combined = df_prices.join(quarterly_earnings, how='left')
+            df_combined = df_combined.join(margins, how='left')
 
             # forward will earnings - prevents lookahead
             df_combined.ffill(inplace=True)
@@ -117,21 +135,34 @@ def main(symbols_file, data_dir, test_symbol):
             df_combined.fillna(0, inplace=True)
 
             if insiders is not None:
-                df_combined = df_combined.join(insiders, how='outer')
+                df_combined = df_combined.join(insiders, how='left')
                 df_combined.fillna(0, inplace=True)
             else:
                 df_combined["insider_acquisition"] = 0
                 df_combined["insider_disposal"] = 0
 
             if df_news is not None:
-                df_combined = df_combined.join(df_news, how='outer')
+                df_combined = df_combined.join(df_news, how='left')
                 df_combined.fillna(0, inplace=True)
             else:
                 df_combined["mean_sentiment"] = 0
                 df_combined["mean_outlook"] = 0
 
-            # final fill out of bad values
-            df_combined = df_combined.apply(lambda col: col.mask((col <= 0) | col.isna()).ffill())
+            # before storing there could be insider trading dates that didn't fall on dates where
+            # we have pricing (weekends etc). We need to ffill these rows to avoid issues:
+            # zero_index = df_combined.index[df_combined['Close'] == 0]
+            # for idx in zero_index:
+            #     for column in df_prices.columns:
+            #         assert column in df_combined.columns, "assumption broken here"
+            #         if df_combined.loc[idx, column] == 0:
+            #             current_pos = df_combined.index.get_loc(idx)
+            #             if idx == df_combined.index[0]:
+            #                 df_combined.loc[idx, column] = df_combined.iloc[current_pos + 1][column]
+            #             else:
+            #                 df_combined.loc[idx, column] = df_combined.iloc[current_pos - 1][column]
+
+            close_zeros = len(df_combined[df_combined['Close'] == 0])
+            assert (close_zeros == 0)
 
             # Writing to CSV
             output_path = os.path.join(data_dir, f"{symbol}_fundamentals.csv")
@@ -143,8 +174,10 @@ def main(symbols_file, data_dir, test_symbol):
         processed_already.append(symbol)
         save_processed_tickers(processed_already)
 
-    ticker_categories.purge(bad_tickers)
-    ticker_categories.save()
+    if test_symbol is None:
+        ticker_categories.purge(bad_tickers)
+        ticker_categories.save()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fetch and process stock fundamentals and pricing data.")

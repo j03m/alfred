@@ -118,8 +118,9 @@ def main():
 
         df = read_file(args.data, f"{symbol}_fundamentals.csv")
         assert (df is not None)
+        close_zeros =  len(df[df['Close'] == 0])
+        assert (close_zeros == 0)
 
-        df = df.apply(lambda col: col.mask((col <= 0) | col.isna()).ffill())
 
         # attach moving averages
         df, columns = attach_moving_average_diffs(df)
@@ -161,6 +162,7 @@ def main():
         frame = add_treasuries(frame, args)
         new_file_path = os.path.join(args.data, f"{symbol}_unscaled.csv")
         frame.index = frame.index.normalize()
+        frame.index.name = None
         frame.to_csv(new_file_path)
 
 # def finalize_single_data_file(args, ticker_data_frames):

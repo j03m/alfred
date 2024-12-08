@@ -88,7 +88,7 @@ class YahooNextCloseWindowDataSet(Dataset):
 
 class CachedStockDataSet(Dataset):
     def __init__(self, symbol, sequence_length, feature_columns, target_columns,
-                 scaler_config, column_aggregation_config, period_length=-1, seed=42, bar_type="d", change=1,
+                 scaler_config, column_aggregation_config=None, period_length=-1, seed=42, bar_type="d", change=1,
                  date_column="Unnamed: 0", data_path="./data", start_date=None, end_date=None, df=None):
         '''
         symbol - ticker
@@ -105,6 +105,10 @@ class CachedStockDataSet(Dataset):
 
         # I wrote this to get many files, but then decided I would only train one series at a time
         # so the input is a single symbol
+
+        if df is None and column_aggregation_config is None and bar_type != "d":
+            raise Exception("If bar type is not d and you don't supply a df, you must supply an aggregation config")
+
         if period_length != -1:
             training_set = list(load_csv_files_and_apply_range(symbols=[symbol],
                                                                data_path=data_path,
