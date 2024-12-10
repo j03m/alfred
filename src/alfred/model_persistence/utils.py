@@ -15,6 +15,7 @@ mongo_client = connection.get_mongo_client()
 db = mongo_client['model_db']
 fs = gridfs.GridFS(db)
 models_collection = db['models']
+status_collection = db['model_status']
 metrics_collection = db['metrics']
 
 
@@ -105,9 +106,23 @@ def set_best_loss(model_token, training_label, loss):
         upsert=True
     )
 
+# make a record that we already trained against this ticker
+def track_model_status(model_token, ticker):
+    status_collection.insert_one({
+        'status': True,
+        'model_token': model_token,
+        'ticker': ticker
+    })
+
+def check_model_status(model_token, ticker):
+    record = status_collection.find_one({'model_token': model_token, 'ticker':ticker})
+    if not record:
+        return False
+    else:
+        return True
+
 
 def get_latest_model(model_token):
-    # todo this is broken off wifi, we need to fallback to localhost
     record = models_collection.find_one({'model_token': model_token}, sort=[('version', -1)])
     if not record:
         print("No previous model.")

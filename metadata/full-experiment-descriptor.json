@@ -6,12 +6,17 @@
     "trans-am"
   ],
   "size": [
+    64,
+    128,
     256
   ],
   "sequence_length": [
-    25
+    30,
+    60
   ],
   "bar_type": [
+    "d",
+    "w",
     "m"
   ],
   "data": [

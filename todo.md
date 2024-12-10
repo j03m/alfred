@@ -1,6 +1,6 @@
 Next:
 * Train(ing) analysts
-* Integrate analyst predictions into pm dataset
+* Put analysts into scaler config, retrain pm
 * Run eval and track against spy
 
 * how to find neglected stocks? Low volume, lack of index and etf inclusion
@@ -8,12 +8,10 @@ Next:
   * Devise algo for "overlooked"
 * alfred could look at full universes soon
 * institutional volume vs retail volume
-    * finhub
-    * qunadl
-    * sec-edgar
-    * chatgpt
+    * sec-edgar (did we finish this crawl? )
+    * Add institutional holdings column to pm
+* Looking at "the spreadsheet from our course" can we use that input as training data and come up with optimal quadrant? 
 
 Research:
 * Finish book
-* 
 * How ususable are the tools in https://github.com/AI4Finance-Foundation/FinRL?

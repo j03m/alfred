@@ -9,7 +9,7 @@ import random
 
 from alfred.metadata import ExperimentSelector, TickerCategories, ColumnSelector
 from alfred.data import CachedStockDataSet, ANALYST_SCALER_CONFIG
-from alfred.model_persistence import model_from_config, prune_old_versions, crc32_columns
+from alfred.model_persistence import model_from_config, prune_old_versions, crc32_columns, check_model_status, track_model_status
 from alfred.model_evaluation import simple_profit_measure, analyze_ledger, evaluate_model
 from alfred.model_training import train_model
 from alfred.utils import plot_evaluation, MongoConnectionStrings
@@ -91,8 +91,10 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
 
     # train on all training tickers
     for ticker in training:
+        if check_model_status(real_model_token, ticker):
+            print(f"{real_model_token} has already been trained on {ticker}. Delete status collection of model_db to reset.")
+            continue
         print("training against: ", ticker)
-
         try:
             dataset = CachedStockDataSet(symbol=ticker,
                                          seed=_args.seed,
@@ -112,6 +114,9 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
         train_model(model, optimizer, scheduler, train_loader, _args.patience, real_model_token,
                     epochs=_args.epochs, training_label=ticker)
         prune_old_versions()  # keep disk under control, keep only the best models
+
+        # track that we are passed this
+        track_model_status(real_model_token, ticker)
 
     # Initialize variables to accumulate values
     total_mse = 0
@@ -235,7 +240,7 @@ if __name__ == "__main__":
                              "seed will be used with the ticker name to randomly but consistently select a period to train/eval against")
     parser.add_argument("--epochs", type=int, default=1500,
                         help="number of epochs to train")
-    parser.add_argument("--patience", type=int, default=75,
+    parser.add_argument("--patience", type=int, default=500,
                         help="when to stop training after patience epochs of no improvements")
     parser.add_argument("--model-path", type=str, default='./models', help="where to store models and best loss data")
     parser.add_argument("--metadata-path", type=str, default='./metadata', help="experiment descriptors live here")
