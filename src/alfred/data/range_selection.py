@@ -1,6 +1,10 @@
 import pandas as pd
 import numpy as np
 import random
+
+from alfred.utils import NotEnoughDataError
+
+
 def consistent_rand_for_symbol(symbol, seed, start, end):
     combined = str(seed) + symbol
     rnd = random.Random(combined)
@@ -46,12 +50,14 @@ def load_csv_files_and_apply_range(symbols, data_path, period_length, seed, bar_
         # once we have the total length post aggregation we can proceed with range selection
         total_length = len(df)
 
-        assert period_length <= total_length, f"Total available data for {symbol} is too short."
+        if period_length > total_length:
+            raise NotEnoughDataError(f"Total available data for {symbol} is too short.")
 
         # Choose consistent train and eval start dates based on the seed and lengths
         start = choose_train_range(symbol, seed, total_length, period_length)
 
-        assert (total_length > start + period_length)
+        if total_length < start + period_length:
+            raise NotEnoughDataError(f"Start of {start} is too far for {symbol}.")
 
         # Subset the DataFrame to the train and eval ranges
         train_df = df.iloc[start:start + period_length]

@@ -12,7 +12,7 @@ from alfred.data import CachedStockDataSet, ANALYST_SCALER_CONFIG
 from alfred.model_persistence import model_from_config, prune_old_versions, crc32_columns, check_model_status, track_model_status
 from alfred.model_evaluation import simple_profit_measure, analyze_ledger, evaluate_model
 from alfred.model_training import train_model
-from alfred.utils import plot_evaluation, MongoConnectionStrings
+from alfred.utils import plot_evaluation, MongoConnectionStrings, NotEnoughDataError
 from sklearn.metrics import mean_squared_error
 
 import numpy as np
@@ -104,6 +104,10 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
                                          sequence_length=sequence_length,
                                          feature_columns=columns,
                                          target_columns=["Close"])  # todo ... hmmm will need to mature this past just Close
+        except NotEnoughDataError as e:
+            print("ERROR: failed to run experiment: ", model_token, " on ", ticker, " due to (not enough data): ", e)
+            ticker_categories.purge([ticker])
+            ticker_categories.save()
         except (ValueError, KeyError) as e:
             print("ERROR: failed to run experiment: ", model_token, " on ", ticker, " due to: ", e)
             continue
