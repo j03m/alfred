@@ -52,9 +52,10 @@ def calculate_analyst_projections(df, ticker, batch_size, start, end, sequence_l
         eval_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=False)
         predictions, actuals = evaluate_model(model, eval_loader)
         print(f"Processed analyst: {ticker} {model_token} ({len(predictions)} predictions)")
-
         assert len(predictions) == len(df_trimmed), "bad dala length assumption!"
-        df_trimmed[f"analyst_{model_token}"] = predictions
+
+        unscaled_productions = dataset.scaler.inverse_transform_column("Close", np.array(predictions).reshape(-1, 1))
+        df_trimmed[f"analyst_{model_token}"] = unscaled_productions
 
     return df_trimmed
 
@@ -103,6 +104,7 @@ def main(args):
     sorted_df["rank"] = sorted_df.groupby(sorted_df.index)["30d_return"].rank(ascending=False).astype(int)
     sorted_df.to_csv(args.training_output_file)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process stock ticker data for portfolio manager training.")
     parser.add_argument("--ticker-file", type=str, default="metadata/spy-ticker-categorization.json",
@@ -116,6 +118,8 @@ if __name__ == "__main__":
                         help="Path to column descriptor JSON file.")
     parser.add_argument("--training-output-file", type=str, default="results/pm-training-final.csv",
                         help="Path to save training dataset CSV.")
+    parser.add_argument("--institutional-ownership", type=str, default="data/institutional_ownership.csv",
+                        help="Data indicating institutional ownership.")
     args = parser.parse_args()
 
     main(args)

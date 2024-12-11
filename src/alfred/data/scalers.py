@@ -7,8 +7,10 @@ from sklearn.base import BaseEstimator, TransformerMixin
 import numpy as np
 import pandas as pd
 
-DEFAULT_SCALER_CONFIG = [
+PM_SCALER_CONFIG = [
     {'regex': r'^Close$', 'type': 'yeo-johnson'},
+    {'regex': r'^analyst_.+', 'type': 'yeo-johnson'},
+    {'columns': ['Institutional'], 'type': 'yeo-johnson'},
     {'columns': ['^VIX'], 'type': 'standard'},
     {'columns': ['SPY', 'CL=F', 'BZ=F'], 'type': 'yeo-johnson'},
     {'columns': ["BTC=F"], 'type': 'standard'}, # We only have btc prices back to 2017 which leads to segments with no variation, which blows up yeo-johnson

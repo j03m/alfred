@@ -13,7 +13,7 @@ import random
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from alfred.data import CustomScaler, DEFAULT_SCALER_CONFIG
+from alfred.data import CustomScaler, PM_SCALER_CONFIG
 from alfred.metadata import ExperimentSelector, ColumnSelector
 from alfred.model_persistence import model_from_config, prune_old_versions
 from alfred.model_training import train_model
@@ -98,7 +98,7 @@ def run_experiment(model_token, size, sequence_length):
     df[date_column] = pd.to_datetime(df[date_column])
     df = df.set_index(date_column)
 
-    scaler = CustomScaler(config=DEFAULT_SCALER_CONFIG, df=df)
+    scaler = CustomScaler(config=PM_SCALER_CONFIG, df=df)
     df = scaler.fit_transform(df)
 
     # Split into 2/3 training and 1/3 evaluation
