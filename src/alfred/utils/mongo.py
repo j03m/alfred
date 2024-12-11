@@ -29,6 +29,8 @@ class MongoConnectionStrings:
                 # Fallback to localhost
                 client = pymongo.MongoClient("mongodb://localhost:27017/")
                 client.admin.command("ping")
+                self.data["host"] = "localhost"
+                self.data["port"] = 27017
                 print("Connected to MongoDB (fallback to localhost).")
                 return client
             except Exception as fallback_error:

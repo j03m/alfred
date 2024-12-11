@@ -3,6 +3,7 @@ from sympy import false
 
 from alfred.data import attach_moving_average_diffs, read_file
 from alfred.metadata import TickerCategories
+from alfred.utils import make_datetime_index
 import argparse
 import os
 import pandas as pd
@@ -111,6 +112,14 @@ def main():
         symbols = [args.symbol]
     else:
         symbols = ticker_categories.get(["training", "evaluation"])
+
+    # load the institutional data file
+    inst_owner_df = pd.read_csv(args.institutional_ownership)
+    inst_owner_df = make_datetime_index(inst_owner_df, "date")
+
+    # todo follow the pattern in treasuries filter by ticker and join
+
+
 
     ticker_data_frames = []
     for symbol in symbols:

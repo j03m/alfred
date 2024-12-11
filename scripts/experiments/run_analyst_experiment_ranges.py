@@ -21,10 +21,11 @@ from torch.utils.data import DataLoader
 
 gbl_args = None
 
-connect_data = MongoConnectionStrings()
+connection_data = MongoConnectionStrings()
+connection_data.get_mongo_client() # don't use this but it will force the right connection strings
 
 DB = 'sacred_db'
-MONGO = connect_data.connection_string()
+MONGO = connection_data.connection_string()
 
 
 scaler_config = ANALYST_SCALER_CONFIG
@@ -108,6 +109,7 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
             print("ERROR: failed to run experiment: ", model_token, " on ", ticker, " due to (not enough data): ", e)
             ticker_categories.purge([ticker])
             ticker_categories.save()
+            continue
         except (ValueError, KeyError) as e:
             print("ERROR: failed to run experiment: ", model_token, " on ", ticker, " due to: ", e)
             continue
@@ -132,16 +134,22 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
     ticker_count = len(eval_tickers)
 
     for ticker in eval_tickers:
-        dataset = CachedStockDataSet(symbol=ticker,
-                                     seed=_args.seed,
-                                     scaler_config=scaler_config,
-                                     period_length=_args.period,
-                                     sequence_length=sequence_length,
-                                     feature_columns=columns,
-                                     bar_type=bar_type,
-                                     target_columns=["Close"],
-                                     column_aggregation_config=agg_config)
-        eval_loader = DataLoader(dataset, batch_size=_args.batch_size, shuffle=False, drop_last=True)
+        try:
+            dataset = CachedStockDataSet(symbol=ticker,
+                                         seed=_args.seed,
+                                         scaler_config=scaler_config,
+                                         period_length=_args.period,
+                                         sequence_length=sequence_length,
+                                         feature_columns=columns,
+                                         bar_type=bar_type,
+                                         target_columns=["Close"],
+                                         column_aggregation_config=agg_config)
+            eval_loader = DataLoader(dataset, batch_size=_args.batch_size, shuffle=False, drop_last=True)
+        except NotEnoughDataError as e:
+            print("ERROR: failed to run experiment: ", model_token, " on ", ticker, " due to (not enough data): ", e)
+            ticker_categories.purge([ticker])
+            ticker_categories.save()
+            continue
 
         # Get predictions and actual values
         predictions, actuals = evaluate_model(model, eval_loader)
