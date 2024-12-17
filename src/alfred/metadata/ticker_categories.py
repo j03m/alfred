@@ -7,15 +7,23 @@ class TickerCategories:
         self.file_name = file_name
         with open(file_name, 'r') as file:
             self.data = json.load(file)
+        self.version = 0
 
     # todo kill all the bad tickers
     def purge(self, bad_tickers):
-        for category, tickers in self.data.items():
-            # Use a list comprehension to efficiently filter out bad tickers
-            self.data[category] = [ticker for ticker in tickers if ticker not in bad_tickers]
-
+        if len(bad_tickers) > 0:
+            print("TICKER PURGE OF: ", bad_tickers)
+            for category, tickers in self.data.items():
+                # Use a list comprehension to efficiently filter out bad tickers
+                self.data[category] = [ticker for ticker in tickers if ticker not in bad_tickers]
+            self.version += 1
     def save(self):
-        with open(self.file_name, 'w') as file:
+        if self.version != 0:
+            file_name = self.file_name + f".{self.version}.json"
+            print("Versioning ticker file: ", file_name)
+        else:
+            file_name = self.file_name
+        with open(file_name, 'w') as file:
             json.dump(self.data, file)
 
     def get(self, categories):
