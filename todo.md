@@ -1,7 +1,8 @@
 Next:
 * Train(ing) analysts
-* Put analysts into scaler config, retrain pm
-* Run eval and track against spy
+* Finish running full instutional data
+* Add dividend to portfolio manager data (maybe to analysts sigh)
+  * alphavantage has them
 
 * how to find neglected stocks? Low volume, lack of index and etf inclusion
   * Get our data feed to include a list of ALL tickers on US indexes

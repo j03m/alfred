@@ -1,14 +1,16 @@
 import argparse
-import pandas as pd
+import os
 from datetime import datetime, timedelta
+
+import numpy as np
+import pandas as pd
+from torch.utils.data import DataLoader
+
+from alfred.data import CachedStockDataSet, ANALYST_SCALER_CONFIG
 from alfred.metadata import TickerCategories, ColumnSelector, ExperimentSelector
 from alfred.model_evaluation import evaluate_model
 from alfred.model_persistence import eval_model_selector
-from alfred.data import CachedStockDataSet, ANALYST_SCALER_CONFIG
 from alfred.utils import make_datetime_index
-import numpy as np
-
-from torch.utils.data import DataLoader
 
 # probably shouldn't hard code this, but it's been a while since we've changed the
 # analysts
@@ -65,6 +67,7 @@ def calculate_30_day_returns(ticker, data_dir, date_column="Unnamed: 0"):
     df = pd.read_csv(f'{data_dir}/{ticker}_unscaled.csv')
     df = make_datetime_index(df, date_column)
     agg_df = df.resample('ME').agg(agg_config)
+    agg_df.index = agg_df.index.to_period('M').to_timestamp()
     agg_df['30d_return'] = agg_df['Close'].pct_change(1)  # Calculate 30-day return
     return agg_df
 
@@ -86,23 +89,62 @@ def main(args):
     date_column = "Unnamed: 0"
     for ticker in tickers:
         df = calculate_30_day_returns(ticker, args.data_dir,  date_column =  date_column)
+        try:
+            divs = pd.read_csv(os.path.join(args.data_dir, f"{ticker}_dividends.csv"))
+        except FileNotFoundError as fne:
+            print(f"no dividend file for: {ticker}, {fne}")
+            filtered.append(ticker)
+            continue
+
+        divs = make_datetime_index(divs, date_column="Date")
+        divs.index = pd.to_datetime(divs.index).tz_localize(None)
         if df.index.min() > start_date or len(df) == 0:
             print("Not enough data to include: ", ticker, " in training")
             continue
+        # quick note, I added dividends here because I didn't want to retrain the analysts on and additional data column
+        # especially considering the best mse's seem to be price only
+        # that could change
         df_time_range = df[(df.index >= start_date) & (df.index <= end_date)]
+        div_time_range = divs[(divs.index >= start_date) & (divs.index <= end_date)]
+        div_time_range.index = div_time_range.index.to_period('M').to_timestamp()
+        df_time_range.index = df_time_range.index.to_period('M').to_timestamp()
         if len(df_time_range) != 144:
             filtered.append(ticker)
             pass
         df_final = calculate_analyst_projections(df_time_range, ticker, 256, start_date, end_date)
         df_final["id"] = ticker_to_id[ticker]
-        returns.append(df_final)
+        df_with_dividend = pd.merge(div_time_range, df_final, left_index=True, right_index=True)
+        returns.append(df_with_dividend)
+
+    tickers_categories.purge(filtered)
+    tickers_categories.save()
 
     # Combine all tickers' returns into a single DataFrame
     combined_df = pd.concat(returns)
-    sorted_df = combined_df.sort_values(by=[date_column], ascending=[True])
+    sorted_df = combined_df.sort_index(ascending=True)
+
+    # load and cleanup inst owners
+    inst_owners = pd.read_csv(args.institutional_ownership)
+    inst_owners = make_datetime_index(inst_owners, date_column="date")
+    inst_owners.index = inst_owners.index.to_period('M').to_timestamp()
+    inst_owners.rename(columns={'value': 'Institutional'}, inplace=True)
+    inst_owners.drop(columns=['Unnamed: 0'], inplace=True)
+    inst_owners.reset_index(inplace=True)
+
+    # map tickers to id
+    inst_owners['id'] = inst_owners['ticker'].map(ticker_to_id).fillna(-1).astype(int)
+    inst_owners.drop(columns=['ticker'], inplace=True)
+
+    sorted_df.reset_index(inplace=True)
+    sorted_df.rename(columns={'index': 'date'}, inplace=True)
+    pm_final = pd.merge(sorted_df, inst_owners, on=["date", "id"], how="left")
+    pm_final = make_datetime_index(pm_final, date_column="date")
+    pm_final["Institutional"].fillna(0, inplace=True)
+
     # see educational/ranked.py to recall our example for this
-    sorted_df["rank"] = sorted_df.groupby(sorted_df.index)["30d_return"].rank(ascending=False).astype(int)
-    sorted_df.to_csv(args.training_output_file)
+    pm_final["rank"] = pm_final.groupby(pm_final.index)["30d_return"].rank(ascending=False).astype(int)
+    pm_final = pm_final.sort_index()
+    pm_final.to_csv(args.training_output_file)
 
 
 if __name__ == "__main__":

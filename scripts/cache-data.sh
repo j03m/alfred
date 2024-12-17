@@ -7,7 +7,10 @@ if [ -z "$1" ]; then
 fi
 
 python scripts/cache-prices.py "--symbol-file=$1" &&
+python scripts/cache-dividends.py "--symbol-file=$1" &&
 python scripts/cache-rates.py &&
 python scripts/cache-fundementals.py "--symbol-file=$1" &&
+python scripts/cache-edgar.py "--symbol-file=$1" &&
+python scripts/compile-edgar.py "--symbol-file=$1" &&
 python scripts/create-final-data-set.py "--symbol-file=$1" &&
-python scripts/cache-news.py "--symbol-file=$1"
+python scripts/produce-pm-training-set.py "--symbol-file=$1" &&
