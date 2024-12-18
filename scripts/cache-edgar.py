@@ -3,15 +3,13 @@ from alfred.data import download_master_index, parse_master_index, generic_sec_f
 import pandas as pd
 from time import sleep
 
-def cache_indexes(output_folder, pm_df):
+def cache_indexes(output_folder, earliest_year, latest_year):
     """Cache master index files for the date range specified in pm_df."""
     # Ensure output folder exists
     os.makedirs(output_folder, exist_ok=True)
 
     # Get the earliest and latest years
-    pm_df['Date'] = pd.to_datetime(pm_df['Date'])
-    earliest_year = pm_df['Date'].dt.year.min()
-    latest_year = pm_df['Date'].dt.year.max()
+
 
     quarters = [1, 2, 3, 4]
     for year in range(earliest_year, latest_year + 1):
@@ -55,13 +53,13 @@ def parse_indexes(output_folder, form_types=['13F-HR']):
                 else:
                     print(f"Filing file already exists: {filing_file_path}")
 
-def main(output_folder="./filings", range_file="./results/pm-training-final.csv", download=False, parse=False):
-    pm_df = pd.read_csv(range_file)
+def main(output_folder="./filings", start=2014, end=2024, download=True, parse=True):
+
 
     # Download index files
     if download:
         print("Caching master index files...")
-        cache_indexes(output_folder, pm_df)
+        cache_indexes(output_folder, start, end)
 
     # Parse index files
     if parse:
@@ -74,11 +72,13 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Download and parse 13F filings for tickers.")
     parser.add_argument("--output-folder", default="./filings", help="Output folder for filings.")
-    parser.add_argument("--range-file", default="./results/pm-training-final.csv",
-                        help="pm training set to define range to fetch.")
-    parser.add_argument("--download", action="store_true", help="Download and cache index files.")
-    parser.add_argument("--parse", action="store_true", help="Parse index files to extract 13F-HR filings.")
+    parser.add_argument("--start", default=2014,
+                        help="start year")
+    parser.add_argument("--end", default=2024,
+                        help="end year")
+    parser.add_argument("--no-download", action="store_true", help="Download and cache index files.")
+    parser.add_argument("--no-parse", action="store_true", help="Parse index files to extract 13F-HR filings.")
 
     args = parser.parse_args()
 
-    main(args.output_folder, args.range_file, args.download, args.parse)
+    main(args.output_folder, args.start, args.end, not args.no_download, not args.no_parse)
