@@ -101,6 +101,9 @@ def main(symbols_file, data_dir, test_symbol):
                 continue
 
             df_prices = pd.read_csv(price_file_path)
+            if len(df_prices) == 0:
+                bad_tickers.append(symbol)
+                continue
 
             close_zeros = len(df_prices[df_prices['Close'] == 0])
             assert (close_zeros == 0)
