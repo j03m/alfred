@@ -1,5 +1,6 @@
 from alfred.utils import FileSystemCrawler
 from alfred.data import OpenFigiDownloader
+from alfred.utils import make_datetime_index
 import pandas as pd
 from datetime import datetime
 from lxml import etree
@@ -98,8 +99,11 @@ def processor(file_path, content):
             cusip = info_table.findtext("cusip")
             company_name = info_table.findtext("nameOfIssuer")
             shares = int(info_table.find("shrsOrPrnAmt").findtext("sshPrnamt"))
-
-            ticker = open_figi_downloader.get_ticker_for_cusip(cusip)
+            try:
+                ticker = open_figi_downloader.get_ticker_for_cusip(cusip)
+            except Exception as e:
+                print("Failed hitting open figi:", e, " treating as non fatal")
+                ticker = None
 
             if ticker is None or ticker == "Unknown":
                 print(f"Could not find ticker for company: {cusip}/{company_name}")
@@ -127,14 +131,21 @@ def processor(file_path, content):
 
 
 def main(data_dir, filings_folder):
+    global aggregated_results
+    global gbl_output_path
+    # Read the CSV file into a DataFrame
+    if os.path.exists(gbl_output_path):
+        df = pd.read_csv(gbl_output_path)
+
+        df['year'] = pd.to_datetime(df['date'], format='%Y-%m-%d').dt.year
+        df['month'] = pd.to_datetime(df['date'], format='%Y-%m-%d').dt.month
+
+        # Group by year, month, and ticker, then aggregate the 'shares' column
+        aggregated_results = df.groupby(['year', 'month', 'ticker'])['value'].sum().to_dict()
+
     fs = FileSystemCrawler(filings_folder, processor)
     fs.crawl()
 
-    global aggregated_results
-    aggregated_list = [
-        {"year": key[0], "month": key[1], "ticker": key[2], "shares": value}
-        for key, value in aggregated_results.items()
-    ]
     dump_csv()
     print(f"Done. Results saved to {gbl_output_path}")
 
