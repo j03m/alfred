@@ -98,7 +98,7 @@ def processor(file_path, content):
         for info_table in table.findall(".//infoTable"):
             cusip = info_table.findtext("cusip")
             company_name = info_table.findtext("nameOfIssuer")
-            shares = int(info_table.find("shrsOrPrnAmt").findtext("sshPrnamt"))
+            shares = float(info_table.find("shrsOrPrnAmt").findtext("sshPrnamt"))
             try:
                 ticker = open_figi_downloader.get_ticker_for_cusip(cusip)
             except Exception as e:
@@ -142,6 +142,8 @@ def main(data_dir, filings_folder):
 
         # Group by year, month, and ticker, then aggregate the 'shares' column
         aggregated_results = df.groupby(['year', 'month', 'ticker'])['value'].sum().to_dict()
+
+        aggregated_results = defaultdict(int, aggregated_results)
 
     fs = FileSystemCrawler(filings_folder, processor)
     fs.crawl()
