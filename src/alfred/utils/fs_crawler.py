@@ -31,8 +31,12 @@ class FileSystemCrawler:
             file_path (str): The path to the file to process.
         """
         with open(file_path, 'r', encoding=self.encoding) as f:
-            content = f.read()
-            self.process_function(file_path, content)
+            try:
+                content = f.read()
+                self.process_function(file_path, content)
+            except Exception as e:
+                print("Couldn't read the file: ", file_path, " error:", e, " skipping.")
+
 
 
 # Example processing function
