@@ -28,6 +28,13 @@ for _descriptor in model_descriptors:
     analysts[token] = (model, columns, _descriptor)
 
 
+def valid_date(s):
+    try:
+        return datetime.strptime(s, "%Y-%m-%d")
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"Invalid date format: {s}. Use YYYY-MM-DD.")
+
+
 def load_symbols_from_file(file):
     return TickerCategories(file)
 
@@ -75,12 +82,19 @@ def calculate_30_day_returns(ticker, data_dir, date_column="Unnamed: 0"):
 def main(args):
     # Load tickers and create ticker-to-ID mapping
     tickers_categories = load_symbols_from_file(args.ticker_file)
-    tickers = tickers_categories.get(["training", "evaluation"])
+    if args.data_set == "training":
+        tickers = tickers_categories.get(["training"])
+    else:
+        tickers = tickers_categories.get(["evaluation"])
     max_rank = len(tickers)
     ticker_to_id = {ticker: idx for idx, ticker in enumerate(tickers)}
 
     # Define the date range for two years
-    end_date = datetime.today()
+    if args.training_end_date is None:
+        end_date = datetime.today()
+    else:
+        end_date = args.training_end_date
+
     start_date = end_date - timedelta(days=12 * 365)
 
     # Calculate returns for each ticker
@@ -88,14 +102,14 @@ def main(args):
     filtered = []
     date_column = "Unnamed: 0"
     for ticker in tickers:
-        df = calculate_30_day_returns(ticker, args.data_dir,  date_column =  date_column)
+        df = calculate_30_day_returns(ticker, args.data_dir, date_column=date_column)
         try:
             divs = pd.read_csv(os.path.join(args.data_dir, f"{ticker}_dividends.csv"))
         except FileNotFoundError as fne:
             print(f"no dividend file for: {ticker}, {fne}")
             filtered.append(ticker)
             continue
-
+        # Todo - all the dividend files are empty need to fix
         divs = make_datetime_index(divs, date_column="Date")
         divs.index = pd.to_datetime(divs.index).tz_localize(None)
         if df.index.min() > start_date or len(df) == 0:
@@ -107,13 +121,18 @@ def main(args):
         df_time_range = df[(df.index >= start_date) & (df.index <= end_date)]
         div_time_range = divs[(divs.index >= start_date) & (divs.index <= end_date)]
         div_time_range.index = div_time_range.index.to_period('M').to_timestamp()
+        # collapsing into a month can create duplicate months if more than one entry per months exist. Sum them.
+        div_time_range = div_time_range.groupby(div_time_range.index).sum()
         df_time_range.index = df_time_range.index.to_period('M').to_timestamp()
-        if len(df_time_range) != 144:
+        expected_months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
+        if len(df_time_range) != expected_months:
             filtered.append(ticker)
             pass
         df_final = calculate_analyst_projections(df_time_range, ticker, 256, start_date, end_date)
         df_final["id"] = ticker_to_id[ticker]
-        df_with_dividend = pd.merge(div_time_range, df_final, left_index=True, right_index=True)
+        # todo here: div_time_range.index.duplicated().any() produces duplicates True
+        df_with_dividend = pd.merge(df_final, div_time_range, how='left', left_index=True, right_index=True)
+        df_with_dividend['Dividend'] = df_with_dividend['Dividend'].ffill().fillna(0)
         returns.append(df_with_dividend)
 
     tickers_categories.purge(filtered)
@@ -136,15 +155,18 @@ def main(args):
     inst_owners.drop(columns=['ticker'], inplace=True)
 
     sorted_df.reset_index(inplace=True)
+    sorted_df.rename(columns={'Unnamed: 0': 'date'}, inplace=True)
     sorted_df.rename(columns={'index': 'date'}, inplace=True)
     pm_final = pd.merge(sorted_df, inst_owners, on=["date", "id"], how="left")
-    pm_final = make_datetime_index(pm_final, date_column="date")
+    pm_final.rename(columns={'date': 'Date', 'id':'ID'}, inplace=True)
+    pm_final = make_datetime_index(pm_final, date_column="Date")
     pm_final["Institutional"].fillna(0, inplace=True)
 
     # see educational/ranked.py to recall our example for this
-    pm_final["rank"] = pm_final.groupby(pm_final.index)["30d_return"].rank(ascending=False).astype(int)
+    pm_final["Rank"] = pm_final.groupby(pm_final.index)["30d_return"].rank(ascending=False).astype(int)
     pm_final = pm_final.sort_index()
-    pm_final.to_csv(args.training_output_file)
+    pm_final.to_csv(os.path.join(args.training_output_dir, f"{args.data_set}-pm-data.csv"))
+
 
 
 if __name__ == "__main__":
@@ -152,16 +174,24 @@ if __name__ == "__main__":
     parser.add_argument("--ticker-file", type=str, default="metadata/spy-ticker-categorization.json",
                         help="Path to the ticker categorization file.")
     parser.add_argument("--data-dir", type=str, default="./data", help="Directory containing ticker data CSV files.")
-    parser.add_argument("--rank-output-file", type=str, default="results/ranked-output.csv",
-                        help="Path to save ranked returns CSV.")
     parser.add_argument("--ticker-id-output-file", type=str, default="results/ticker-id-output.csv",
                         help="Path to save ticker-to-ID mapping CSV.")
     parser.add_argument("--column-descriptor-file", type=str, default="metadata/column-descriptors.json",
                         help="Path to column descriptor JSON file.")
-    parser.add_argument("--training-output-file", type=str, default="results/pm-training-final.csv",
+    parser.add_argument("--training-output-dir", type=str, default="results",
                         help="Path to save training dataset CSV.")
     parser.add_argument("--institutional-ownership", type=str, default="data/institutional_ownership.csv",
                         help="Data indicating institutional ownership.")
+    parser.add_argument(
+        "--training-end-date",
+        type=valid_date,  # Use the custom validation function
+        default=None,
+        help="The training end date in YYYY-MM-DD format (e.g., 2024-12-16) otherwise today will be used",
+    )
+
+    parser.add_argument("--data-set", type=str, default="training", choices=["training", "eval"],
+                        help="Should we create a training or eval set.")
+
     args = parser.parse_args()
 
     main(args)

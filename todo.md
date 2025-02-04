@@ -1,15 +1,25 @@
-Next:
-* Train(ing) analysts
-* Finish running full instutional data
-* PM Data points:
-  * Should have P/E
-  * Should have Market Cap
-  * Dividend expressed as %
-  * Look back and calculate beta (sensitivty to market)
-  * How do we backtest the model ala the way we would with screener? 
-  * Google the piotroski screening factors 
-  * Is there anti-correlation to the bench marks? Were there stocks up when spy is down?
-    * non-inverse etfs of course
+Next Plans:
+
+* Can we actually predict rank? Using a small set of stocks conduct a study to see if its even possible to train on the parms we have
+and get matching rank value. Even if we overfit.
+  * It's looking grim. Our MSE on the eval set is a whole number lol
+  * Gonna review the columns and see if they can be simplified in some way and that they are all scaled correctly
+  * Can try to train on a larger set
+
+Other Experiments:
+
+* Ablation Study
+  * Drop columns? 
+  * Using the small model to determine impact if any?
+  * lstm only?
+  
+* We never validated that the N day diff from moving avg was helpful - how do we validate that?
+* Back to reinforcement learning - what can we do here?
+  
+
+
+
+Longer Term:
 
 * Long term we should think about how to measure optimal with risk
   * Ie, ranks right now don't take into account risk, just return

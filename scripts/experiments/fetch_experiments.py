@@ -77,7 +77,7 @@ def main():
         default="./results/mgmt_completed_experiments.csv",
         help="Path to the output CSV file (default: ./results/mgmt_completed_experiments.csv)"
     )
-    parser.add_argument("--token", type=str, default="analyst_experiment_set", help="namespace for experiment set to render")
+    parser.add_argument("--token", type=str, default="mgmt_experiment_set", help="namespace for experiment set to render")
     args = parser.parse_args()
     export_experiments(args.output_file, args.token)
 

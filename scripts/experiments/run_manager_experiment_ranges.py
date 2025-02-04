@@ -23,6 +23,10 @@ from sklearn.metrics import mean_squared_error
 
 
 connect_data = MongoConnectionStrings()
+# sacred will init its own client
+# this is just called to init the client and get the right strings.
+# Bad design :/ see imp for details why (i had my reasons)
+connect_data.get_mongo_client()
 MONGO = connect_data.connection_string()
 DB = 'sacred_db'
 
@@ -89,30 +93,38 @@ def config():
     sequence_length = None
 
 
+# todo modify this script to handle different columns for ablation study
+# Study the scaled columns, think through what might be better
+
 @ex.main
 def run_experiment(model_token, size, sequence_length):
     # Read the training file
 
-    df = pd.read_csv(gbl_args.input_file)
+    train_df = pd.read_csv(gbl_args.training_file)
+    eval_df = pd.read_csv(gbl_args.eval_file)
+
     date_column = "Date"
-    df[date_column] = pd.to_datetime(df[date_column])
-    df = df.set_index(date_column)
+    train_df[date_column] = pd.to_datetime(train_df[date_column])
+    train_df = train_df.set_index(date_column)
 
-    scaler = CustomScaler(config=PM_SCALER_CONFIG, df=df)
-    df = scaler.fit_transform(df)
+    eval_df[date_column] = pd.to_datetime(eval_df[date_column])
+    eval_df = eval_df.set_index(date_column)
 
-    # Split into 2/3 training and 1/3 evaluation
-    split_index = int(len(df) * 2 / 3)
+    scaler = CustomScaler(config=PM_SCALER_CONFIG, df=train_df)
+    train_df = scaler.fit_transform(train_df)
 
-    # Split the DataFrame
-    # Todo: Sequences look good, but we don;t have enough data, there is only 41 unique months in the training set. We need to
-    # look back further. Revisit the file producer to see why we limited the date
-    train_df = df.iloc[:split_index]
-    eval_df = df.iloc[split_index:]
+    # todo is this cool?
+    eval_df = scaler.fit_transform(eval_df)
+    if gbl_args.saved_scaled is not None:
+        train_df.to_csv(f"{gbl_args.saved_scaled}_training.csv")
+        eval_df.to_csv(f"{gbl_args.saved_scaled}_eval.csv")
+        raise Exception("Force ending.")
+
 
     ids = len(train_df["ID"].unique())  # number of companies
     output = ids * sequence_length  # output should be a prediction of rank for each sequence entry
     model_sequence_length = ids * sequence_length
+
     # sequence length * total companies is the real sequence length
     model, optimizer, scheduler, real_model_token = model_from_config(
         num_features=len(train_df.columns) - 1,  # -1 is dropping Rank which is our predicted column
@@ -122,7 +134,7 @@ def run_experiment(model_token, size, sequence_length):
             "port_mgmt", model_token, sequence_length, size, output
         ])
 
-    features = df.columns.drop('Rank')
+    features = train_df.columns.drop('Rank')
     prediction = ["Rank"]
     X_train, y_train = generate_sequences(input_df=train_df, features=features, prediction=prediction,
                                           window_size=sequence_length)
@@ -190,8 +202,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Run selected experiments using Sacred.")
     parser.add_argument("--index-file", type=str, default="./metadata/mgmt-experiment-index.json",
                         help="Path to the JSON file containing indexed experiments")
-    parser.add_argument("--input-file", type=str, default="./results/pm-training-final.csv",
-                        help="Training and eval data for the manager")
+    parser.add_argument("--training-file", type=str, default="./results/training-pm-data.csv",
+                        help="Training data for the manager")
+    parser.add_argument("--eval-file", type=str, default="./results/eval-pm-data.csv",
+                        help="Eval data for the manager")
     parser.add_argument("--column-file", type=str, default="./metadata/column-descriptors.json",
                         help="Path to the JSON file containing indexed experiments")
     parser.add_argument("--include", type=str, default="",
@@ -208,5 +222,6 @@ if __name__ == '__main__':
                         help="when to stop training after patience epochs of no improvements")
     parser.add_argument("--metadata-path", type=str, default='./metadata', help="experiment descriptors live here")
     parser.add_argument("--mode", default="both", choices=["train", "eval", "both"], help="train eval or both")
+    parser.add_argument("--save-scaled", default=None, type=str, help="For debugging save out the scaled dataset")
     gbl_args = parser.parse_args()
     main(gbl_args)

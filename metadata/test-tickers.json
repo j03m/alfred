@@ -1,0 +1,1 @@
+{"training": ["CPT", "ICE", "AAPL"], "evaluation": ["PARA", "GE", "TSLA"], "data": ["^VIX", "SPY", "CL=F", "BZ=F", "BTC=F"]}

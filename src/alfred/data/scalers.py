@@ -18,7 +18,8 @@ PM_SCALER_CONFIG = [
     {'regex': r'^Volume$', 'type': 'yeo-johnson'},
     {'columns': ['reportedEPS', 'estimatedEPS', 'surprise', 'surprisePercentage', 'insider_acquisition',
                  'insider_disposal', 'mean_outlook', 'mean_sentiment', 'ID', 'Rank' ], 'type': 'standard'},
-    {'regex': r'\d+year', 'type': 'standard'}
+    {'regex': r'\d+year', 'type': 'standard'},
+    {'columns': ['ID'], 'type': 'none'}
 ]
 
 ANALYST_SCALER_CONFIG = [
@@ -33,6 +34,16 @@ ANALYST_SCALER_CONFIG = [
     {'regex': r'\d+year', 'type': 'standard'}
 ]
 
+
+class NoOpScaler(BaseEstimator, TransformerMixin):
+    def fit(self, X, y=None):
+        return self  # No fitting needed
+
+    def transform(self, X):
+        return np.asarray(X)  # Ensures it's still an array
+
+    def inverse_transform(self, X):
+        return np.asarray(X)  # Returns original data unchanged
 
 class LogReturnScaler(BaseEstimator, TransformerMixin):
     '''
@@ -127,7 +138,9 @@ class CustomScaler:
                 columns.extend(matched_columns)
 
             for column in columns:
-                if scaler_type == "standard":
+                if scaler_type == "none":
+                    self.scaler_mapping[column] = NoOpScaler()
+                elif scaler_type == "standard":
                     self.scaler_mapping[column] = StandardScaler()
                 elif scaler_type == "minmax":
                     self.scaler_mapping[column] = MinMaxScaler()

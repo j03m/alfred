@@ -93,6 +93,8 @@ def processor(file_path, content):
         table = roots.get("informationTable", None)
         if table is None:
             print(f"{file_path} does not contain informationTable")
+            os.rename(file_path, done_file)
+            print(f"Renamed to: {done_file}")
             return
 
         for info_table in table.findall(".//infoTable"):

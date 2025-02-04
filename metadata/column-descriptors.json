@@ -10,7 +10,9 @@
         { "name": "insider_acquisition" },
         { "name": "insider_disposal" },
         { "name": "mean_sentiment" },
-        { "name": "mean_outlook" }
+        { "name": "mean_outlook" },
+        { "name": "Dividend" },
+        { "name": "Institutional" }
     ],
     "technicals": [
         { "name": "Close_diff_MA_7" },
