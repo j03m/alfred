@@ -1,6 +1,8 @@
+import numpy as np
 import pandas as pd
 import torch
 from alfred.devices import set_device
+from sklearn.metrics import mean_squared_error
 
 # todo change this to a device manager singleton that things call into instead of gbls in each file :/
 
@@ -62,6 +64,23 @@ def analyze_ledger(ledger_df):
 
     return metrics
 
+def clamp_round(input, top=3, bottom=1):
+    clamped_input = [max(bottom, min(top, x)) for x in input]
+    return [round(x) for x in clamped_input]
+
+def nrmse_by_range(y_true, y_pred):
+    mse = mean_squared_error(y_true, y_pred)
+    rmse = np.sqrt(mse)
+    range_y = np.max(y_true) - np.min(y_true)
+    return rmse / range_y, mse
+
+def sort_score(input, entries=3):
+    return_me = []
+    for i in range(0, len(input), entries):
+        chunk = input[i:i + entries]
+        sorted_ranks = np.argsort(chunk) + 1
+        return_me.extend(sorted_ranks.tolist())
+    return return_me
 
 def evaluate_model(model, loader, prediction_squeeze=-1):
     model.eval()
@@ -75,7 +94,15 @@ def evaluate_model(model, loader, prediction_squeeze=-1):
                 output = model(seq).squeeze(prediction_squeeze)
             else:
                 output = model(seq).squeeze()
-            predictions.extend(output.cpu().tolist())
-            actuals.extend(labels.squeeze().cpu().tolist())
+
+            output_list = sort_score(output.cpu().tolist())
+            labels = clamp_round(labels.squeeze().cpu().tolist())
+            # print("************")
+            # print(output_list)
+            # print("============")
+            # print(labels)
+            # print("************")
+            predictions.extend(output_list)
+            actuals.extend(labels)
 
     return predictions, actuals

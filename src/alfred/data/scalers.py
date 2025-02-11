@@ -17,9 +17,9 @@ PM_SCALER_CONFIG = [
     {'regex': r'^Margin.*', 'type': 'standard'},
     {'regex': r'^Volume$', 'type': 'yeo-johnson'},
     {'columns': ['reportedEPS', 'estimatedEPS', 'surprise', 'surprisePercentage', 'insider_acquisition',
-                 'insider_disposal', 'mean_outlook', 'mean_sentiment', 'ID', 'Rank' ], 'type': 'standard'},
+                 'insider_disposal', 'mean_outlook', 'mean_sentiment'], 'type': 'standard'},
     {'regex': r'\d+year', 'type': 'standard'},
-    {'columns': ['ID'], 'type': 'none'}
+    {'columns': ['ID', 'Rank'], 'type': 'none'}
 ]
 
 ANALYST_SCALER_CONFIG = [
@@ -158,17 +158,20 @@ class CustomScaler:
     def fit(self, df):
 
         for column, scaler in self.scaler_mapping.items():
-            scaler.fit(df[[column]].values)
+            # only scale columns that are preset:
+            if column in df.columns:
+                scaler.fit(df[[column]].values)
 
     def transform(self, df, in_place=False):
         if not in_place:
             df = df.copy()
 
         for column, scaler in self.scaler_mapping.items():
-            assert not df[column].isnull().any(), f"{column} has null before transform"
-            temp_col = scaler.transform(df[[column]].values)
-            df[column] = temp_col
-            assert not df[column].isnull().any(), f"{column} has null after transform"
+            if column in df.columns:
+                assert not df[column].isnull().any(), f"{column} has null before transform"
+                temp_col = scaler.transform(df[[column]].values)
+                df[column] = temp_col
+                assert not df[column].isnull().any(), f"{column} has null after transform"
         return df
 
     def fit_transform(self, df):

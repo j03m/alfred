@@ -15,12 +15,10 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from alfred.data import CustomScaler, PM_SCALER_CONFIG
 from alfred.metadata import ExperimentSelector, ColumnSelector
-from alfred.model_persistence import model_from_config, prune_old_versions
+from alfred.model_persistence import model_from_config, prune_old_versions, crc32_columns
 from alfred.model_training import train_model
-from alfred.model_evaluation import evaluate_model
+from alfred.model_evaluation import evaluate_model, nrmse_by_range
 from alfred.utils import MongoConnectionStrings
-from sklearn.metrics import mean_squared_error
-
 
 connect_data = MongoConnectionStrings()
 # sacred will init its own client
@@ -39,6 +37,7 @@ ex.observers.append(MongoObserver(
 ))
 
 gbl_args = None
+
 
 def generate_sequences(input_df, features, prediction, window_size, date_column="Date"):
     unique_dates = input_df.index.unique()
@@ -83,100 +82,172 @@ def build_experiment_descriptor_key(config):
     model_token = config["model_token"]
     size = config["size"]
     sequence_length = config["sequence_length"]
-    return f"{model_token}:{size}:{sequence_length}"
+    data = crc32_columns(config["columns"])
+    return f"{model_token}:{size}:{sequence_length}:{data}"
 
 
 @ex.config
 def config():
     model_token = None,
     size = None,
-    sequence_length = None
+    sequence_length = None,
+    columns = None
 
 
-# todo modify this script to handle different columns for ablation study
-# Study the scaled columns, think through what might be better
+import pandas as pd
 
-@ex.main
-def run_experiment(model_token, size, sequence_length):
-    # Read the training file
 
-    train_df = pd.read_csv(gbl_args.training_file)
-    eval_df = pd.read_csv(gbl_args.eval_file)
-
+def process_dataframe(mode, file_path, all_columns, save_scaled=None):
     date_column = "Date"
-    train_df[date_column] = pd.to_datetime(train_df[date_column])
-    train_df = train_df.set_index(date_column)
+    df = pd.read_csv(file_path)
+    df = df[all_columns]
+    df[date_column] = pd.to_datetime(df[date_column])
+    df = df.set_index(date_column)
+    scaler = CustomScaler(config=PM_SCALER_CONFIG, df=df)
+    df = scaler.fit_transform(df)
 
-    eval_df[date_column] = pd.to_datetime(eval_df[date_column])
-    eval_df = eval_df.set_index(date_column)
+    if save_scaled:
+        df.to_csv(f"{save_scaled}_{mode}.csv")
 
-    scaler = CustomScaler(config=PM_SCALER_CONFIG, df=train_df)
-    train_df = scaler.fit_transform(train_df)
-
-    # todo is this cool?
-    eval_df = scaler.fit_transform(eval_df)
-    if gbl_args.saved_scaled is not None:
-        train_df.to_csv(f"{gbl_args.saved_scaled}_training.csv")
-        eval_df.to_csv(f"{gbl_args.saved_scaled}_eval.csv")
-        raise Exception("Force ending.")
+    return df
 
 
-    ids = len(train_df["ID"].unique())  # number of companies
-    output = ids * sequence_length  # output should be a prediction of rank for each sequence entry
-    model_sequence_length = ids * sequence_length
+def prepare_and_train_model(model, optimizer, scheduler, train_df, sequence_length, real_model_token):
+    # Define features and prediction for training
+    features_train = train_df.columns.drop('Rank')
+    prediction_train = ["Rank"]
 
-    # sequence length * total companies is the real sequence length
-    model, optimizer, scheduler, real_model_token = model_from_config(
-        num_features=len(train_df.columns) - 1,  # -1 is dropping Rank which is our predicted column
-        config_token=model_token,
-        sequence_length=model_sequence_length, size=size, output=output,
-        descriptors=[
-            "port_mgmt", model_token, sequence_length, size, output
-        ])
-
-    features = train_df.columns.drop('Rank')
-    prediction = ["Rank"]
-    X_train, y_train = generate_sequences(input_df=train_df, features=features, prediction=prediction,
+    # Generate sequences
+    X_train, y_train = generate_sequences(input_df=train_df,
+                                          features=features_train,
+                                          prediction=prediction_train,
                                           window_size=sequence_length)
-    X_eval, y_eval = generate_sequences(input_df=eval_df, features=features, prediction=prediction,
-                                        window_size=sequence_length)
 
+    # Create tensors
     X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
     y_train_tensor = torch.tensor(y_train, dtype=torch.float32)
+
+    # Create dataset and dataloader
+    train_dataset = TensorDataset(X_train_tensor, y_train_tensor.squeeze(-1))
+    train_loader = DataLoader(train_dataset, batch_size=gbl_args.batch_size, shuffle=False)
+
+    # Perform training
+    return train_model(model=model,
+                       optimizer=optimizer,
+                       scheduler=scheduler,
+                       train_loader=train_loader,
+                       patience=gbl_args.patience,
+                       epochs=gbl_args.epochs,
+                       model_token=real_model_token,
+                       training_label="manager")
+
+
+def eval_model(model, eval_df, gbl_args, sequence_length, real_model_token):
+    # Define features and prediction for evaluation
+    features_eval = eval_df.columns.drop('Rank')
+    prediction_eval = ["Rank"]
+
+    # Generate sequences
+    X_eval, y_eval = generate_sequences(input_df=eval_df,
+                                        features=features_eval,
+                                        prediction=prediction_eval,
+                                        window_size=sequence_length)
+
+    # Create tensors
     X_eval_tensor = torch.tensor(X_eval, dtype=torch.float32)
     y_eval_tensor = torch.tensor(y_eval, dtype=torch.float32)
 
-    # Create datasets and dataloaders
-    train_dataset = TensorDataset(X_train_tensor, y_train_tensor.squeeze(-1))
+    # Create dataset and dataloader
     eval_dataset = TensorDataset(X_eval_tensor, y_eval_tensor.squeeze(-1))
-    train_loader = DataLoader(train_dataset, batch_size=gbl_args.batch_size, shuffle=False)
     eval_loader = DataLoader(eval_dataset, batch_size=gbl_args.batch_size, shuffle=False)
 
-    # params busted here
-    last_train_mse = train_model(model=model,
-                                 optimizer=optimizer,
-                                 scheduler=scheduler,
-                                 train_loader=train_loader,
-                                 patience=gbl_args.patience,
-                                 epochs=gbl_args.epochs,
-                                 model_token=real_model_token,
-                                 training_label="manager")
-
-    prune_old_versions()
-
-    # add something here that looks at profit loss total spy vs top 5 rank predict
-    print("Evaluating pm: ")
+    print(f"Evaluating pm: {real_model_token}")
     predictions, actuals = evaluate_model(model, eval_loader, prediction_squeeze=None)
-    mse = mean_squared_error(actuals, predictions)
+    nrmse, mse = nrmse_by_range(actuals, predictions)
     print("pm mse: ", mse)
+    print("pm nrmse: ", nrmse)
+
     ex.log_scalar('mse', mse)
     ex.info["model_token"] = real_model_token
-    results = {
-        'eval_mse': mse,
-        'train_mse': last_train_mse,
-    }
-    return results
 
+    return nrmse, mse
+
+
+@ex.main
+def run_experiment(model_token, size, sequence_length, columns):
+    # Read the training file
+
+    column_selector = ColumnSelector(gbl_args.column_file)
+    columns = sorted(column_selector.get(columns))
+    all_columns = columns + ["Date", "Rank", "ID"]
+
+    column_count = None
+    ids = None
+    if gbl_args.mode == "train" or gbl_args.mode == "both":
+        train_df = process_dataframe("training", gbl_args.training_file, all_columns, gbl_args.save_scaled)
+        column_count = len(train_df.columns) - 1
+        ids = len(train_df["ID"].unique())  # number of companies
+
+    if gbl_args.mode == "eval" or gbl_args.mode == "both":
+        eval_df = process_dataframe("eval", gbl_args.eval_file, all_columns, gbl_args.save_scaled)
+        column_count = len(eval_df.columns) - 1
+        ids = len(eval_df["ID"].unique())  # number of companies
+
+    assert column_count is not None, "Invalid mode. If args is working, this should never happen"
+    assert ids is not None, "Invalid mode. If args is working, this should never happen"
+
+    output = ids * sequence_length  # output should be a prediction of rank for each sequence entry
+    model_sequence_length = ids * sequence_length
+
+    model, optimizer, scheduler, real_model_token = model_from_config(
+        num_features=column_count,
+        config_token=model_token,
+        sequence_length=model_sequence_length, size=size, output=output,
+        descriptors=[
+            "port_mgmt", model_token, sequence_length, size, output, crc32_columns(columns)
+        ])
+
+    # Usage with mode guard
+    last_train_mse = None
+    eval_mse = None
+    eval_nrmse = None
+    train_nrmse = None
+    if gbl_args.mode == "train" or gbl_args.mode == "both":
+        last_nrmse, last_train_mse = prepare_and_train_model(model=model,
+                                                             optimizer=optimizer,
+                                                             scheduler=scheduler,
+                                                             train_df=train_df,
+                                                             sequence_length=sequence_length,
+                                                             real_model_token=real_model_token)
+        prune_old_versions()
+        if gbl_args.mode == "train":
+            return {
+                'eval_mse': -1,
+                'train_nrmse' : last_nrmse,
+                'train_mse': last_train_mse,
+            }
+
+    if gbl_args.mode == "eval" or gbl_args.mode == "both":
+        eval_nrmse, eval_mse = eval_model(model=model,
+                                          eval_df=eval_df,
+                                          gbl_args=gbl_args,
+                                          sequence_length=sequence_length,
+                                          real_model_token=real_model_token)
+        prune_old_versions()
+        if gbl_args.mode == "eval":
+            return {
+                'eval_mse': eval_mse,
+                'eval_nrmse': eval_nrmse,
+                'train_mse': -1,
+            }
+
+    assert gbl_args.mode == "both", "something is broken, should not be here!"
+    return {
+        'eval_mse': eval_mse,
+        'eval_nrmse': eval_nrmse,
+        'train_mse': last_train_mse,
+        'train_nrmse': train_nrmse
+    }
 
 def main(args):
     selector = ExperimentSelector(args.index_file, mongo=MONGO, db=DB)
@@ -189,7 +260,15 @@ def main(args):
     for experiment in experiments:
         if experiment:
             key = build_experiment_descriptor_key(experiment)
-            if key not in past_experiments:
+
+            # if we're training, we shouldn't re-train for this experiment set
+            should_run = False
+            if args.mode == "eval":
+                should_run = True
+            else:
+                should_run = key not in past_experiments
+
+            if should_run:
                 print("Running key:", key)
                 ex.run(config_updates=experiment)
                 # update the list in case another machine is running (poor man's update)

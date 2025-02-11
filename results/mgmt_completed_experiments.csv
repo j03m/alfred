@@ -1,10 +1,3 @@
-_id,start_time,stop_time,config_model_token,config_seed,config_sequence_length,config_size,config_token,eval_mse,train_mse,model_token
-1,2025-01-30 11:33:25.774,2025-01-30 11:53:39.506,lstm,125878626,12,64,mgmt_experiment_set,1.3575942857541945,,port_mgmt_lstm_12_64_36_mps
-2,2025-01-30 21:45:10.124,2025-01-30 22:32:03.802,lstm,783905229,12,128,mgmt_experiment_set,1.3395834477622972,,port_mgmt_lstm_12_128_36_mps
-3,2025-01-30 22:32:03.857,2025-01-30 22:46:11.576,lstm-conv1d,862855679,12,128,mgmt_experiment_set,1.3162384644017093,,port_mgmt_lstm-conv1d_12_128_36_mps
-4,2025-01-30 22:46:11.664,2025-01-30 23:01:53.857,trans-am,14920658,12,128,mgmt_experiment_set,1.6346890968708006,0.021898898129445423,port_mgmt_trans-am_12_128_36_mps
-5,2025-01-31 15:08:03.453,2025-01-31 15:24:41.035,lstm,511667772,12,512,mgmt_experiment_set,1.1567200206866508,0.01460821406676545,port_mgmt_lstm_12_512_36_mps
-6,2025-01-31 15:24:41.104,2025-01-31 16:38:52.777,lstm-conv1d,610342741,12,512,mgmt_experiment_set,1.0372440104487841,0.01835445181782776,port_mgmt_lstm-conv1d_12_512_36_mps
-7,2025-01-31 16:38:52.835,2025-01-31 16:54:46.936,trans-am,427350301,12,512,mgmt_experiment_set,1.404567658312162,0.02649861015806641,port_mgmt_trans-am_12_512_36_mps
-8,2025-01-31 16:58:34.009,2025-01-31 19:34:40.312,lstm,292426005,12,2048,mgmt_experiment_set,1.3024564571379371,0.018320437157612054,port_mgmt_lstm_12_2048_36_mps
-9,2025-01-31 19:34:40.435,2025-02-03 14:44:30.761,lstm-conv1d,747892826,12,2048,mgmt_experiment_set,1.054780057279631,0.009581497915242926,port_mgmt_lstm-conv1d_12_2048_36_mps
+_id,start_time,stop_time,config_columns,config_model_token,config_seed,config_sequence_length,config_size,config_token,eval_mse,train_mse,model_token
+2,2025-02-09 20:25:09.699,2025-02-09 21:01:26.168,['price-only'],lstm-conv1d,918708309,12,128,mgmt_experiment_set,1.1453634085213034,,port_mgmt_lstm-conv1d_12_128_36_0xd2c0aec0_mps
+3,2025-02-09 21:01:26.246,2025-02-10 02:25:59.258,"['core', 'fundamentals', 'technicals', 'macro']",lstm-conv1d,367866271,12,1024,mgmt_experiment_set,1.1474519632414368,0.011226384189764136,port_mgmt_lstm-conv1d_12_1024_36_0x3c79ee85_mps

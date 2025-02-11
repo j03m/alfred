@@ -128,8 +128,9 @@ def main():
         # lose some history from the back due to missing moving avg
         df.dropna(inplace=True)
 
-        # attach labels
-        attach_price_prediction_labels(args, columns, df)
+        # attach labels - this is commented out because I suspected its backwards and didn't have time to fix
+        # not really needed at this time
+        # attach_price_prediction_labels(args, columns, df)
 
         # fill where we can't predict with 0
         df.fillna(0, inplace=True)

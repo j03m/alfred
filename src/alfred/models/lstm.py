@@ -48,6 +48,7 @@ class LSTMConv1d(nn.Module):
         super().__init__()
         self.hidden_dim = hidden_dim
         self.conv1 = nn.Conv1d(in_channels=features, out_channels=hidden_dim, kernel_size=kernel_size, padding=padding)
+        self.bn1 = nn.BatchNorm1d(hidden_dim)
         self.relu = nn.ReLU()
 
         lstm_size = int((seq_len + (2 * padding) - kernel_size) / 1) + 1
@@ -63,6 +64,7 @@ class LSTMConv1d(nn.Module):
         # conv1d
         input_seq = input.permute(0, 2, 1)  # Transpose to [batch, features, seq_length]
         x = self.conv1(input_seq)
+        x = self.bn1(x)
         x = self.relu(x)
 
         lstm_out, (h_n, c_n) = self.lstm(x)

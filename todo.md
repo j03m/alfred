@@ -12,7 +12,16 @@ Other Experiments:
   * Drop columns? 
   * Using the small model to determine impact if any?
   * lstm only?
-  
+  * 
+
+* Analyst Ablation Study
+  * Monthly Bars
+    * Train on 1-2 highly correlated stocks
+    * Test on 1 highly correlated and 1 negatively correlated stock
+
+* Buy and Hold vs Most Optimal Selection Quarterly rebalance
+* What happens if you could detect most optimal with 1-2 weeks of lag?
+
 * We never validated that the N day diff from moving avg was helpful - how do we validate that?
 * Back to reinforcement learning - what can we do here?
   

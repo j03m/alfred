@@ -22,11 +22,7 @@
         { "name": "Close_diff_MA_90" },
         { "name": "Volume_diff_MA_90" },
         { "name": "Close_diff_MA_180" },
-        { "name": "Volume_diff_MA_180" },
-        { "name": "price_change_term_7" },
-        { "name": "price_change_term_30" },
-        { "name": "price_change_term_120" },
-        { "name": "price_change_term_240" }
+        { "name": "Volume_diff_MA_180" }
     ],
     "price-only": [
         { "name": "Close" }
@@ -55,10 +51,6 @@
       "Volume_diff_MA_90": "last",
       "Close_diff_MA_180": "last",
       "Volume_diff_MA_180": "last",
-      "price_change_term_7": "last",
-      "price_change_term_30": "last",
-      "price_change_term_120": "last",
-      "price_change_term_240": "last",
       "Close": "last",
       "Volume": "sum",
       "reportedEPS": "last",

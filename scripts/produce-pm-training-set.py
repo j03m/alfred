@@ -75,7 +75,7 @@ def calculate_30_day_returns(ticker, data_dir, date_column="Unnamed: 0"):
     df = make_datetime_index(df, date_column)
     agg_df = df.resample('ME').agg(agg_config)
     agg_df.index = agg_df.index.to_period('M').to_timestamp()
-    agg_df['30d_return'] = agg_df['Close'].pct_change(1)  # Calculate 30-day return
+    agg_df['120d_return'] = agg_df['Close'].pct_change(4)  # Calculate 120-day return
     return agg_df
 
 
@@ -86,7 +86,7 @@ def main(args):
         tickers = tickers_categories.get(["training"])
     else:
         tickers = tickers_categories.get(["evaluation"])
-    max_rank = len(tickers)
+
     ticker_to_id = {ticker: idx for idx, ticker in enumerate(tickers)}
 
     # Define the date range for two years
@@ -100,15 +100,21 @@ def main(args):
     # Calculate returns for each ticker
     returns = []
     filtered = []
+    debug = []
     date_column = "Unnamed: 0"
     for ticker in tickers:
         df = calculate_30_day_returns(ticker, args.data_dir, date_column=date_column)
+        temp_df = df.copy()
+        temp_df["Ticker"] = ticker
+        temp_df = temp_df[["Ticker", "120d_return"]]
+        debug.append(temp_df)
         try:
             divs = pd.read_csv(os.path.join(args.data_dir, f"{ticker}_dividends.csv"))
         except FileNotFoundError as fne:
             print(f"no dividend file for: {ticker}, {fne}")
             filtered.append(ticker)
             continue
+
         # Todo - all the dividend files are empty need to fix
         divs = make_datetime_index(divs, date_column="Date")
         divs.index = pd.to_datetime(divs.index).tz_localize(None)
@@ -128,7 +134,12 @@ def main(args):
         if len(df_time_range) != expected_months:
             filtered.append(ticker)
             pass
-        df_final = calculate_analyst_projections(df_time_range, ticker, 256, start_date, end_date)
+
+        if args.include_analysts:
+            df_final = calculate_analyst_projections(df_time_range, ticker, 256, start_date, end_date)
+        else:
+            df_final = df_time_range
+
         df_final["id"] = ticker_to_id[ticker]
         # todo here: div_time_range.index.duplicated().any() produces duplicates True
         df_with_dividend = pd.merge(df_final, div_time_range, how='left', left_index=True, right_index=True)
@@ -139,7 +150,10 @@ def main(args):
     tickers_categories.save()
 
     # Combine all tickers' returns into a single DataFrame
+
     combined_df = pd.concat(returns)
+    debug_final = pd.concat(debug)
+    debug_final.to_csv("./results/debug.csv")
     sorted_df = combined_df.sort_index(ascending=True)
 
     # load and cleanup inst owners
@@ -163,8 +177,9 @@ def main(args):
     pm_final["Institutional"].fillna(0, inplace=True)
 
     # see educational/ranked.py to recall our example for this
-    pm_final["Rank"] = pm_final.groupby(pm_final.index)["30d_return"].rank(ascending=False).astype(int)
+    pm_final["Rank"] = pm_final.groupby(pm_final.index)["120d_return"].rank(ascending=False).astype(int)
     pm_final = pm_final.sort_index()
+    pm_final.drop(['120d_return'], axis=1)
     pm_final.to_csv(os.path.join(args.training_output_dir, f"{args.data_set}-pm-data.csv"))
 
 
@@ -182,6 +197,7 @@ if __name__ == "__main__":
                         help="Path to save training dataset CSV.")
     parser.add_argument("--institutional-ownership", type=str, default="data/institutional_ownership.csv",
                         help="Data indicating institutional ownership.")
+    parser.add_argument("--include-analysts", action="store_true", default=False)
     parser.add_argument(
         "--training-end-date",
         type=valid_date,  # Use the custom validation function

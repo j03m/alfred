@@ -70,7 +70,7 @@ def model_from_config(config_token, num_features, sequence_length, size, output,
 
     model_token = build_model_token(descriptors)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.5)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=4, factor=0.5)
 
     # Load the latest model from MongoDB
     model_checkpoint = get_latest_model(model_token)
