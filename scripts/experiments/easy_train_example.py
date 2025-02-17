@@ -1,7 +1,6 @@
 from alfred.easy import trainer
 import pandas as pd
 import argparse
-import torch.nn as nn
 
 def trim_timerange(df):
     start_date = pd.Timestamp('2004-03-31T00:00:00.000000000', tz='UTC')
@@ -17,7 +16,7 @@ def main():
 
     # Here, you would typically use args.model for something, like passing it to trainer if needed.
     # For demonstration, we'll just print it:
-
+    print("Starting easy trainer")
     trainer(augment_func=trim_timerange, verbose=True, model_size=args.size, model_name=args.model)
 
 

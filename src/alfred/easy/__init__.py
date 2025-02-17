@@ -1,1 +1,1 @@
-from .train_pandas import *
+from .pandas import *

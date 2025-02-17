@@ -10,7 +10,7 @@ import random
 from alfred.metadata import ExperimentSelector, TickerCategories, ColumnSelector
 from alfred.data import CachedStockDataSet, ANALYST_SCALER_CONFIG
 from alfred.model_persistence import model_from_config, prune_old_versions, crc32_columns, check_model_status, track_model_status
-from alfred.model_evaluation import simple_profit_measure, analyze_ledger, evaluate_model
+from alfred.model_optimization import simple_profit_measure, analyze_ledger, evaluate_model
 from alfred.model_training import train_model
 from alfred.utils import plot_evaluation, MongoConnectionStrings, NotEnoughDataError
 from sklearn.metrics import mean_squared_error

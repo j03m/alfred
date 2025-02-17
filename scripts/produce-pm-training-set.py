@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 
 from alfred.data import CachedStockDataSet, ANALYST_SCALER_CONFIG
 from alfred.metadata import TickerCategories, ColumnSelector, ExperimentSelector
-from alfred.model_evaluation import evaluate_model
+from alfred.model_optimization import evaluate_model
 from alfred.model_persistence import eval_model_selector
 from alfred.utils import make_datetime_index
 

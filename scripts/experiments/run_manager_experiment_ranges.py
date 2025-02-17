@@ -17,7 +17,7 @@ from alfred.data import CustomScaler, PM_SCALER_CONFIG
 from alfred.metadata import ExperimentSelector, ColumnSelector
 from alfred.model_persistence import model_from_config, prune_old_versions, crc32_columns
 from alfred.model_training import from alfred.model_training import train_model
-from alfred.model_evaluation import evaluate_model, nrmse_by_range
+from alfred.model_optimization import evaluate_model, nrmse_by_range
 from alfred.utils import MongoConnectionStrings
 
 connect_data = MongoConnectionStrings()

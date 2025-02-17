@@ -3,7 +3,7 @@ import pandas as pd
 import argparse
 from alfred.metadata import TickerCategories
 from alfred.model_training import train_model
-from alfred.model_evaluation import evaluate_model
+from alfred.model_optimization import evaluate_model
 from alfred.data import CustomScaler, PM_SCALER_CONFIG
 
 def train (args, tickerCategories:TickerCategories):

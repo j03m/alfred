@@ -1,12 +1,33 @@
-import numpy as np
 import pandas as pd
-import torch
-from alfred.devices import set_device
-from sklearn.metrics import mean_squared_error
 
-# todo change this to a device manager singleton that things call into instead of gbls in each file :/
+import torch
+import torch.nn as nn
+
+from alfred.devices import set_device
+from alfred.model_metrics import BCEAccumulator
 
 device = set_device()
+
+def evaluate_model(model, loader, stat_accumulator=BCEAccumulator(),  loss_function=nn.BCELoss()):
+    model.eval()
+    count = 0
+    total_loss = 0.0
+    for seq, labels in loader:
+        seq = seq.to(device)
+        labels = labels.to(device)
+        with torch.no_grad():
+            output = model(seq).squeeze()
+            batch_loss = loss_function(output, labels)
+            loss_value = batch_loss.item()
+            total_loss += loss_value
+            count += 1
+            if torch.isnan(batch_loss):
+                raise Exception("Found NaN!")
+            stat_accumulator.update(output.squeeze(), labels)
+
+    stat_accumulator.compute(count)
+    return total_loss/count, stat_accumulator.get()
+
 
 def simple_profit_measure(predictions, actuals):
     ledger = []
@@ -63,48 +84,3 @@ def analyze_ledger(ledger_df):
     }
 
     return metrics
-
-def clamp_round(input, top=3, bottom=1):
-    clamped_input = [max(bottom, min(top, x)) for x in input]
-    return [round(x) for x in clamped_input]
-
-def nrmse_by_range(y_true, y_pred):
-    mse = mean_squared_error(y_true, y_pred)
-    rmse = np.sqrt(mse)
-    range_y = np.max(y_true) - np.min(y_true)
-    return rmse / range_y, mse
-
-def sort_score(input, entries=3):
-    return_me = []
-    for i in range(0, len(input), entries):
-        chunk = input[i:i + entries]
-        sorted_ranks = np.argsort(chunk) + 1
-        return_me.extend(sorted_ranks.tolist())
-    return return_me
-
-# todo refactor me to accept a stat accumulator
-# consolidate into training util or pull out the accumulators to be shared
-def evaluate_model(model, loader, prediction_squeeze=-1):
-    model.eval()
-    predictions = []
-    actuals = []
-    for seq, labels in loader:
-        seq = seq.to(device)
-        labels = labels.to(device)
-        with torch.no_grad():
-            if prediction_squeeze is not None:
-                output = model(seq).squeeze(prediction_squeeze)
-            else:
-                output = model(seq).squeeze()
-
-            output_list = sort_score(output.cpu().tolist())
-            labels = clamp_round(labels.squeeze().cpu().tolist())
-            # print("************")
-            # print(output_list)
-            # print("============")
-            # print(labels)
-            # print("************")
-            predictions.extend(output_list)
-            actuals.extend(labels)
-
-    return predictions, actuals

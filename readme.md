@@ -158,36 +158,63 @@ Given `(size^2 * layers-1) + size * layers` we move from `(256**2 * 9) + 256 *10
 
 However, even at this size the model plateaued at roughly at the same rate :(. 
 
-After inspecting the output here, I realized that my predictions were in the range of 0 to 1 always because
-I was using Sigmoid as my activation function (that makes perfect sense) and lacked some sort of rounding
-to actually predict a class. Swapping the activation function to Softmax, I tried both models again.
-
-In this case we end up with lower mses, but both models still plateau very quickly. What I then realized
-is softmax as early as the first set of prediction was producing ALL 1s. This looks like because the 
-final layers produce very high numbers.
-
-I then also noticed, the `CustomScaler` I wrote had a major oversite in it. When I looked at the first level of activations
+I then also noticed, the `CustomScaler` I wrote had a major oversight in it. When I looked at the first level of activations
 in our model, I noticed the values were exploding in one iteration. With some help from an AI, I spotted a massive value
 in column 51 of my input data. Turns out, the scaler configuration supplied to the scaler was missing columns and there was
 nothing in alfred's `CustomScaler` to catch it. I added that code, fixed the input and the subsequent values looked
 much more reasonable.
 
-Hard lesson: LOOK CLOSELY AT YOUR INPUT
+> Hard lesson: LOOK CLOSELY AT YOUR INPUT before you look at other stuff in the case of exploding gradients! 
+
+### Training and Performance on a Single Equity
+
+The very simple training script using `alfred's` easy wrapper is [here](scripts/experiments/easy_test.py)). This only trains against 
+one ticker (APPL) the results of which are below. We'll expand on this, including other tickers for training and evaluating against
+tickers we never trained on later.
+
+After running a quick test at 10 layers and size 256 I achieved decent performance on the training set, but increasing the size of the model
+to 100 layers at 1024 I achieved event better:
+
+| Metric    | Previous Run (Epoch 2300) | Current Run (Epoch 1190) |
+|-----------|---------------------------|--------------------------|
+| Mean Loss | 0.2085                    | 0.0577                   |
+| Accuracy  | 0.7024                    | 0.9582                   |
+| Precision | 0.7024                    | 0.9449                   |
+| Recall    | 0.9999                    | 0.9987                   |
+| F1-Score  | 0.8252                    | 0.9711                   |
+
+
+First I should while I was happy with this outcome, the real test is on data the model hasn't seen so there is no real reason to get excited here. But after a day of abysmal scoring
+due to scaling issues I'm happy to have landed here. 
+
+Because we're trying to predict if next quarter will be a good trade, we need to think a bit about the game theory of outcomes. While 
+we likely cannot trade off binary classes, the thought exercise about which of these metrics is most valuable to trading environment is a useful one. For simplicty, 
+I'll assume we will only issue buy orders or hold on True. On False we will either avoid buying or sell our position.
+
+*Accuracy* - gives us our overall performance at 95.8%. This is our total number of correct predictions. Ie, we want to be mostly correct in either direction
+with our positions so we make and don't lose money. 
+
+*Precision* - This is a measure of our true positives. Ie, if we make a trade thinking the market will go up how often are we right? Ie, we would be wrong around 5.5% of the time. 
+That may not seem like a lot but depending on how wrong we are that could hurt.
+
+*Recall* - Recall lets us know, of the universe of good trades, how many are we catching? So this being almost 100% (99.87) mixed with our precision score indicates that maybe we lean
+toward predicting positive trades more often than not. Ie, we're getting all the good trades, but 5% of the time we're off.
+
+*F1* - Gives us the balance of precision and recall. 
+
+
+### Evaluating on a single equity
+
+Earlier we spent some time picking uncorrelated stocks with `LNC` being the least correlated to `AAPL` so we'll run an evaluation against that.
 
 
 
 
+## LSTMs
 
+## Convolutions
 
-
-
-
-
-
-### History
-
-
-### Transformer
+## Transformer
 
 
 
