@@ -38,92 +38,6 @@ ANALYST_SCALER_CONFIG = [
     {'regex': r'\d+year', 'type': 'standard'}
 ]
 
-
-class NoOpScaler(BaseEstimator, TransformerMixin):
-    def fit(self, X, y=None):
-        return self  # No fitting needed
-
-    def transform(self, X):
-        return np.asarray(X)  # Ensures it's still an array
-
-    def inverse_transform(self, X):
-        return np.asarray(X)  # Returns original data unchanged
-
-
-class LogReturnScaler(BaseEstimator, TransformerMixin):
-    '''
-    LogReturnScaler - A scaler for converting prices to log returns and vice versa.
-
-    Why Use Log Returns?
-    - Stability, stationarity, and normalization, as described in financial modeling.
-    '''
-
-    def __init__(self, cumsum: bool = True, amplifier: int = 2):
-        self.do_cumsum = cumsum
-        self.amplifier = amplifier
-        self.initial_price = None
-
-    def fit(self, X, y=None):
-        return self  # This scaler doesn't require fitting
-
-    def transform(self, input_data):
-        if isinstance(input_data, np.ndarray):
-            input = pd.Series(input_data)
-        else:
-            input = input_data
-
-        # Ensure input contains no negative or zero values
-        assert not (input <= 0).any(), "This transform only supports data that is > 0, no negative or zero values"
-
-        # Forward fill any NaNs for continuity
-        cleaned = input.ffill()
-        X = np.asarray(cleaned)
-        self.initial_price = X[0]  # Store the initial price
-
-        # Calculate log returns
-        log_returns = np.diff(np.log(X), axis=0)  # Log returns
-        if self.do_cumsum:
-            log_returns = log_returns.cumsum()  # Apply cumulative sum if required
-        if self.amplifier != 0:
-            log_returns = self.amplifier * log_returns  # Apply amplification
-        # todo: This keeps the length the same but is a problem for inverse. I didn't get the working though
-        log_returns = np.append(log_returns, log_returns[-1])
-        return np.expand_dims(log_returns, axis=1)  # Return transformed data
-
-    def inverse_transform(self, X):
-        raise NotImplementedError("doesn't work")
-
-
-def signed_log1p(x):
-    return np.sign(x) * np.log1p(np.abs(x))
-
-
-class SignedLog1pMinMaxScaler(BaseEstimator, TransformerMixin):
-    '''
-    Why use sign log1p min max? I think log returns might be better, but this was meant to reduce vol numbers
-    '''
-
-    def __init__(self, feature_range=(0, 1)):
-        self.feature_range = feature_range
-        self.minmax_scaler = MinMaxScaler(feature_range=feature_range)
-
-    def fit(self, X, y=None):
-        # Apply signed log1p transformation and then fit the MinMaxScaler
-        X_transformed = signed_log1p(X)
-        self.minmax_scaler.fit(X_transformed)
-        return self
-
-    def transform(self, X, y=None):
-        # Apply signed log1p transformation and then MinMax scaling
-        X_transformed = signed_log1p(X)
-        return self.minmax_scaler.transform(X_transformed)
-
-    def inverse_transform(self, X, y=None):
-        # First inverse the MinMax scaling, then apply the inverse of the signed log1p
-        X_inverse_scaled = self.minmax_scaler.inverse_transform(X)
-        return np.sign(X_inverse_scaled) * (np.expm1(np.abs(X_inverse_scaled)))
-
-
 class CustomScaler:
     def __init__(self, config, df):
         self.config = config
@@ -211,21 +125,6 @@ class CustomScaler:
         scaler = self.scaler_mapping[column]
         return scaler.inverse_transform(data)
 
-    def serialize(self, path):
-        # Save the actual scalers along with the mappings
-        joblib.dump({
-            "config": self.config,
-            "scaler_mapping": self.scaler_mapping,
-            "scalers": {col: scaler for col, scaler in self.scaler_mapping.items()}
-        }, path)
-
-    @staticmethod
-    def load(path):
-        data = joblib.load(path)
-        custom_scaler = CustomScaler(data['config'])
-        custom_scaler.scaler_mapping = data['scalers']
-        return custom_scaler
-
     def get_scaled(self, df):
         return self.transform(df.copy())
 
@@ -240,3 +139,88 @@ class CustomScaler:
 # scaler = CustomScaler(config)
 # scaled_df = scaler.fit_transform(df)
 # scaler.serialize('scalers.pkl')
+
+
+class NoOpScaler(BaseEstimator, TransformerMixin):
+    def fit(self, X, y=None):
+        return self  # No fitting needed
+
+    def transform(self, X):
+        return np.asarray(X)  # Ensures it's still an array
+
+    def inverse_transform(self, X):
+        return np.asarray(X)  # Returns original data unchanged
+
+
+class LogReturnScaler(BaseEstimator, TransformerMixin):
+    '''
+    LogReturnScaler - A scaler for converting prices to log returns and vice versa.
+
+    Why Use Log Returns?
+    - Stability, stationarity, and normalization, as described in financial modeling.
+    '''
+
+    def __init__(self, cumsum: bool = True, amplifier: int = 2):
+        self.do_cumsum = cumsum
+        self.amplifier = amplifier
+        self.initial_price = None
+
+    def fit(self, X, y=None):
+        return self  # This scaler doesn't require fitting
+
+    def transform(self, input_data):
+        if isinstance(input_data, np.ndarray):
+            input = pd.Series(input_data)
+        else:
+            input = input_data
+
+        # Ensure input contains no negative or zero values
+        assert not (input <= 0).any(), "This transform only supports data that is > 0, no negative or zero values"
+
+        # Forward fill any NaNs for continuity
+        cleaned = input.ffill()
+        X = np.asarray(cleaned)
+        self.initial_price = X[0]  # Store the initial price
+
+        # Calculate log returns
+        log_returns = np.diff(np.log(X), axis=0)  # Log returns
+        if self.do_cumsum:
+            log_returns = log_returns.cumsum()  # Apply cumulative sum if required
+        if self.amplifier != 0:
+            log_returns = self.amplifier * log_returns  # Apply amplification
+        # todo: This keeps the length the same but is a problem for inverse. I didn't get the working though
+        log_returns = np.append(log_returns, log_returns[-1])
+        return np.expand_dims(log_returns, axis=1)  # Return transformed data
+
+    def inverse_transform(self, X):
+        raise NotImplementedError("doesn't work")
+
+
+def signed_log1p(x):
+    return np.sign(x) * np.log1p(np.abs(x))
+
+
+class SignedLog1pMinMaxScaler(BaseEstimator, TransformerMixin):
+    '''
+    Why use sign log1p min max? I think log returns might be better, but this was meant to reduce vol numbers
+    '''
+
+    def __init__(self, feature_range=(0, 1)):
+        self.feature_range = feature_range
+        self.minmax_scaler = MinMaxScaler(feature_range=feature_range)
+
+    def fit(self, X, y=None):
+        # Apply signed log1p transformation and then fit the MinMaxScaler
+        X_transformed = signed_log1p(X)
+        self.minmax_scaler.fit(X_transformed)
+        return self
+
+    def transform(self, X, y=None):
+        # Apply signed log1p transformation and then MinMax scaling
+        X_transformed = signed_log1p(X)
+        return self.minmax_scaler.transform(X_transformed)
+
+    def inverse_transform(self, X, y=None):
+        # First inverse the MinMax scaling, then apply the inverse of the signed log1p
+        X_inverse_scaled = self.minmax_scaler.inverse_transform(X)
+        return np.sign(X_inverse_scaled) * (np.expm1(np.abs(X_inverse_scaled)))

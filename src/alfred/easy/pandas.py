@@ -32,28 +32,35 @@ def prepare_data_and_model(category="easy_model",
     df = read_time_series_file(file, date_column)
     df = augment_func(df)
 
-    print("scaling")
-    scaler = CustomScaler(scaler_config, df)
-    df = scaler.fit_transform(df)
-    df.dropna(inplace=True)
-
-    # if no features are specified, assume its all columns
-    if len(features) == 0:
-        features_train = df.drop(labels, axis=1)
-        labels_train = df[labels]
-        features = features_train.columns
-    else:
-        features_train = df[features]
-        labels_train = df[labels]
-
     print("loading model from config or creating model")
-    model, optimizer, scheduler, real_model_token = model_from_config(
+    model, optimizer, scheduler, scaler, real_model_token, was_loaded = model_from_config(
         num_features=len(features),
         config_token=model_name,
         sequence_length=-1, size=model_size, output=len(labels),
         descriptors=[
             category, model_name, model_size, len(labels), crc32_columns(features)
         ])
+
+    # The scaler is persisted with the model to avoid issues with distribution shift with future values
+    # If we don't have a scaler that means we have a new model, make a scaler, and fit_transform
+    # otherwise just transform
+    if scaler is None:
+        print("creating a scaler and scaling")
+        scaler = CustomScaler(scaler_config, df)
+        df = scaler.fit_transform(df)
+        df.dropna(inplace=True)
+    else:
+        print("scaling with known scaler")
+        df = scaler.transform(df)
+
+    # if no features are specified, assume it's all columns
+    if len(features) == 0:
+        features_train = df.drop(labels, axis=1)
+        labels_train = df[labels]
+    else:
+        features_train = df[features]
+        labels_train = df[labels]
+
 
     # train data prep
     x_train_tensor = torch.tensor(features_train.values, dtype=torch.float32)
@@ -62,7 +69,7 @@ def prepare_data_and_model(category="easy_model",
     train_dataset = TensorDataset(x_train_tensor, y_train_tensor.squeeze(-1))
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
 
-    return model, optimizer, scheduler, train_loader, real_model_token  # Return necessary variables
+    return model, optimizer, scheduler, train_loader, real_model_token, scaler, was_loaded  # Return necessary variables
 
 
 def trainer(category="easy_model",
@@ -80,7 +87,8 @@ def trainer(category="easy_model",
             augment_func=noop,
             verbose=False,
             loss_function=nn.MSELoss()):
-    model, optimizer, scheduler, train_loader, real_model_token = prepare_data_and_model(
+
+    model, optimizer, scheduler, train_loader, real_model_token, scaler, was_loaded = prepare_data_and_model(
         category=category,
         model_name=model_name,
         model_size=model_size,
@@ -94,7 +102,7 @@ def trainer(category="easy_model",
         augment_func=augment_func
     )
 
-    print("Starting training:")
+    print("Starting training:") # todo we need a dataclass, this param list is out of control
     return train_model(model=model,
                        optimizer=optimizer,
                        scheduler=scheduler,
@@ -104,7 +112,8 @@ def trainer(category="easy_model",
                        model_token=real_model_token,
                        training_label=category,
                        verbose=verbose,
-                       loss_function=loss_function)
+                       loss_function=loss_function,
+                       scaler=scaler)
 
 
 def evaler(category="easy_model",
@@ -118,7 +127,7 @@ def evaler(category="easy_model",
            date_column="Unnamed: 0",
            augment_func=noop,
            loss_function=nn.MSELoss()):
-    model, _, _, eval_loader, real_model_token = prepare_data_and_model(
+    model, _, _, eval_loader, real_model_token, scaler, was_loaded = prepare_data_and_model(
         category=category,
         model_name=model_name,
         model_size=model_size,
@@ -131,6 +140,8 @@ def evaler(category="easy_model",
         date_column=date_column,
         augment_func=augment_func
     )
+    if not was_loaded:
+        print("WARNING: You are evaluating an empty model. This model was unknown to the system.")
 
     loss, data = evaluate_model(model, eval_loader, stat_accumulator=BCEAccumulator(), loss_function=loss_function)
 

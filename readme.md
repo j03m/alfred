@@ -219,14 +219,22 @@ can we do better against a 2nd corpus of uncorrelated tickers?
 
 ### Expanding Training
 
+Now we have to consider how to train against additional equities. For this experiment since we're not taking into account the timeseries aspect and treating it all
+as a tabular classification problem one possibility is concatenating all the files together. This would let us train against the largest set of available data. Another consideration
+though is if we want to expand our list of equities using this approach we would have to retrain on all the available data again. Another possibility is to train the model across each file independently. This is computationally cheaper if we add coverage, but runs the risk of catastrophic forgetting 
+and possibly as some risk of order dependence. 
 
+I decided to go with initially concatenating with the assumption we could fine tune on the original dataset later. We'll have to make some changes to the `easy` module to save scalers
+to be re-used for fine-tuning later. For both initial training and fine-tuning, we will want to use consistent feature scaling. The best approach is usually to calculate scaling parameters 
+(e.g., mean, standard deviation) from your initial training dataset (e.g., the first 100 equities) and apply the same scaling transformation to all subsequent data, including new equities. 
+This ensures consistency in feature ranges across all data seen by the model. For an illustration of why this is needed check out [scripts/educational/data-distrubtion-shift.py](scripts/educational/data-distrubtion-shift.py).
 
 
 ## LSTMs
 
 ## Convolutions
 
-## Transformer
+## Transformer  
 
 
 

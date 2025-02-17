@@ -1,10 +1,13 @@
 import torch
 import io
 import gridfs
+import joblib
+import zlib
+
 from alfred.devices import build_model_token, set_device
 from alfred.models import LSTMModel, LSTMConv1d, AdvancedLSTM, TransAm, Vanilla
 from alfred.utils import MongoConnectionStrings
-import zlib
+
 import torch.optim as optim
 
 DEVICE = set_device()
@@ -79,38 +82,28 @@ def model_from_config(config_token, num_features, sequence_length, size, output,
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         mode='min',
-        patience=5,  # Increased patience to allow for more epochs before adjustment
+        patience=10,  # Increased patience to allow for more epochs before adjustment
         factor=0.3,  # Less aggressive reduction
         cooldown=3,  # Wait 3 epochs after reducing before considering another reduction
     )
-    # scheduler = optim.lr_scheduler.CyclicLR(optimizer,
-    #                                         base_lr=1e-3,  # Lower bound of the learning rate range
-    #                                         max_lr=6e-3,  # Upper bound of the learning rate range
-    #                                         step_size_up=2000,
-    #                                         # Number of training iterations in the increasing half of a cycle
-    #                                         mode='triangular',
-    #                                         # Schedules the learning rate to increase linearly and then decrease linearly
-    #                                         cycle_momentum=True
-    #                                         # If True, momentum is cycled inversely to learning rate
-    #                                         )
-
-    # todo document where we are, the result and some next steps
 
     # Load the latest model from MongoDB
     model_checkpoint = get_latest_model(model_token)
+
     if model_checkpoint:
         model.load_state_dict(model_checkpoint['model_state_dict'])
         optimizer.load_state_dict(model_checkpoint['optimizer_state_dict'])
         scheduler.load_state_dict(model_checkpoint['scheduler_state_dict'])
+        scaler = get_model_scaler(model_token)
+        return model, optimizer, scheduler, scaler, model_token, True
+    else:
+        return model, optimizer, scheduler, None, model_token, False
 
-    return model, optimizer, scheduler, model_token
-
-
-def maybe_save_model(model, optimizer, scheduler, eval_loss, model_token, training_label):
+def maybe_save_model(model, optimizer, scheduler, scaler, eval_loss, model_token, training_label):
     best_loss = get_best_loss(model_token, training_label)
     if eval_loss < best_loss:
         print(f"New best model: {eval_loss} vs {best_loss}: saving")
-        save_next_model(model, optimizer, scheduler, model_token, eval_loss)
+        save_next_model(model, optimizer, scheduler, scaler, model_token, eval_loss)
         set_best_loss(model_token, training_label, eval_loss)
         return True
     else:
@@ -146,6 +139,17 @@ def check_model_status(model_token, ticker):
     else:
         return True
 
+def get_model_scaler(model_token):
+    record = models_collection.find_one({'model_token': model_token}, sort=[('version', -1)])
+    if not record:
+        print("No previous model.")
+        return None
+
+    print(f"Found model version {record['version']} for {model_token}.")
+
+    scaler_file_id = record['scaler_file_id']
+    scaler_file = fs.get(scaler_file_id)
+    return joblib.load(io.BytesIO(scaler_file.read()))
 
 def get_latest_model(model_token):
     record = models_collection.find_one({'model_token': model_token}, sort=[('version', -1)])
@@ -155,18 +159,18 @@ def get_latest_model(model_token):
 
     print(f"Found model version {record['version']} for {model_token}.")
 
-    file_id = record['file_id']
+    file_id = record['model_file_id']
     model_data = fs.get(file_id).read()
     buffer = io.BytesIO(model_data)
     return torch.load(buffer)
 
 
-def save_next_model(model, optimizer, scheduler, model_token, eval_loss):
+def save_next_model(model, optimizer, scheduler, scaler, model_token, eval_loss):
     # Determine the next version number
     last_record = models_collection.find_one({'model_token': model_token}, sort=[('version', -1)])
     next_version = (last_record['version'] + 1) if last_record else 0
 
-    # Serialize model to binary
+    # --- Serialize Model, Optimizer, Scheduler ---
     buffer = io.BytesIO()
     torch.save({
         'model_state_dict': model.state_dict(),
@@ -176,14 +180,22 @@ def save_next_model(model, optimizer, scheduler, model_token, eval_loss):
     buffer.seek(0)
 
     # needed due to models being > bson limit (laaaaame)
-    file_id = fs.put(buffer.getvalue(), filename=f"{model_token}_v{next_version}")
+    model_file_id = fs.put(buffer.getvalue(), filename=f"{model_token}_v{next_version}")
+
+    # --- Serialize Scaler ---
+    scaler_buffer = io.BytesIO()
+    joblib.dump(scaler, scaler_buffer)  # Serialize scaler to buffer
+    scaler_buffer.seek(0)
+    scaler_file_id = fs.put(scaler_buffer.getvalue(),
+                            filename=f"{model_token}_scaler_v{next_version}")  # Save scaler to GridFS
 
     # Save to MongoDB
     models_collection.insert_one({
         'model_token': model_token,
         'version': next_version,
         'eval_loss': eval_loss,
-        'file_id': file_id
+        'model_file_id': model_file_id,
+        'scaler_file_id': scaler_file_id
     })
     print(f"Model version {next_version} saved for {model_token}.")
 

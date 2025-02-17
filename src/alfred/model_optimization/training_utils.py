@@ -8,7 +8,7 @@ from alfred.model_metrics import BCEAccumulator
 
 device = set_device()
 
-def train_model(model, optimizer, scheduler, train_loader, patience, model_token, training_label, epochs=20,
+def train_model(model, optimizer, scheduler, scaler, train_loader, patience, model_token, training_label, epochs=20,
                 loss_function=nn.BCELoss(), stat_accumulator=BCEAccumulator(), verbose=False, verbosity_limit=10):
     model.train()
 
@@ -42,7 +42,7 @@ def train_model(model, optimizer, scheduler, train_loader, patience, model_token
             print(f"Predictions: {y_pred.detach().cpu().numpy().flatten()}")  # Flatten and print on one line
             print(f"Labels:      {labels.detach().cpu().numpy().flatten()}")  # Flatten and print on one line
 
-        saved = maybe_save_model(model, optimizer, scheduler, mean_loss, model_token, training_label)
+        saved = maybe_save_model(model, optimizer, scheduler, scaler, mean_loss, model_token, training_label)
 
         if last_mean_loss is not None:
             if not saved:
