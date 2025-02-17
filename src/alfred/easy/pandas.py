@@ -20,7 +20,7 @@ def noop(df):
 def prepare_data_and_model(category="easy_model",
                            model_name="vanilla",
                            model_size=256,
-                           file="data/AAPL_quarterly_directional.csv",
+                           files=["data/AAPL_quarterly_directional.csv"],
                            scaler_config=PM_SCALER_CONFIG,
                            features=[],
                            labels=["PQ"],
@@ -29,8 +29,12 @@ def prepare_data_and_model(category="easy_model",
                            date_column="Unnamed: 0",
                            augment_func=noop):
     print("reading input pandas")
-    df = read_time_series_file(file, date_column)
-    df = augment_func(df)
+    dfs = []
+    for file in files:
+        df = read_time_series_file(file, date_column)
+        df = augment_func(df)
+        dfs.append(df)
+    df = pd.concat(dfs)
 
     # if no features are specified, assume it's all columns
     if len(features) == 0:
@@ -79,7 +83,7 @@ def prepare_data_and_model(category="easy_model",
 def trainer(category="easy_model",
             model_name="vanilla",
             model_size=256,
-            file="data/AAPL_quarterly_directional.csv",
+            files=["data/AAPL_quarterly_directional.csv"],
             scaler_config=PM_SCALER_CONFIG,
             epochs=5000,
             features=[],
@@ -96,7 +100,7 @@ def trainer(category="easy_model",
         category=category,
         model_name=model_name,
         model_size=model_size,
-        file=file,
+        files=files,
         scaler_config=scaler_config,
         features=features,
         labels=labels,
@@ -123,7 +127,7 @@ def trainer(category="easy_model",
 def evaler(category="easy_model",
            model_name="vanilla",
            model_size=256,
-           file="data/LNC_quarterly_directional.csv",
+           files=["data/LNC_quarterly_directional.csv"],
            scaler_config=PM_SCALER_CONFIG,
            features=[],
            labels=["PQ"],
@@ -135,7 +139,7 @@ def evaler(category="easy_model",
         category=category,
         model_name=model_name,
         model_size=model_size,
-        file=file,
+        files=files,
         scaler_config=scaler_config,
         features=features,
         labels=labels,
