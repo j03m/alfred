@@ -1,0 +1,29 @@
+{
+  "training": [
+    "AAPL",
+    "LNC",
+    "ATI",
+    "PRGO",
+    "JNPR",
+    "THC",
+    "MO",
+    "MAT",
+    "ALB",
+    "ROST",
+    "NEM"
+  ],
+  "evaluation": [
+    "F",
+    "AVB",
+    "MAC",
+    "ZION",
+    "FCX",
+    "ROST",
+    "SWK",
+    "PDCO",
+    "JNPR",
+    "T",
+    "HIG"
+  ]
+}
+

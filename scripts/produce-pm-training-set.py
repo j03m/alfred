@@ -68,7 +68,6 @@ def calculate_analyst_projections(df, ticker, batch_size, start, end, sequence_l
 
     return df_trimmed
 
-
 def calculate_30_day_returns(ticker, data_dir, date_column="Unnamed: 0"):
     # Load the price data for the ticker
     df = pd.read_csv(f'{data_dir}/{ticker}_unscaled.csv')

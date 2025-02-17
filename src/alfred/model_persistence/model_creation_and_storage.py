@@ -2,7 +2,7 @@ import torch
 import io
 import gridfs
 from alfred.devices import build_model_token, set_device
-from alfred.models import LSTMModel, LSTMConv1d, AdvancedLSTM, TransAm
+from alfred.models import LSTMModel, LSTMConv1d, AdvancedLSTM, TransAm, Vanilla
 from alfred.utils import MongoConnectionStrings
 import zlib
 import torch.optim as optim
@@ -35,10 +35,11 @@ def crc32_columns(strings):
     # Return the hash in hexadecimal format
     return f"{crc32_hash:#08x}"
 
+
 def eval_model_selector(model_descriptor, column_selector):
     model_token = model_descriptor["model_token"]
     sequence_length = model_descriptor["sequence_length"]
-    data = model_descriptor["data"] # columns
+    data = model_descriptor["data"]  # columns
     bar_type = model_descriptor["bar_type"]
     size = model_descriptor["size"]
     columns = sorted(column_selector.get(data))
@@ -53,6 +54,7 @@ def eval_model_selector(model_descriptor, column_selector):
         ])
     return model, real_model_token, columns
 
+
 def model_from_config(config_token, num_features, sequence_length, size, output, descriptors, layers=2):
     if config_token == 'lstm':
         model = LSTMModel(features=num_features, hidden_dim=size, output_size=output, num_layers=layers)
@@ -63,6 +65,10 @@ def model_from_config(config_token, num_features, sequence_length, size, output,
                            kernel_size=10)
     elif config_token == 'trans-am':
         model = TransAm(features=num_features, model_size=size, heads=size / 16, output=output, last_bar=True)
+    elif config_token == 'vanilla.small':
+        model = Vanilla(input_size=num_features, hidden_size=size, output_size=output)
+    elif config_token == 'vanilla.large':
+        model = Vanilla(input_size=num_features, hidden_size=size, output_size=output, layers=100)
     else:
         raise Exception("Model type not supported")
 
@@ -70,7 +76,25 @@ def model_from_config(config_token, num_features, sequence_length, size, output,
 
     model_token = build_model_token(descriptors)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=4, factor=0.5)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode='min',
+        patience=5,  # Increased patience to allow for more epochs before adjustment
+        factor=0.3,  # Less aggressive reduction
+        cooldown=3,  # Wait 3 epochs after reducing before considering another reduction
+    )
+    # scheduler = optim.lr_scheduler.CyclicLR(optimizer,
+    #                                         base_lr=1e-3,  # Lower bound of the learning rate range
+    #                                         max_lr=6e-3,  # Upper bound of the learning rate range
+    #                                         step_size_up=2000,
+    #                                         # Number of training iterations in the increasing half of a cycle
+    #                                         mode='triangular',
+    #                                         # Schedules the learning rate to increase linearly and then decrease linearly
+    #                                         cycle_momentum=True
+    #                                         # If True, momentum is cycled inversely to learning rate
+    #                                         )
+
+    # todo document where we are, the result and some next steps
 
     # Load the latest model from MongoDB
     model_checkpoint = get_latest_model(model_token)
@@ -90,7 +114,6 @@ def maybe_save_model(model, optimizer, scheduler, eval_loss, model_token, traini
         set_best_loss(model_token, training_label, eval_loss)
         return True
     else:
-        print(f"{eval_loss} vs {best_loss}: declining save")
         return False
 
 
@@ -106,6 +129,7 @@ def set_best_loss(model_token, training_label, loss):
         upsert=True
     )
 
+
 # make a record that we already trained against this ticker
 def track_model_status(model_token, ticker):
     status_collection.insert_one({
@@ -114,8 +138,9 @@ def track_model_status(model_token, ticker):
         'ticker': ticker
     })
 
+
 def check_model_status(model_token, ticker):
-    record = status_collection.find_one({'model_token': model_token, 'ticker':ticker})
+    record = status_collection.find_one({'model_token': model_token, 'ticker': ticker})
     if not record:
         return False
     else:

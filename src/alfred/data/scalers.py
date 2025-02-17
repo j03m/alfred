@@ -9,24 +9,28 @@ import pandas as pd
 
 PM_SCALER_CONFIG = [
     {'regex': r'^Close$', 'type': 'yeo-johnson'},
+    {'regex': r'.+_diff_.+', 'type': 'standard'},
     {'regex': r'^analyst_.+', 'type': 'yeo-johnson'},
+    {'regex': r'^delta_.+', 'type': 'yeo-johnson'},
     {'columns': ['Institutional'], 'type': 'yeo-johnson'},
     {'columns': ['^VIX'], 'type': 'standard'},
     {'columns': ['SPY', 'CL=F', 'BZ=F'], 'type': 'yeo-johnson'},
-    {'columns': ["BTC=F"], 'type': 'standard'}, # We only have btc prices back to 2017 which leads to segments with no variation, which blows up yeo-johnson
+    {'columns': ["BTC=F"], 'type': 'standard'},
+    # We only have btc prices back to 2017 which leads to segments with no variation, which blows up yeo-johnson
     {'regex': r'^Margin.*', 'type': 'standard'},
     {'regex': r'^Volume$', 'type': 'yeo-johnson'},
     {'columns': ['reportedEPS', 'estimatedEPS', 'surprise', 'surprisePercentage', 'insider_acquisition',
                  'insider_disposal', 'mean_outlook', 'mean_sentiment'], 'type': 'standard'},
     {'regex': r'\d+year', 'type': 'standard'},
-    {'columns': ['ID', 'Rank'], 'type': 'none'}
+    {'columns': ['ID', 'Rank', "PQ"], 'type': 'none'}
 ]
 
 ANALYST_SCALER_CONFIG = [
     {'regex': r'^Close$', 'type': 'yeo-johnson'},
     {'columns': ['^VIX'], 'type': 'standard'},
     {'columns': ['SPY', 'CL=F', 'BZ=F'], 'type': 'yeo-johnson'},
-    {'columns': ["BTC=F"], 'type': 'standard'}, # We only have btc prices back to 2017 which leads to segments with no variation, which blows up yeo-johnson
+    {'columns': ["BTC=F"], 'type': 'standard'},
+    # We only have btc prices back to 2017 which leads to segments with no variation, which blows up yeo-johnson
     {'regex': r'^Margin.*', 'type': 'standard'},
     {'regex': r'^Volume$', 'type': 'yeo-johnson'},
     {'columns': ['reportedEPS', 'estimatedEPS', 'surprise', 'surprisePercentage', 'insider_acquisition',
@@ -44,6 +48,7 @@ class NoOpScaler(BaseEstimator, TransformerMixin):
 
     def inverse_transform(self, X):
         return np.asarray(X)  # Returns original data unchanged
+
 
 class LogReturnScaler(BaseEstimator, TransformerMixin):
     '''
@@ -156,6 +161,12 @@ class CustomScaler:
                     raise ValueError(f"Unsupported scaler type: {scaler_type}")
 
     def fit(self, df):
+        # verify no dataframe column lacks representation in the scaler
+        for column in df.columns:
+            if column not in self.scaler_mapping:
+                raise Exception(f"Column {column} is not represented in the scaler config. Please specify all columns "
+                                f"or (as we have painfully experienced in the past) columns will slip through unscaled"
+                                f"and lead to much harder to deal with gradient issues.")
 
         for column, scaler in self.scaler_mapping.items():
             # only scale columns that are preset:
@@ -163,6 +174,13 @@ class CustomScaler:
                 scaler.fit(df[[column]].values)
 
     def transform(self, df, in_place=False):
+        for column in df.columns:
+            if column not in self.scaler_mapping:
+                raise Exception(
+                    f"(2) Column {column} is not represented in the scaler config. Please specify all columns "
+                    f"or (as we have painfully experienced in the past) columns will slip through unscaled"
+                    f"and lead to much harder to deal with gradient issues.")
+
         if not in_place:
             df = df.copy()
 

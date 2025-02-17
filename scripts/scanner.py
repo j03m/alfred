@@ -73,7 +73,7 @@ def main():
 
     correlations = build_correlations(args.directory, args.matcher, args.start_date, args.end_date, args.date_column)
 
-    print(greedy_anti_correlation("AAPL", correlations))
+    print(greedy_anti_correlation(args.starting_ticker, correlations))
 
 
 if __name__ == "__main__":

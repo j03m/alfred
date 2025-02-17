@@ -82,6 +82,8 @@ def sort_score(input, entries=3):
         return_me.extend(sorted_ranks.tolist())
     return return_me
 
+# todo refactor me to accept a stat accumulator
+# consolidate into training util or pull out the accumulators to be shared
 def evaluate_model(model, loader, prediction_squeeze=-1):
     model.eval()
     predictions = []

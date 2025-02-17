@@ -5,6 +5,10 @@ def make_datetime_index(df, date_column="Unnamed: 0"):
     df = df.sort_index()  # Ensure it's sorted by date
     return df
 
+def read_time_series_file(file, date_column="Unnamed: 0"):
+    df = pd.read_csv(file)
+    return make_datetime_index(df, date_column)
+
 def reindex_dataframes(main_df, *target_dfs):
     '''
     This will reindex all parameters following main to main's index

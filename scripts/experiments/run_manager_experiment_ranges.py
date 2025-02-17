@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from alfred.data import CustomScaler, PM_SCALER_CONFIG
 from alfred.metadata import ExperimentSelector, ColumnSelector
 from alfred.model_persistence import model_from_config, prune_old_versions, crc32_columns
-from alfred.model_training import train_model
+from alfred.model_training import from alfred.model_training import train_model
 from alfred.model_evaluation import evaluate_model, nrmse_by_range
 from alfred.utils import MongoConnectionStrings
 
@@ -93,10 +93,6 @@ def config():
     sequence_length = None,
     columns = None
 
-
-import pandas as pd
-
-
 def process_dataframe(mode, file_path, all_columns, save_scaled=None):
     date_column = "Date"
     df = pd.read_csv(file_path)
@@ -140,7 +136,6 @@ def prepare_and_train_model(model, optimizer, scheduler, train_df, sequence_leng
                        epochs=gbl_args.epochs,
                        model_token=real_model_token,
                        training_label="manager")
-
 
 def eval_model(model, eval_df, gbl_args, sequence_length, real_model_token):
     # Define features and prediction for evaluation
@@ -213,7 +208,7 @@ def run_experiment(model_token, size, sequence_length, columns):
     eval_nrmse = None
     train_nrmse = None
     if gbl_args.mode == "train" or gbl_args.mode == "both":
-        last_nrmse, last_train_mse = prepare_and_train_model(model=model,
+        last_train_mse, accumulator = prepare_and_train_model(model=model,
                                                              optimizer=optimizer,
                                                              scheduler=scheduler,
                                                              train_df=train_df,
@@ -223,7 +218,7 @@ def run_experiment(model_token, size, sequence_length, columns):
         if gbl_args.mode == "train":
             return {
                 'eval_mse': -1,
-                'train_nrmse' : last_nrmse,
+                'accumulated_stats' : accumulator.get(),
                 'train_mse': last_train_mse,
             }
 
