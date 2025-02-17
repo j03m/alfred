@@ -207,6 +207,18 @@ toward predicting positive trades more often than not. Ie, we're getting all the
 
 Earlier we spent some time picking uncorrelated stocks with `LNC` being the least correlated to `AAPL` so we'll run an evaluation against that.
 
+Just as a sanity check we'll use `alfred's` easy evaler to check how our model performs 
+against an uncorrelated stock. The results are unsurprisingly pretty abysmal:
+
+```
+Evaluation: Loss: 0.323896328608195 stats: {'accuracy': tensor(0.5357, device='mps:0'), 'precision': tensor(0.5417, device='mps:0'), 'recall': tensor(0.8667, device='mps:0'), 'f1': tensor(0.6667, device='mps:0')}
+```
+
+So that leaves us with the question, if we train against our corpus of uncorrelated tickers
+can we do better against a 2nd corpus of uncorrelated tickers?
+
+### Expanding Training
+
 
 
 
