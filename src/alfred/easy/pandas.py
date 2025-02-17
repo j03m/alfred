@@ -32,9 +32,15 @@ def prepare_data_and_model(category="easy_model",
     df = read_time_series_file(file, date_column)
     df = augment_func(df)
 
+    # if no features are specified, assume it's all columns
+    if len(features) == 0:
+        size = len(df.columns) -1
+    else:
+        size = len(features)
+
     print("loading model from config or creating model")
     model, optimizer, scheduler, scaler, real_model_token, was_loaded = model_from_config(
-        num_features=len(features),
+        num_features=size,
         config_token=model_name,
         sequence_length=-1, size=model_size, output=len(labels),
         descriptors=[
@@ -53,14 +59,12 @@ def prepare_data_and_model(category="easy_model",
         print("scaling with known scaler")
         df = scaler.transform(df)
 
-    # if no features are specified, assume it's all columns
     if len(features) == 0:
         features_train = df.drop(labels, axis=1)
         labels_train = df[labels]
     else:
         features_train = df[features]
         labels_train = df[labels]
-
 
     # train data prep
     x_train_tensor = torch.tensor(features_train.values, dtype=torch.float32)
