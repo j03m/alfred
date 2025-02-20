@@ -167,11 +167,6 @@ class SimpleBackTest(bt.Strategy):
                      order.executed.comm))
             self.bar_executed = len(self)
 
-        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            self.log('Order Canceled/Margin/Rejected')
-            if order.rejected:
-                print(f"Order Rejected Reason: {order.rejectreason_descr}")
-
         self.order = None  # Reset order
 
     def notify_trade(self, trade):
@@ -201,6 +196,7 @@ def print_strategy_summary(strategy, strategy_name):
     print(f"  TRET Analysis:")
     print_trade_analysis_tree(tret_analyzer.get_analysis())
 
+    print("*********Win/Loss: ", trade_analysis['won']['total']/trade_analysis['lost']['total'])
 
 def run_backtest(df, model_strategy_class, args):
     # Backtest Strategy
@@ -225,7 +221,7 @@ def run_backtest(df, model_strategy_class, args):
 
     cerebro.broker.setcash(args.cash)
     cerebro.broker.setcommission(commission=args.commission)
-    cerebro.addsizer(bt.sizers.FixedSize, stake=10)
+    cerebro.addsizer(bt.sizers.AllInSizer)
 
     print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
     results = cerebro.run()
@@ -292,9 +288,9 @@ if __name__ == "__main__":
     parser.add_argument("--close_buy_confidence", type=float, default=0.5, help="score <= needed to close a buy")
     parser.add_argument("--init_short_confidence", type=float, default=0.3, help="score <= needed to initiate a buy")
     parser.add_argument("--close_short_confidence", type=float, default=0.5, help="score >= needed to close a buy")
-    parser.add_argument("--cash", type=float, default=1_000_000, help="cash start")
+    parser.add_argument("--cash", type=float, default=1_000, help="cash start")
     parser.add_argument("--commission", type=float, default=0.0002, help="trade commission")
-    parser.add_argument("--plot", action="store_true", help="Plot the backtest results")
+    parser.add_argument("--plot", action="store_true", default=True, help="Plot the backtest results")
 
     args = parser.parse_args()
     main(args)
