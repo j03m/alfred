@@ -217,7 +217,9 @@ Evaluation: Loss: 0.323896328608195 stats: {'accuracy': tensor(0.5357, device='m
 So that leaves us with the question, if we train against our corpus of uncorrelated tickers
 can we do better against a 2nd corpus of uncorrelated tickers?
 
-### Expanding Training
+### Expanding Our Equity Set
+
+#### Training vanilla.large and vanilla.small v1
 
 Now we have to consider how to train against additional equities. For this experiment since we're not taking into account the timeseries aspect and treating it all
 as a tabular classification problem one possibility is concatenating all the files together. This would let us train against the largest set of available data. Another consideration
@@ -229,6 +231,134 @@ to be re-used for fine-tuning later. For both initial training and fine-tuning, 
 (e.g., mean, standard deviation) from your initial training dataset (e.g., the first 100 equities) and apply the same scaling transformation to all subsequent data, including new equities. 
 This ensures consistency in feature ranges across all data seen by the model. For an illustration of why this is needed check out [scripts/educational/data-distrubtion-shift.py](scripts/educational/data-distrubtion-shift.py).
 
+Running `vanilla.large` (100 layers) with size 1024 against the concatenated list of test tickers gives us decent results, but not as solid as testing a single ticker:
+
+```
+BCE:  {'accuracy': tensor(0.9231, device='mps:0'), 'precision': tensor(0.9124, device='mps:0'), 'recall': tensor(0.9425, device='mps:0'), 'f1': tensor(0.9272, device='mps:0')}
+```
+
+Oddly, a smart model `vanilla.small` (10 layers) with size 256 yielded: 
+
+```
+{'accuracy': tensor(0.9965, device='mps:0'), 'precision': tensor(0.9959, device='mps:0'), 'recall': tensor(0.9973, device='mps:0'), 'f1': tensor(0.9966, device='mps:0')}
+```
+
+Which made me pause. However, after some research I found that he larger net might be dealing with vanishing gradients due to its size.
+
+#### Evaluating vanilla.large and vanilla.small v1
+
+Running `scripts/easy_evaler.py` we get a sense of how both larger and small models will perform on other equities.
+
+Small: `Evaluation: Loss: 0.30814009917951446 stats: {'accuracy': tensor(0.6591, device='mps:0'), 'precision': tensor(0.6602, device='mps:0'), 'recall': tensor(0.6616, device='mps:0'), 'f1': tensor(0.6609, device='mps:0')}`
+
+Large: `Evaluation: Loss: 0.27523269157151437 stats: {'accuracy': tensor(0.6645, device='mps:0'), 'precision': tensor(0.6631, device='mps:0'), 'recall': tensor(0.6746, device='mps:0'), 'f1': tensor(0.6688, device='mps:0')}`
+
+Even though the smaller model seemed to fit the training data much better
+
+#### Minor change to activation
+
+During a code review (from an AI lol) I got the following advice:
+
+>  Batch normalization is most effective when applied before the activation function. By applying it after, you're normalizing the output of the Tanh, which is already bounded and might have regions of very small gradients. By applying batch norm before the Tanh, you ensure that the input to the Tanh has a good distribution (mean 0, variance 1), preventing it from saturating and improving gradient flow. The layers_pairs line is changed to iterate over linear layers and batchnorm layers in the right order, and the activation is moved after the batch norm in the forward method.
+
+I made this change and retrained, and revaluated the models. For the large model, that didn't give much if any lift, I wonder about the soundness of the advice.
+
+Training ended a little later:
+
+```text
+Epoch 2020 - patience 1000/1000 - mean loss: 0.003793424164980714 vs best loss: 0.001796873403785365 - Stats: 
+BCE:  {'accuracy': tensor(0.9166, device='mps:0'), 'precision': tensor(0.9035, device='mps:0'), 'recall': tensor(0.9398, device='mps:0'), 'f1': tensor(0.9213, device='mps:0')}
+```
+
+Eval ended about the same:
+
+```text
+Evaluation: Loss: 0.2811918371461898 stats: {'accuracy': tensor(0.6602, device='mps:0'), 'precision': tensor(0.6645, device='mps:0'), 'recall': tensor(0.6530, device='mps:0'), 'f1': tensor(0.6587, device='mps:0')}
+```
+
+That said we may still be suffering from disappearing gradients due to the depth of the network. We'll look at that next. 
+
+For the small model we were again, highly tuned to the training set, but our eval performance was roughly the same:
+
+```text
+BCE:  {'accuracy': tensor(0.9964, device='mps:0'), 'precision': tensor(0.9958, device='mps:0'), 'recall': tensor(0.9973, device='mps:0'), 'f1': tensor(0.9965, device='mps:0')}
+
+Evaluation: Loss: 0.31217595087277394 stats: {'accuracy': tensor(0.6602, device='mps:0'), 'precision': tensor(0.6524, device='mps:0'), 'recall': tensor(0.6918, device='mps:0'), 'f1': tensor(0.6715, device='mps:0')}
+```
+
+
+#### More size, less depth
+
+I decided to train the model again to test the layers as the problem theory. This time I would test the 1024 sized model, but only with 10 layers. The result there mimicked the 
+small model in that it was able to get very low error rate on the training data, but not so much during evaluation on the second set:
+
+Training:
+```text
+Epoch 4990 - patience 1/1000 - mean loss: 1.8080596676220705e-11 vs best loss: 1.803881936065778e-11 - Stats: 
+BCE:  {'accuracy': tensor(0.9970, device='mps:0'), 'precision': tensor(0.9965, device='mps:0'), 'recall': tensor(0.9978, device='mps:0'), 'f1': tensor(0.9971, device='mps:0')}
+last learning rate: [0.001]
+```
+
+Eval:
+```
+Evaluation: Loss: 0.3111821541515449 stats: {'accuracy': tensor(0.6634, device='mps:0'), 'precision': tensor(0.6577, device='mps:0'), 'recall': tensor(0.6875, device='mps:0'), 'f1': tensor(0.6723, device='mps:0')}
+```
+
+So what we've established here is for this particular case:
+
+* More isn't always better - specifically more layers
+* We may be overfitting to the training set
+
+I don't fully grok the ins and outs of resnet, but the idea that it helps solve deep network issues is covered here:
+https://medium.com/@ibtedaazeem/understanding-resnet-architecture-a-deep-dive-into-residual-neural-network-2c792e6537a9
+
+To be fair, I don't know that 66% accuracy is a bad score for our use case. In theory, anything that gave us a > 50 chance would be an advantage. We'll look at how to 
+backtest the predictions later in the article.
+
+### Dropout - Vanilla.small and Vanilla.large v2
+
+To help deal with the issue of overfitting, I introduced dropout to the vanilla network which I had previous left out
+on purpose to make sure we were using the simplest possible example.
+
+We add the dropout after activation. Because dropout zeros out a fraction of neuron activations during training, applying it
+before batch normalization would lead to inconsistent statistics being calculated in that layer. Putting the dropout after 
+activation also isn't ideal. For example if we were using ReLU we could end up with many activations being zero-ed before
+dropout is even applied.
+
+TODO: review the script we added educational regarding order
+
+#### Retraining and retesting 
+
+Notably, because the 100 layer experiment seems to be such a wash and is much more expensive to train I will initially run another test of `vanilla.small` and our 10 layer, 1024 size
+model (now dubbed `vanilla.medium`) first. If either of those look like had a performance improvement on the eval set, I'll rerun `vanilla.large`. 
+
+I should probably note if you are following along here that its important we wipe out the models prior to retesting! Use the [clear_models.py](scripts/experiments/clear_models.py)
+
+Drop out didn't significantly move the needle with our evaluation still being roughly 66% accuracy:
+
+```text
+Evaluation: Loss: 0.3080481131546376 stats: {'accuracy': tensor(0.6677, device='mps:0'), 'precision': tensor(0.6619, device='mps:0'), 'recall': tensor(0.6918, device='mps:0'), 'f1': tensor(0.6765, device='mps:0')}
+```
+
+
+## Back Testing Directional Signals
+
+There are a few options available to us here moving forward, we could potentially play around with different model architectures and types and we can potentially increase the number of 
+equities we're training against. Given the blessing that we're working with quarterly data, we can likely load up entire universes of equities for training and not hit any physical limits
+on modern hardware. That said, I've mentioned before the directional indicator is a bit ham-fisted. If we're going to spend an enormous amount of time or hardware training on more data,
+we should migrate the current network to predict something like velocity of the move.  
+
+That said before we do that, given our results, what we can do is get an understanding of how impactful a 66% projection is from a profitability perspective against single equities vs buy and hold of a benchmark.
+
+To do that we can run a basic experiment. We can choose two uncorrelated equities from our evaluation set and for given period of time trade them long/short quarter over quarter in a back
+test and compare the result to holding an index over the same time period. This won't be a sophisticated backtest, but it will let us know in theory what our model might perform like as
+directional analyst. 
+
+
+
+
+
+## Predicting Magnitudes
 
 ## LSTMs
 

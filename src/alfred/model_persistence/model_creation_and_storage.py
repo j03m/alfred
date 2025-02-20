@@ -72,6 +72,8 @@ def model_from_config(config_token, num_features, sequence_length, size, output,
         model = Vanilla(input_size=num_features, hidden_size=size, output_size=output)
     elif config_token == 'vanilla.large':
         model = Vanilla(input_size=num_features, hidden_size=size, output_size=output, layers=100)
+    elif config_token == 'vanilla.medium':
+        model = Vanilla(input_size=num_features, hidden_size=size, output_size=output, layers=10)
     else:
         raise Exception("Model type not supported")
 
@@ -152,6 +154,7 @@ def get_model_scaler(model_token):
     return joblib.load(io.BytesIO(scaler_file.read()))
 
 def get_latest_model(model_token):
+    print("Looking for:", model_token)
     record = models_collection.find_one({'model_token': model_token}, sort=[('version', -1)])
     if not record:
         print("No previous model.")

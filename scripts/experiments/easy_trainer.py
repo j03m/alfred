@@ -1,20 +1,12 @@
 from alfred.easy import trainer
 from alfred.metadata import TickerCategories
-import pandas as pd
+from alfred.utils import trim_timerange, set_deterministic
+
+import numpy as np
+
 import argparse
 
-def trim_timerange(df, min_date=None, max_date=None):
-    if min_date is None:
-        start_date = df.index.min()
-    else:
-        start_date = pd.Timestamp(min_date, tz='UTC')
-
-    if max_date is None:
-        # If max_date is not provided, we are not trimming the upper bound
-        return df[df.index >= start_date]
-    else:
-        end_date = pd.Timestamp(max_date, tz='UTC')
-        return df[(df.index >= start_date) & (df.index <= end_date)]
+set_deterministic(0)
 
 def main():
     # Set up argument parser

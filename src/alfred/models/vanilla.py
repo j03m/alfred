@@ -1,8 +1,7 @@
 import torch.nn as nn
-import torch
 
 class Vanilla(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, layers=10, hidden_activation=nn.ReLU(), final_activation=nn.Sigmoid()):
+    def __init__(self, input_size, hidden_size, output_size, layers=10, hidden_activation=nn.Tanh(), final_activation=nn.Sigmoid(), dropout=0.3):
         super(Vanilla, self).__init__()
         self.input_size = input_size
         self.output_size = output_size
@@ -10,6 +9,7 @@ class Vanilla(nn.Module):
         self.first_layer = nn.Linear(input_size, hidden_size)
         self.hidden_activation = hidden_activation
         self.final_activation = final_activation
+        self.dropout = nn.Dropout(p=dropout)
 
         for i in range(layers):
             self.layers.append(nn.Linear(hidden_size, hidden_size))
@@ -25,11 +25,14 @@ class Vanilla(nn.Module):
         self.layers_pairs = zip(self.layers, self.layers[1:])
 
 
-    def forward(self, input):
-        x = self.hidden_activation(self.first_layer(input))
+    def forward(self, input_data):
+        x = self.hidden_activation(self.first_layer(input_data))
         for layer, batch_norm in self.layers_pairs:
-            x = self.hidden_activation(layer(x))
+            x = layer(x)
             x = batch_norm(x)
+            x = self.hidden_activation(x)
+            x = self.dropout(x)
+
         final_x = self.last_layer(x)
         predictions = self.final_activation(final_x)
         return predictions

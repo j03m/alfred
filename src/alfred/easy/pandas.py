@@ -38,7 +38,8 @@ def prepare_data_and_model(category="easy_model",
 
     # if no features are specified, assume it's all columns
     if len(features) == 0:
-        size = len(df.columns) -1
+        size = len(df.columns) - len(labels)
+        features = list(set(df.columns) - set(labels))
     else:
         size = len(features)
 
@@ -48,6 +49,7 @@ def prepare_data_and_model(category="easy_model",
         config_token=model_name,
         sequence_length=-1, size=model_size, output=len(labels),
         descriptors=[
+            #TODO: Im busted, features are blank!
             category, model_name, model_size, len(labels), crc32_columns(features)
         ])
 
@@ -58,10 +60,11 @@ def prepare_data_and_model(category="easy_model",
         print("creating a scaler and scaling")
         scaler = CustomScaler(scaler_config, df)
         df = scaler.fit_transform(df)
-        df.dropna(inplace=True)
     else:
         print("scaling with known scaler")
         df = scaler.transform(df)
+
+    df.dropna(inplace=True)
 
     if len(features) == 0:
         features_train = df.drop(labels, axis=1)

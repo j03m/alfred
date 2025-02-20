@@ -9,6 +9,19 @@ def read_time_series_file(file, date_column="Unnamed: 0"):
     df = pd.read_csv(file)
     return make_datetime_index(df, date_column)
 
+def trim_timerange(df, min_date=None, max_date=None):
+    if min_date is None:
+        start_date = df.index.min()
+    else:
+        start_date = pd.Timestamp(min_date, tz='UTC')
+
+    if max_date is None:
+        # If max_date is not provided, we are not trimming the upper bound
+        return df[df.index >= start_date]
+    else:
+        end_date = pd.Timestamp(max_date, tz='UTC')
+        return df[(df.index >= start_date) & (df.index <= end_date)]
+
 def reindex_dataframes(main_df, *target_dfs):
     '''
     This will reindex all parameters following main to main's index

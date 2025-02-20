@@ -1,8 +1,7 @@
 import torch
 from torch import nn as nn
 
-
-from alfred.model_persistence import maybe_save_model, get_best_loss
+from alfred.model_persistence import maybe_save_model, get_best_loss, prune_old_versions
 from alfred.devices import set_device
 from alfred.model_metrics import BCEAccumulator
 
@@ -57,5 +56,6 @@ def train_model(model, optimizer, scheduler, scaler, train_loader, patience, mod
             return last_mean_loss
 
         scheduler.step(mean_loss)
+        prune_old_versions()
 
     return last_mean_loss, stat_accumulator
