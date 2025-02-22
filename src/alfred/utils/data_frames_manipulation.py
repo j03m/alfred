@@ -7,7 +7,8 @@ def make_datetime_index(df, date_column="Unnamed: 0"):
 
 def read_time_series_file(file, date_column="Unnamed: 0"):
     df = pd.read_csv(file)
-    return make_datetime_index(df, date_column)
+    df = make_datetime_index(df, date_column)
+    return df
 
 def trim_timerange(df, min_date=None, max_date=None):
     if min_date is None:

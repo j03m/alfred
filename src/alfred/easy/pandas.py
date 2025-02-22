@@ -27,13 +27,19 @@ def prepare_data_and_model(category="easy_model",
                            batch_size=32,
                            shuffle=True,
                            date_column="Unnamed: 0",
-                           augment_func=noop):
+                           augment_func=noop,
+                           data_frames=None):
     print("reading input pandas")
     dfs = []
-    for file in files:
-        df = read_time_series_file(file, date_column)
-        df = augment_func(df)
-        dfs.append(df)
+    if data_frames is None:
+        for file in files:
+            df = read_time_series_file(file, date_column)
+            df = augment_func(df)
+            dfs.append(df)
+
+    else:
+        dfs= data_frames
+
     df = pd.concat(dfs)
 
     # if no features are specified, assume it's all columns
