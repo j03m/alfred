@@ -414,10 +414,13 @@ These columns are likely on the chopping block.
 
 ### SHAP
 
+TODO: Revisit shap, I kept getting an error with the vanilla model: 
 
-
-
-
+```
+AssertionError: The SHAP explanations do not sum up to the model's output! This is either because of a rounding error or because an operator in 
+your computation graph was not fully supported. If the sum difference of %f is significant compared to the scale of your model outputs, 
+please post as a github issue, with a reproducible example so we can debug it. Used framework: pytorch - Max. diff: [some value] - Tolerance: 0.01
+```
 
 ## Predicting Magnitudes
 
@@ -426,6 +429,9 @@ Now that we have a decent signal, prior to spending more money on training I wan
 1) Have the model predict a score representing the percent increase of the stock and perhaps some confidence measure
 2) Have the model operate on a universe of evaluation tickers in its backtest. Ie, rather than trading against one ticker, look at all tickers and chose the one with the best score
 3) Consider reinforcement learning for the above process
+
+To do this, we'll need to recreate our training data. We'll add an `--operation` parameter to `scripts/create-basic-direction-data.py` to either be `direction` (bool) or `magnitude` 
+(+/- percent change).
 
 ### Changing up our model and training data
 
