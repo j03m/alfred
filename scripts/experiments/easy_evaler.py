@@ -11,7 +11,7 @@ def main():
     parser = argparse.ArgumentParser(description="Run trainer with specified model.")
     parser.add_argument('--model', type=str, default='vanilla.small', help='Name of the model to use')
     parser.add_argument('--size', type=int, default=256, help='The size of the model to use')
-    parser.add_argument('--tickers', type=str, default="./metadata/basic-tickers.json", help='Tickers to train on')
+    parser.add_argument('--tickers', type=str, default="./metadata/basic-tickers.json", help='Tickers to evaluate on')
     parser.add_argument('--min_date', type=str, default="2004-03-31", help='Minimum date for timerange trimming (YYYY-MM-DD)')
     parser.add_argument('--max_date', type=str, default=None, help='Maximum date for timerange trimming (YYYY-MM-DD)')
 

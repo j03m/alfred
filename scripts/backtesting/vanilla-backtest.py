@@ -3,10 +3,12 @@ import argparse
 
 from datetime import datetime
 
+from QuantLib import Simple
+
 from alfred.utils import set_deterministic, read_time_series_file, trim_timerange
 from alfred.easy import prepare_data_and_model
 from alfred.devices import set_device
-from alfred.model_optimization import run_basic_signal_backtest, print_ledger_metrics
+from alfred.model_backtesting import SimpleBacktester, NuancedBacktester
 device = set_device()
 
 def main(args):
@@ -40,20 +42,45 @@ def main(args):
     operations = []
     readings = []
     model.eval()
-    for features, _ in loader:
-        features = features.to(device)
-        with torch.no_grad():
-            output = model(features).squeeze()
-        value = output.item()
-        readings.append(value)
-        if value >= args.buy_confidence:
-            operations.append(1)
-        else:
-            operations.append(0)
 
-    ledger = run_basic_signal_backtest(df, operations, readings)
-    ledger.to_csv("./data/backtest.csv")
-    print_ledger_metrics(df, ledger)
+
+    if args.type == "simple":
+        for features, _ in loader:
+            features = features.to(device)
+            with torch.no_grad():
+                output = model(features).squeeze()
+            value = output.item()
+            readings.append(value)
+            if value >= args.buy_confidence:
+                operations.append(1)
+            else:
+                operations.append(0)
+        bt = SimpleBacktester()
+        ledger = bt.run_test(df,operations, readings)
+        bt.print_ledger_metrics(df, ledger)
+
+    elif args.type == "nuanced":
+        for features, _ in loader:
+            features = features.to(device)
+            with torch.no_grad():
+                output = model(features).squeeze()
+            value = output.item()
+            readings.append(value)
+            if value >= args.buy_confidence:
+                operations.append(2)
+            elif args.buy_confidence > value >= args.close_buy_confidence:
+                operations.append(1)
+            elif args.close_short_confidence < value >= args.short_confidence:
+                operations.append(-1)
+            elif value < args.short_confidence:
+                operations.append(-2)
+            else:
+                operations.append(0)
+        bt = NuancedBacktester()
+        ledger = bt.run_test(df,operations, readings)
+        bt.print_ledger_metrics(df, ledger)
+    else:
+        assert False, "I'm broken"
 
 
 if __name__ == "__main__":
@@ -63,11 +90,14 @@ if __name__ == "__main__":
     parser.add_argument('--max_date', type=str, default="2024-12-31",
                         help='Maximum date for timerange trimming (YYYY-MM-DD)')
     parser.add_argument("--test_ticker", type=str, default="AAPL", help="Ticker symbol for the test asset")
+    parser.add_argument("--type", choices=["simple", "nuanced"], default="simple", help="The type of backtest to run")
     parser.add_argument("--seed", type=int, default=0, help="Random seed for reproducibility")
     parser.add_argument("--model_name", type=str, default="vanilla.medium", help="model to back test")
     parser.add_argument("--model_size", type=int, default=1024, help="model size")
-    parser.add_argument("--buy_confidence", type=float, default=0.5, help="score >= needed to initiate a buy")
-    parser.add_argument("--short_confidence", type=float, default=0.5, help="score <= needed to initiate a buy")
+    parser.add_argument("--buy_confidence", type=float, default=0.7, help="score >= needed to initiate a buy")
+    parser.add_argument("--close_buy_confidence", type=float, default=0.5, help="score >= needed to initiate a buy")
+    parser.add_argument("--close_short_confidence", type=float, default=0.5, help="score <= needed to initiate a buy")
+    parser.add_argument("--short_confidence", type=float, default=0.3, help="score <= needed to initiate a buy")
 
 
     args = parser.parse_args()

@@ -354,11 +354,83 @@ To do that we can run a basic experiment. We can choose two uncorrelated equitie
 test and compare the result to holding an index over the same time period. This won't be a sophisticated backtest, but it will let us know in theory what our model might perform like as
 directional analyst. 
 
+To do this I introduced `alfred.model_backtesting`. There were a few backtesters out in the world already, for example `backtesting.py` and `backtrader` but for various reasons I was jumping 
+through hoops implementing what I wanted here which was not a fully featured backtesting solution, but a smoke test of sorts. For example backtrader demands trades be executed on the next bar open
+which is probably realistic, but not what needed for my quarter over quarter testing. When I did finally get it to work, something was going wrong with the broker execution framework and 
+my buy orders were never executing. I opted for two of my own models. `SimpleBackTester` and `NuancedBackTester` which can see in [scripts/backtesting/vanilla-backtest.py](scripts/backtesting/vanilla-backtest.py).
+
+The former simply looks at 1 or 0 signals and either shorts or longs based on the signal and uses the opposite direction to take the other side. Nuanced backtester moves away from our boolean model toward
+a place where we use a score to determine how long or short we want to be. (More on that later).
+
+Testing against our tickers our results are very mixed. This set of executions:
+
+```shell
+python scripts/backtesting/vanilla-backtest.py --test_ticker=F &&
+python scripts/backtesting/vanilla-backtest.py --test_ticker=AVB &&
+python scripts/backtesting/vanilla-backtest.py --test_ticker=MAC &&
+python scripts/backtesting/vanilla-backtest.py --test_ticker=ZION &&
+python scripts/backtesting/vanilla-backtest.py --test_ticker=FCX &&
+python scripts/backtesting/vanilla-backtest.py --test_ticker=ROST &&
+python scripts/backtesting/vanilla-backtest.py --test_ticker=SWK &&
+python scripts/backtesting/vanilla-backtest.py --test_ticker=PDCO &&
+python scripts/backtesting/vanilla-backtest.py --test_ticker=JNPR &&
+python scripts/backtesting/vanilla-backtest.py --test_ticker=T &&
+python scripts/backtesting/vanilla-backtest.py --test_ticker=HIG &&
+echo "done"
+```
+Ended up with a mix of positive vs negative win rates and profit levels vs buy hold. Nothing I would want to trade against but an interesting experiment. 
+
+## Re-Examining Feature Importance
+
+### Poor Man's Ablation
+Earlier we looked at correlation of various features to our class of buy or sell. Now that we have a trained model I'd like to revisit that idea by doing a sort of rough sketch
+sensitivity analysis or feature ablation and then looking at SHAP to see if it gives us different outcome. The idea here being if there are features we can fully eliminate when we 
+try to train on more data or do a more complex prediction set we can perhaps be more efficient. [scripts/experiments/poor-mans-feature-ablation.py](scripts/experiments/poor-mans-feature-ablation.py)
+implement a loop where we ablate each feature column and re-evaluate the model. 
+
+The idea here is that if the model gets worse when the feature is ablated, then the feature is needed. If the model gets better when the feature is ablated, then the feature is perhaps noise. 
+We also calculate differences for our other BCELoss stats. 
+
+My theory is that we can drop anything that has both a positive impact on loss and negative impact on F1 (Ie, loss goes up, f1 goes down)
+
+````text
+                   Feature  Loss Change  f1 Change
+25                   2year     0.012671  -0.009751
+46             delta_3year     0.006012  -0.002079
+21                   BTC=F     0.005888  -0.000988
+24                   3year     0.005429  -0.000544
+51      delta_mean_outlook     0.004501  -0.002548
+37  delta_Margin_Operating     0.003540  -0.003140
+34          delta_surprise     0.002971  -0.000512
+0          Close_diff_MA_7     0.002962  -0.004616
+29            mean_outlook     0.002173  -0.002079
+12                surprise     0.001501  -0.003140
+16       Margin_Net_Profit     0.001170  -0.002630
+18                     SPY     0.000709  -0.014790
+50    delta_mean_sentiment     0.000290  -0.001568
+20                    BZ=F     0.000120  -0.000544
+````
+These columns are likely on the chopping block.
+
+### SHAP
+
+
 
 
 
 
 ## Predicting Magnitudes
+
+Now that we have a decent signal, prior to spending more money on training I wanted to mature our model. In this manner I want to try a few things:
+
+1) Have the model predict a score representing the percent increase of the stock and perhaps some confidence measure
+2) Have the model operate on a universe of evaluation tickers in its backtest. Ie, rather than trading against one ticker, look at all tickers and chose the one with the best score
+3) Consider reinforcement learning for the above process
+
+### Changing up our model and training data
+
+
+
 
 ## LSTMs
 
