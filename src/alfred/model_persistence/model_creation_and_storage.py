@@ -9,6 +9,7 @@ from alfred.models import LSTMModel, LSTMConv1d, AdvancedLSTM, TransAm, Vanilla
 from alfred.utils import MongoConnectionStrings
 
 import torch.optim as optim
+import torch.nn as nn
 
 DEVICE = set_device()
 
@@ -74,13 +75,15 @@ def model_from_config(config_token, num_features, sequence_length, size, output,
         model = Vanilla(input_size=num_features, hidden_size=size, output_size=output, layers=100)
     elif config_token == 'vanilla.medium':
         model = Vanilla(input_size=num_features, hidden_size=size, output_size=output, layers=10)
+    elif config_token == 'vanilla.medium.identity':
+        model = Vanilla(input_size=num_features, hidden_size=size, output_size=output, layers=10, final_activation=nn.Identity())
     else:
         raise Exception("Model type not supported")
 
     model.to(DEVICE)
 
     model_token = build_model_token(descriptors)
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.01)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         mode='min',

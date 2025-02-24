@@ -15,7 +15,7 @@ PM_SCALER_CONFIG = [
     {'columns': ['Institutional'], 'type': 'yeo-johnson'},
     {'columns': ['^VIX'], 'type': 'standard'},
     {'columns': ['SPY', 'CL=F', 'BZ=F'], 'type': 'yeo-johnson'},
-    {'columns': ["BTC=F"], 'type': 'standard'},
+    {'columns': ["BTC=F", "PM"], 'type': 'standard'},
     # We only have btc prices back to 2017 which leads to segments with no variation, which blows up yeo-johnson
     {'regex': r'^Margin.*', 'type': 'standard'},
     {'regex': r'^Volume$', 'type': 'yeo-johnson'},

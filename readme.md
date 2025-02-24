@@ -433,6 +433,23 @@ Now that we have a decent signal, prior to spending more money on training I wan
 To do this, we'll need to recreate our training data. We'll add an `--operation` parameter to `scripts/create-basic-direction-data.py` to either be `direction` (bool) or `magnitude` 
 (+/- percent change).
 
+Changing the model slightly to not use sigmoid as its final activation, I retrained the model to look at its overall mse on the eval set. 
+
+From here, we'll try something different. Rather than taking a position in the same stock based on teh signal, we'll run each of our evaluation stocks
+through the backtester, but we'll only take a position in the stock with the highest predicted magnitude. 
+
+From there based on the results we'll make a  call to train the model on a massive set of data (all stocks).
+
+That said, the result of our first run were absolutely abysmal indicating something very wrong:
+
+```text
+Evaluation: Loss: 4.130457425939626 stats: {'mse': tensor(4.1860, device='mps:0'), 'error_variance': tensor(1103.5389)}
+```
+
+
+
+
+
 ### Changing up our model and training data
 
 

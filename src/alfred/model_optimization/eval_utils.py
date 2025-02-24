@@ -18,6 +18,7 @@ def evaluate_model(model, loader, stat_accumulator=BCEAccumulator(),  loss_funct
         with torch.no_grad():
             output = model(seq).squeeze()
             batch_loss = loss_function(output, labels)
+
             loss_value = batch_loss.item()
             total_loss += loss_value
             count += 1

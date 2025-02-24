@@ -123,7 +123,8 @@ def trainer(category="easy_model",
             date_column="Unnamed: 0",
             augment_func=noop,
             verbose=False,
-            loss_function=nn.MSELoss()):
+            loss_function=nn.BCELoss(),
+            stat_accumulator=BCEAccumulator):
     model, optimizer, scheduler, train_loader, real_model_token, scaler, was_loaded = prepare_data_and_model(
         category=category,
         model_name=model_name,
@@ -149,7 +150,8 @@ def trainer(category="easy_model",
                        training_label=category,
                        verbose=verbose,
                        loss_function=loss_function,
-                       scaler=scaler)
+                       scaler=scaler,
+                       stat_accumulator=stat_accumulator)
 
 
 def evaler(category="easy_model",
@@ -162,7 +164,8 @@ def evaler(category="easy_model",
            batch_size=32,
            date_column="Unnamed: 0",
            augment_func=noop,
-           loss_function=nn.MSELoss()):
+           loss_function=nn.BCELoss(),
+           stat_accumulator=BCEAccumulator()):
     model, _, _, eval_loader, real_model_token, scaler, was_loaded = prepare_data_and_model(
         category=category,
         model_name=model_name,
@@ -179,7 +182,7 @@ def evaler(category="easy_model",
     if not was_loaded:
         print("WARNING: You are evaluating an empty model. This model was unknown to the system.")
 
-    loss, data = evaluate_model(model, eval_loader, stat_accumulator=BCEAccumulator(), loss_function=loss_function)
+    loss, data = evaluate_model(model, eval_loader, stat_accumulator=stat_accumulator, loss_function=loss_function)
 
     print(f"Evaluation: Loss: {loss} stats: {data}")
     return loss, data

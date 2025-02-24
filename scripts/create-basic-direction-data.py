@@ -28,10 +28,12 @@ def main():
         if args.operation == "direction":
             comparison_result = quarterly_data["Close"].shift(-1) > quarterly_data["Close"]
             quarterly_data["PQ"] = comparison_result.astype(int)
+            quarterly_data.dropna(inplace=True)
             quarterly_data.to_csv(os.path.join(args.data, f"{ticker}_quarterly_directional.csv"))
         elif args.operation == "magnitude":
             next_day_close = quarterly_data["Close"].shift(-1)
             quarterly_data["PM"] = (next_day_close - quarterly_data["Close"] ) / quarterly_data["Close"]
+            quarterly_data.dropna(inplace=True)
             quarterly_data.to_csv(os.path.join(args.data, f"{ticker}_quarterly_magnitude.csv"))
 
 
