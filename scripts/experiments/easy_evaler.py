@@ -25,6 +25,7 @@ def main():
     parser.add_argument('--label', type=str, default="PQ",
                         help='label column')
     parser.add_argument('--loss', choices=["bce", "mse"], default="bce", help='loss function')
+
     args = parser.parse_args()
 
     ticker_metadata = TickerCategories(args.tickers)

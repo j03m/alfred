@@ -26,6 +26,7 @@ def main():
     parser.add_argument('--label', type=str, default="PQ",
                         help='label column')
     parser.add_argument('--loss', choices=["bce", "mse"], default="bce", help='loss function')
+    parser.add_argument('--epochs', type=int, default=5000, help='number of epochs')
 
     args = parser.parse_args()
 
@@ -44,6 +45,7 @@ def main():
         model_size=args.size,
         model_name=args.model,
         labels=[args.label],
+        epochs=args.epochs,
         loss_function=nn.BCELoss() if args.loss == "bce" else nn.MSELoss(),
         stat_accumulator=BCEAccumulator() if args.loss == "bce" else MSEAccumulator())
 

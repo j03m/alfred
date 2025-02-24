@@ -36,7 +36,7 @@ def train_model(model, optimizer, scheduler, scaler, train_loader, patience, mod
         if verbose and epoch % verbosity_limit == 0:
             best_loss = get_best_loss(model_token, training_label)
             print(f'Epoch {epoch} - patience {patience_count}/{patience} - mean loss: {mean_loss} vs best loss: {best_loss} - Stats: ')
-            print ("BCE: ", stat_accumulator.compute(length=count))
+            print ("Stats: ", stat_accumulator.compute(length=count))
             print("last learning rate:", scheduler.get_last_lr())
             print(f"Predictions: {y_pred.detach().cpu().numpy().flatten()}")  # Flatten and print on one line
             print(f"Labels:      {labels.detach().cpu().numpy().flatten()}")  # Flatten and print on one line
@@ -56,6 +56,7 @@ def train_model(model, optimizer, scheduler, scaler, train_loader, patience, mod
             return last_mean_loss
 
         scheduler.step(mean_loss)
-        prune_old_versions()
+        if saved:
+            prune_old_versions()
 
     return last_mean_loss, stat_accumulator

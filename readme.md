@@ -446,7 +446,8 @@ That said, the result of our first run were absolutely abysmal indicating someth
 Evaluation: Loss: 4.130457425939626 stats: {'mse': tensor(4.1860, device='mps:0'), 'error_variance': tensor(1103.5389)}
 ```
 
-
+I realized quickly here that the model hadn't actually run out of patience it had just hit the epochs limit so I gave it some more time
+and got the training mse down to: 
 
 
 
