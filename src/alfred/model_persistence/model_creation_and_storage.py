@@ -212,7 +212,9 @@ def prune_old_versions():
         {'$sort': {'version': -1}},  # Sort by version in descending order
         {'$group': {
             '_id': '$model_token',  # Group by model_token
-            'latest_id': {'$first': '$_id'}  # Get the _id of the latest version
+            'latest_id': {'$first': '$_id'},  # Get the _id of the latest version
+            'latest_model_file_id': {'$first': '$model_file_id'},  # Keep latest model file
+            'latest_scaler_file_id': {'$first': '$scaler_file_id'}  # Keep latest scaler file
         }}
     ]
 
@@ -220,6 +222,25 @@ def prune_old_versions():
     latest_versions = list(models_collection.aggregate(pipeline))
     latest_ids = {doc['latest_id'] for doc in latest_versions}
 
+    # Find all models to delete (those not in latest_ids) and collect their file_ids
+    old_models = models_collection.find({'_id': {'$nin': list(latest_ids)}})
+    old_file_ids = []
+    for model in old_models:
+        if 'model_file_id' in model:
+            old_file_ids.append(model['model_file_id'])
+        if 'scaler_file_id' in model:
+            old_file_ids.append(model['scaler_file_id'])
+
     # Delete all other versions
     result = models_collection.delete_many({'_id': {'$nin': list(latest_ids)}})
+
+    # Delete associated GridFS files (this also removes chunks)
+    deleted_files = 0
+    for file_id in old_file_ids:
+        try:
+            fs.delete(file_id)  # Deletes from fs.files and fs.chunks
+            deleted_files += 1
+        except gridfs.errors.NoFile:
+            print(f"ERROR: GridFS file with ID {file_id} not found, skipping, but this might be a problem")
+
     print(f"Pruned {result.deleted_count} old model versions.")

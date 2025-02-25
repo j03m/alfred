@@ -22,7 +22,7 @@ class Vanilla(nn.Module):
         nn.init.xavier_uniform_(self.last_layer.weight)
 
         # turn layers into tuples (1,2 - 3,4. ...
-        self.layers_pairs = zip(self.layers, self.layers[1:])
+        self.layers_pairs = list(zip(self.layers, self.layers[1:]))
 
 
     def forward(self, input_data):

@@ -449,18 +449,18 @@ Evaluation: Loss: 4.130457425939626 stats: {'mse': tensor(4.1860, device='mps:0'
 I realized quickly here that the model hadn't actually run out of patience it had just hit the epochs limit so I gave it some more time
 and got the training mse down to: 
 
-
+TODO: something is wrong. We can't load this model and continue training or retrain it without loss being insanely high
 
 ### Changing up our model and training data
 
 
+## LSTMs vs NNs
 
+## LSTMs with Convolutions
 
-## LSTMs
+## Transformer?
 
-## Convolutions
-
-## Transformer  
+## Reinforcement Learning
 
 
 

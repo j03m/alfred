@@ -38,7 +38,6 @@ def drop_model_db():
 
 def main():
     print("This script will delete the entire 'model_db' database.")
-    print("Note: This is different from the original functionality which deleted specific experiments.")
     drop_model_db()
 
 
