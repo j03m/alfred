@@ -78,16 +78,19 @@ def prepare_data_and_model_raw(category="easy_model",
     # if no features are specified, assume it's all columns
     if len(features) == 0:
         size = len(df.columns) - len(labels)
-        features = list(set(df.columns) - set(labels))
+        features = sorted(list(set(df.columns) - set(labels)))
     else:
         size = len(features)
+
+
     print("loading model from config or creating model")
+    features_hash = crc32_columns(features)
     model, optimizer, scheduler, scaler, real_model_token, was_loaded = model_from_config(
         num_features=size,
         config_token=model_name,
         sequence_length=-1, size=model_size, output=len(labels),
         descriptors=[
-            category, model_name, model_size, len(labels), crc32_columns(features)
+            category, model_name, model_size, len(labels), features_hash
         ])
     # The scaler is persisted with the model to avoid issues with distribution shift with future values
     # If we don't have a scaler that means we have a new model, make a scaler, and fit_transform
@@ -100,12 +103,11 @@ def prepare_data_and_model_raw(category="easy_model",
         print("scaling with known scaler")
         df = scaler.transform(df)
     df.dropna(inplace=True)
-    if len(features) == 0:
-        features_train = df.drop(labels, axis=1)
-        labels_train = df[labels]
-    else:
-        features_train = df[features]
-        labels_train = df[labels]
+
+    features_train = df[features]
+    labels_train = df[labels]
+
+    assert features_hash == crc32_columns(features_train.columns)
     return features_train, labels_train, model, optimizer, real_model_token, scaler, scheduler, was_loaded
 
 
@@ -117,7 +119,7 @@ def trainer(category="easy_model",
             epochs=5000,
             features=[],
             labels=["PQ"],
-            patience=1000,
+            patience=500,
             batch_size=32,
             shuffle=True,
             date_column="Unnamed: 0",

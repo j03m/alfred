@@ -87,9 +87,9 @@ def model_from_config(config_token, num_features, sequence_length, size, output,
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         mode='min',
-        patience=10,  # Increased patience to allow for more epochs before adjustment
-        factor=0.3,  # Less aggressive reduction
-        cooldown=3,  # Wait 3 epochs after reducing before considering another reduction
+        patience=20,  # Increased patience to allow for more epochs before adjustment
+        factor=0.9,  # Less aggressive reduction
+        cooldown=20,  # Wait 3 epochs after reducing before considering another reduction
     )
 
     # Load the latest model from MongoDB

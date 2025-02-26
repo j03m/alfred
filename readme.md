@@ -166,30 +166,71 @@ much more reasonable.
 
 > Hard lesson: LOOK CLOSELY AT YOUR INPUT before you look at other stuff in the case of exploding gradients! 
 
-### Training and Performance on a Single Equity
+### Training and Performance
 
-The very simple training script using `alfred's` easy wrapper is [here](scripts/experiments/easy_test.py)). This only trains against 
-one ticker (APPL) the results of which are below. We'll expand on this, including other tickers for training and evaluating against
+The very simple training script using `alfred's` `easy` wrapper is [here](scripts/experiments/easy_trainer.py)). This only trains against 
+some subset of tickers. For now I used one, AAPL - the results of which are below. We'll expand on this, including other tickers for training and evaluating against
 tickers we never trained on later.
 
-After running a quick test at 10 layers and size 256 I achieved decent performance on the training set, but increasing the size of the model
-to 100 layers at 1024 I achieved event better:
+I ran a quick test at 10 layers and size 256 I achieved decent performance on the training set (vanilla.small/256 is the default model):
 
-| Metric    | Previous Run (Epoch 2300) | Current Run (Epoch 1190) |
-|-----------|---------------------------|--------------------------|
-| Mean Loss | 0.2085                    | 0.0577                   |
-| Accuracy  | 0.7024                    | 0.9582                   |
-| Precision | 0.7024                    | 0.9449                   |
-| Recall    | 0.9999                    | 0.9987                   |
-| F1-Score  | 0.8252                    | 0.9711                   |
+> (venv) jmordetsky in ~/alfred (main) > python scripts/experiments/easy_trainer.py --tickers=metadata/basic-tickers.json
 
+| Metric    | Value          |
+|-----------|----------------|
+| Best Loss | 7.9142e-07     |
+| Accuracy  | 1.0000 (mps:0) |
+| Precision | 1.0000 (mps:0) |
+| Recall    | 1.0000 (mps:0) |
+| F1 Score  | 1.0000 (mps:0) |
+
+
+
+I then tried `vanilla.medium` which is 10 layers at 1024:
+
+> (venv) jmordetsky in ~/alfred (main) > python scripts/experiments/easy_trainer.py --tickers=metadata/basic-tickers.json --model vanilla.medium --size 1024
+
+| Metric    | Value          |
+|-----------|----------------|
+| Best Loss | 5.7641e-08     |
+| Accuracy  | 1.0000 (mps:0) |
+| Precision | 1.0000 (mps:0) |
+| Recall    | 1.0000 (mps:0) |
+| F1 Score  | 1.0000 (mps:0) |
 
 First I should while I was happy with this outcome, the real test is on data the model hasn't seen so there is no real reason to get excited here. But after a day of abysmal scoring
-due to scaling issues I'm happy to have landed here. 
+due to scaling issues I'm happy to have landed here. Seeing 1's across the board for our metrics is nice, but also worrying about the possibily
+of over fitting against our training stocks.
 
 Because we're trying to predict if next quarter will be a good trade, we need to think a bit about the game theory of outcomes. While 
 we likely cannot trade off binary classes, the thought exercise about which of these metrics is most valuable to trading environment is a useful one. For simplicty, 
 I'll assume we will only issue buy orders or hold on True. On False we will either avoid buying or sell our position.
+
+To get a sense on how we perform against data we've never seen, we'll use alfred's `easy_evaler` against our evaluation stocks. We'll test
+`vanilla.small` and `vanilla.medium`
+
+Medium: 
+
+| Metric    | Value          |
+|-----------|----------------|
+| Loss      | 22.2711        |
+| Accuracy  | 0.4708 (mps:0) |
+| Precision | 0.4768 (mps:0) |
+| Recall    | 0.5539 (mps:0) |
+| F1 Score  | 0.5125 (mps:0) |
+
+Small:
+
+| Metric    | Value          |
+|-----------|----------------|
+| Loss      | 13.9524        |
+| Accuracy  | 0.5357 (mps:0) |
+| Precision | 0.5313 (mps:0) |
+| Recall    | 0.6401 (mps:0) |
+| F1 Score  | 0.5806 (mps:0) |
+
+
+TODO: Something seems off here, our evaluation against the training set is terrible?
 
 *Accuracy* - gives us our overall performance at 95.8%. This is our total number of correct predictions. Ie, we want to be mostly correct in either direction
 with our positions so we make and don't lose money. 
@@ -217,115 +258,7 @@ Evaluation: Loss: 0.323896328608195 stats: {'accuracy': tensor(0.5357, device='m
 So that leaves us with the question, if we train against our corpus of uncorrelated tickers
 can we do better against a 2nd corpus of uncorrelated tickers?
 
-### Expanding Our Equity Set
 
-#### Training vanilla.large and vanilla.small v1
-
-Now we have to consider how to train against additional equities. For this experiment since we're not taking into account the timeseries aspect and treating it all
-as a tabular classification problem one possibility is concatenating all the files together. This would let us train against the largest set of available data. Another consideration
-though is if we want to expand our list of equities using this approach we would have to retrain on all the available data again. Another possibility is to train the model across each file independently. This is computationally cheaper if we add coverage, but runs the risk of catastrophic forgetting 
-and possibly as some risk of order dependence. 
-
-I decided to go with initially concatenating with the assumption we could fine tune on the original dataset later. We'll have to make some changes to the `easy` module to save scalers
-to be re-used for fine-tuning later. For both initial training and fine-tuning, we will want to use consistent feature scaling. The best approach is usually to calculate scaling parameters 
-(e.g., mean, standard deviation) from your initial training dataset (e.g., the first 100 equities) and apply the same scaling transformation to all subsequent data, including new equities. 
-This ensures consistency in feature ranges across all data seen by the model. For an illustration of why this is needed check out [scripts/educational/data-distrubtion-shift.py](scripts/educational/data-distrubtion-shift.py).
-
-Running `vanilla.large` (100 layers) with size 1024 against the concatenated list of test tickers gives us decent results, but not as solid as testing a single ticker:
-
-```
-BCE:  {'accuracy': tensor(0.9231, device='mps:0'), 'precision': tensor(0.9124, device='mps:0'), 'recall': tensor(0.9425, device='mps:0'), 'f1': tensor(0.9272, device='mps:0')}
-```
-
-Oddly, a smart model `vanilla.small` (10 layers) with size 256 yielded: 
-
-```
-{'accuracy': tensor(0.9965, device='mps:0'), 'precision': tensor(0.9959, device='mps:0'), 'recall': tensor(0.9973, device='mps:0'), 'f1': tensor(0.9966, device='mps:0')}
-```
-
-Which made me pause. However, after some research I found that he larger net might be dealing with vanishing gradients due to its size.
-
-#### Evaluating vanilla.large and vanilla.small v1
-
-Running `scripts/easy_evaler.py` we get a sense of how both larger and small models will perform on other equities.
-
-Small: `Evaluation: Loss: 0.30814009917951446 stats: {'accuracy': tensor(0.6591, device='mps:0'), 'precision': tensor(0.6602, device='mps:0'), 'recall': tensor(0.6616, device='mps:0'), 'f1': tensor(0.6609, device='mps:0')}`
-
-Large: `Evaluation: Loss: 0.27523269157151437 stats: {'accuracy': tensor(0.6645, device='mps:0'), 'precision': tensor(0.6631, device='mps:0'), 'recall': tensor(0.6746, device='mps:0'), 'f1': tensor(0.6688, device='mps:0')}`
-
-Even though the smaller model seemed to fit the training data much better
-
-#### Minor change to activation
-
-During a code review (from an AI lol) I got the following advice:
-
->  Batch normalization is most effective when applied before the activation function. By applying it after, you're normalizing the output of the Tanh, which is already bounded and might have regions of very small gradients. By applying batch norm before the Tanh, you ensure that the input to the Tanh has a good distribution (mean 0, variance 1), preventing it from saturating and improving gradient flow. The layers_pairs line is changed to iterate over linear layers and batchnorm layers in the right order, and the activation is moved after the batch norm in the forward method.
-
-I made this change and retrained, and revaluated the models. For the large model, that didn't give much if any lift, I wonder about the soundness of the advice.
-
-Training ended a little later:
-
-```text
-Epoch 2020 - patience 1000/1000 - mean loss: 0.003793424164980714 vs best loss: 0.001796873403785365 - Stats: 
-BCE:  {'accuracy': tensor(0.9166, device='mps:0'), 'precision': tensor(0.9035, device='mps:0'), 'recall': tensor(0.9398, device='mps:0'), 'f1': tensor(0.9213, device='mps:0')}
-```
-
-Eval ended about the same:
-
-```text
-Evaluation: Loss: 0.2811918371461898 stats: {'accuracy': tensor(0.6602, device='mps:0'), 'precision': tensor(0.6645, device='mps:0'), 'recall': tensor(0.6530, device='mps:0'), 'f1': tensor(0.6587, device='mps:0')}
-```
-
-That said we may still be suffering from disappearing gradients due to the depth of the network. We'll look at that next. 
-
-For the small model we were again, highly tuned to the training set, but our eval performance was roughly the same:
-
-```text
-BCE:  {'accuracy': tensor(0.9964, device='mps:0'), 'precision': tensor(0.9958, device='mps:0'), 'recall': tensor(0.9973, device='mps:0'), 'f1': tensor(0.9965, device='mps:0')}
-
-Evaluation: Loss: 0.31217595087277394 stats: {'accuracy': tensor(0.6602, device='mps:0'), 'precision': tensor(0.6524, device='mps:0'), 'recall': tensor(0.6918, device='mps:0'), 'f1': tensor(0.6715, device='mps:0')}
-```
-
-
-#### More size, less depth
-
-I decided to train the model again to test the layers as the problem theory. This time I would test the 1024 sized model, but only with 10 layers. The result there mimicked the 
-small model in that it was able to get very low error rate on the training data, but not so much during evaluation on the second set:
-
-Training:
-```text
-Epoch 4990 - patience 1/1000 - mean loss: 1.8080596676220705e-11 vs best loss: 1.803881936065778e-11 - Stats: 
-BCE:  {'accuracy': tensor(0.9970, device='mps:0'), 'precision': tensor(0.9965, device='mps:0'), 'recall': tensor(0.9978, device='mps:0'), 'f1': tensor(0.9971, device='mps:0')}
-last learning rate: [0.001]
-```
-
-Eval:
-```
-Evaluation: Loss: 0.3111821541515449 stats: {'accuracy': tensor(0.6634, device='mps:0'), 'precision': tensor(0.6577, device='mps:0'), 'recall': tensor(0.6875, device='mps:0'), 'f1': tensor(0.6723, device='mps:0')}
-```
-
-So what we've established here is for this particular case:
-
-* More isn't always better - specifically more layers
-* We may be overfitting to the training set
-
-I don't fully grok the ins and outs of resnet, but the idea that it helps solve deep network issues is covered here:
-https://medium.com/@ibtedaazeem/understanding-resnet-architecture-a-deep-dive-into-residual-neural-network-2c792e6537a9
-
-To be fair, I don't know that 66% accuracy is a bad score for our use case. In theory, anything that gave us a > 50 chance would be an advantage. We'll look at how to 
-backtest the predictions later in the article.
-
-### Dropout - Vanilla.small and Vanilla.large v2
-
-To help deal with the issue of overfitting, I introduced dropout to the vanilla network which I had previous left out
-on purpose to make sure we were using the simplest possible example.
-
-We add the dropout after activation. Because dropout zeros out a fraction of neuron activations during training, applying it
-before batch normalization would lead to inconsistent statistics being calculated in that layer. Putting the dropout after 
-activation also isn't ideal. For example if we were using ReLU we could end up with many activations being zero-ed before
-dropout is even applied.
-
-TODO: review the script we added educational regarding order
 
 #### Retraining and retesting 
 

@@ -10,7 +10,9 @@ device = set_device()
 def train_model(model, optimizer, scheduler, scaler, train_loader, patience, model_token, training_label, epochs=20,
                 loss_function=nn.BCELoss(), stat_accumulator=BCEAccumulator(), verbose=False, verbosity_limit=10):
     model.train()
-
+    best_stats = None
+    best_loss = None
+    stats = None
     patience_count = 0
     last_mean_loss = None
     for epoch in range(epochs):
@@ -35,8 +37,9 @@ def train_model(model, optimizer, scheduler, scaler, train_loader, patience, mod
         mean_loss = total_loss / count
         if verbose and epoch % verbosity_limit == 0:
             best_loss = get_best_loss(model_token, training_label)
-            print(f'Epoch {epoch} - patience {patience_count}/{patience} - mean loss: {mean_loss} vs best loss: {best_loss} - Stats: ')
-            print ("Stats: ", stat_accumulator.compute(length=count))
+            print(f'Epoch {epoch} - patience {patience_count}/{patience} -  loss: {mean_loss} vs best loss: {best_loss}')
+            stats = stat_accumulator.compute()
+            print ("Stats: ", stats)
             print("last learning rate:", scheduler.get_last_lr())
             print(f"Predictions: {y_pred.detach().cpu().numpy().flatten()}")  # Flatten and print on one line
             print(f"Labels:      {labels.detach().cpu().numpy().flatten()}")  # Flatten and print on one line
@@ -51,12 +54,16 @@ def train_model(model, optimizer, scheduler, scaler, train_loader, patience, mod
 
         last_mean_loss = mean_loss
 
-        if patience_count > patience:
-            print(f'Out of patience at epoch {epoch}. Patience count: {patience}/{patience_count}. Limit: {patience}')
-            return last_mean_loss
-
         scheduler.step(mean_loss)
         if saved:
             prune_old_versions()
+            best_stats = stats
 
-    return last_mean_loss, stat_accumulator
+        stat_accumulator.reset()
+
+        if patience_count > patience:
+            print(f'Out of patience at epoch {epoch}. Patience count: {patience}/{patience_count}. Limit: {patience}')
+            break
+
+    print(f'Best loss: {best_loss}, Best Stats: {stats}')
+    return get_best_loss(model_token, training_label), best_stats

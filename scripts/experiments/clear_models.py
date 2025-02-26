@@ -37,7 +37,7 @@ def drop_model_db():
 
 
 def main():
-    print("This script will delete the entire 'model_db' database.")
+    print("**************This script will delete the entire 'model_db' database.")
     drop_model_db()
 
 

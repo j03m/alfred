@@ -21,12 +21,13 @@ def main():
                         help='Minimum date for timerange trimming (YYYY-MM-DD)')
     parser.add_argument('--max_date', type=str, default=None, help='Maximum date for timerange trimming (YYYY-MM-DD)')
     parser.add_argument('--tickers', type=str, default="./metadata/basic-tickers.json", help='Tickers to train on')
-    parser.add_argument('--file-post-fix', type=str, default="_quarter_directional",
+    parser.add_argument('--file-post-fix', type=str, default="_quarterly_directional",
                         help='assumes data/[ticker][args.file_post_fix].csv as data to use')
     parser.add_argument('--label', type=str, default="PQ",
                         help='label column')
     parser.add_argument('--loss', choices=["bce", "mse"], default="bce", help='loss function')
     parser.add_argument('--epochs', type=int, default=5000, help='number of epochs')
+    parser.add_argument('--patience', type=int, default=500, help='number of epochs to allow without loss decrease')
 
     args = parser.parse_args()
 
@@ -41,6 +42,7 @@ def main():
         category=args.category,
         augment_func=lambda df: trim_timerange(df, min_date=args.min_date, max_date=args.max_date),
         files=files,
+        patience=args.patience,
         verbose=True,
         model_size=args.size,
         model_name=args.model,

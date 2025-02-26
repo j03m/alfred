@@ -20,7 +20,7 @@ def main():
     parser.add_argument('--min_date', type=str, default="2004-03-31",
                         help='Minimum date for timerange trimming (YYYY-MM-DD)')
     parser.add_argument('--max_date', type=str, default=None, help='Maximum date for timerange trimming (YYYY-MM-DD)')
-    parser.add_argument('--file-post-fix', type=str, default="_quarter_directional",
+    parser.add_argument('--file-post-fix', type=str, default="_quarterly_directional",
                         help='assumes data/[ticker][args.file_post_fix].csv as data to use')
     parser.add_argument('--label', type=str, default="PQ",
                         help='label column')

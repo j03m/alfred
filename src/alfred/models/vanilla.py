@@ -21,18 +21,16 @@ class Vanilla(nn.Module):
                 nn.init.xavier_uniform_(layer.weight)
         nn.init.xavier_uniform_(self.last_layer.weight)
 
-        # turn layers into tuples (1,2 - 3,4. ...
-        self.layers_pairs = list(zip(self.layers, self.layers[1:]))
-
 
     def forward(self, input_data):
         x = self.hidden_activation(self.first_layer(input_data))
-        for layer, batch_norm in self.layers_pairs:
-            x = layer(x)
-            x = batch_norm(x)
+        for i in range(0, len(self.layers), 2):
+            linear_layer = self.layers[i]
+            batch_norm_layer = self.layers[i + 1]
+            x = linear_layer(x)
+            x = batch_norm_layer(x)
             x = self.hidden_activation(x)
             x = self.dropout(x)
-
         final_x = self.last_layer(x)
         predictions = self.final_activation(final_x)
         return predictions

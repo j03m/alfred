@@ -26,5 +26,5 @@ def evaluate_model(model, loader, stat_accumulator=BCEAccumulator(),  loss_funct
                 raise Exception("Found NaN!")
             stat_accumulator.update(output.squeeze(), labels)
 
-    stat_accumulator.compute(count)
+    stat_accumulator.compute()
     return total_loss/count, stat_accumulator.get()
