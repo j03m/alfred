@@ -65,7 +65,7 @@ def main():
     results = []
     for column, result in ablation_results.items():
         row = {'Feature': column, 'Loss Change': result['loss'] - main_loss,
-               f'f1 Change': result['stats']['f1'].item() - main_stats['f1'].item()}
+               f'f1 Change': result['stats']['f1'] - main_stats['f1']}
         results.append(row)
 
     results_df = pd.DataFrame(results)

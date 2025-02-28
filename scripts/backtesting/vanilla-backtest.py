@@ -3,8 +3,6 @@ import argparse
 
 from datetime import datetime
 
-from QuantLib import Simple
-
 from alfred.utils import set_deterministic, read_time_series_file, trim_timerange
 from alfred.easy import prepare_data_and_model
 from alfred.devices import set_device

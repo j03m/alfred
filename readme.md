@@ -211,13 +211,13 @@ To get a sense on how we perform against data we've never seen, we'll use alfred
 
 Medium: 
 
-| Metric    | Value          |
-|-----------|----------------|
-| Loss      | 22.2711        |
-| Accuracy  | 0.4708 (mps:0) |
-| Precision | 0.4768 (mps:0) |
-| Recall    | 0.5539 (mps:0) |
-| F1 Score  | 0.5125 (mps:0) |
+| Metric    | Value              |
+|-----------|--------------------|
+| Loss      | 6.602123483308945  |
+| Accuracy  | 0.6287878751754761 |
+| Precision | 0.6306695342063904 |
+| Recall    | 0.6293103694915771 |
+| F1        | 0.6299892067909241 |
 
 Small:
 
@@ -230,8 +230,6 @@ Small:
 | F1 Score  | 0.5806 (mps:0) |
 
 
-TODO: Something seems off here, our evaluation against the training set is terrible?
-
 *Accuracy* - gives us our overall performance at 95.8%. This is our total number of correct predictions. Ie, we want to be mostly correct in either direction
 with our positions so we make and don't lose money. 
 
@@ -243,35 +241,13 @@ toward predicting positive trades more often than not. Ie, we're getting all the
 
 *F1* - Gives us the balance of precision and recall. 
 
+From a purely theoretical point of view, an F1 score of >  50 should allow us to make money at least on the
+basket of evaluation stocks in question. However, there is that age old xkcd commic we should keep in mind:
 
-### Evaluating on a single equity
+![img.png](img.png)
 
-Earlier we spent some time picking uncorrelated stocks with `LNC` being the least correlated to `AAPL` so we'll run an evaluation against that.
+There is more to a profitable trading strategy to be considered :).
 
-Just as a sanity check we'll use `alfred's` easy evaler to check how our model performs 
-against an uncorrelated stock. The results are unsurprisingly pretty abysmal:
-
-```
-Evaluation: Loss: 0.323896328608195 stats: {'accuracy': tensor(0.5357, device='mps:0'), 'precision': tensor(0.5417, device='mps:0'), 'recall': tensor(0.8667, device='mps:0'), 'f1': tensor(0.6667, device='mps:0')}
-```
-
-So that leaves us with the question, if we train against our corpus of uncorrelated tickers
-can we do better against a 2nd corpus of uncorrelated tickers?
-
-
-
-#### Retraining and retesting 
-
-Notably, because the 100 layer experiment seems to be such a wash and is much more expensive to train I will initially run another test of `vanilla.small` and our 10 layer, 1024 size
-model (now dubbed `vanilla.medium`) first. If either of those look like had a performance improvement on the eval set, I'll rerun `vanilla.large`. 
-
-I should probably note if you are following along here that its important we wipe out the models prior to retesting! Use the [clear_models.py](scripts/experiments/clear_models.py)
-
-Drop out didn't significantly move the needle with our evaluation still being roughly 66% accuracy:
-
-```text
-Evaluation: Loss: 0.3080481131546376 stats: {'accuracy': tensor(0.6677, device='mps:0'), 'precision': tensor(0.6619, device='mps:0'), 'recall': tensor(0.6918, device='mps:0'), 'f1': tensor(0.6765, device='mps:0')}
-```
 
 
 ## Back Testing Directional Signals
@@ -279,23 +255,24 @@ Evaluation: Loss: 0.3080481131546376 stats: {'accuracy': tensor(0.6677, device='
 There are a few options available to us here moving forward, we could potentially play around with different model architectures and types and we can potentially increase the number of 
 equities we're training against. Given the blessing that we're working with quarterly data, we can likely load up entire universes of equities for training and not hit any physical limits
 on modern hardware. That said, I've mentioned before the directional indicator is a bit ham-fisted. If we're going to spend an enormous amount of time or hardware training on more data,
-we should migrate the current network to predict something like velocity of the move.  
+we should migrate the current network to predict something like the velocity or magnitude of the move.  
 
 That said before we do that, given our results, what we can do is get an understanding of how impactful a 66% projection is from a profitability perspective against single equities vs buy and hold of a benchmark.
 
-To do that we can run a basic experiment. We can choose two uncorrelated equities from our evaluation set and for given period of time trade them long/short quarter over quarter in a back
+To do that we can run a basic experiment. We can choose take the uncorrelated equities from our evaluation set and for given period of time trade them long/short quarter over quarter in a back
 test and compare the result to holding an index over the same time period. This won't be a sophisticated backtest, but it will let us know in theory what our model might perform like as
 directional analyst. 
 
 To do this I introduced `alfred.model_backtesting`. There were a few backtesters out in the world already, for example `backtesting.py` and `backtrader` but for various reasons I was jumping 
-through hoops implementing what I wanted here which was not a fully featured backtesting solution, but a smoke test of sorts. For example backtrader demands trades be executed on the next bar open
+through hoops implementing what I wanted here, which was not a fully featured backtesting solution, but a smoke test of sorts. For example backtrader demands trades be executed on the next bar open
 which is probably realistic, but not what needed for my quarter over quarter testing. When I did finally get it to work, something was going wrong with the broker execution framework and 
 my buy orders were never executing. I opted for two of my own models. `SimpleBackTester` and `NuancedBackTester` which can see in [scripts/backtesting/vanilla-backtest.py](scripts/backtesting/vanilla-backtest.py).
 
-The former simply looks at 1 or 0 signals and either shorts or longs based on the signal and uses the opposite direction to take the other side. Nuanced backtester moves away from our boolean model toward
-a place where we use a score to determine how long or short we want to be. (More on that later).
+The former simply checks if the prediction > 0.5. If so it takes a long posisiton, otherwise it takes a short position. Opposite signals are exits. The latter introduces a confidence level to the score. If the signal is > 0.7 or < 0.3 it will consider that a strong indicator to go long or short. A lesser score of >= 0.5 or < 0.5 is a signal to get out of a trade if we're in one. 
 
-Testing against our tickers our results are very mixed. This set of executions:
+Seasoned traders will probably giggle at my lack of sophistication here, but again, I just wanted to get a sense of how our prediction scores would play out.
+
+I ran two tests, both using `vanilla.medium`:
 
 ```shell
 python scripts/backtesting/vanilla-backtest.py --test_ticker=F &&
@@ -311,7 +288,12 @@ python scripts/backtesting/vanilla-backtest.py --test_ticker=T &&
 python scripts/backtesting/vanilla-backtest.py --test_ticker=HIG &&
 echo "done"
 ```
-Ended up with a mix of positive vs negative win rates and profit levels vs buy hold. Nothing I would want to trade against but an interesting experiment. 
+
+Results were mixed for the simple back tests with roughly equal winners and losers and a mixed bag from a win rate perspective.
+
+TODO: build a summary 
+
+
 
 ## Re-Examining Feature Importance
 
@@ -324,26 +306,15 @@ implement a loop where we ablate each feature column and re-evaluate the model.
 The idea here is that if the model gets worse when the feature is ablated, then the feature is needed. If the model gets better when the feature is ablated, then the feature is perhaps noise. 
 We also calculate differences for our other BCELoss stats. 
 
-My theory is that we can drop anything that has both a positive impact on loss and negative impact on F1 (Ie, loss goes up, f1 goes down)
+My theory is that we could drop anything that has both a positive impact on loss and negative impact on F1 (Ie, loss goes up, f1 goes down). But there wasn't much that fit this criteria:
 
 ````text
-                   Feature  Loss Change  f1 Change
-25                   2year     0.012671  -0.009751
-46             delta_3year     0.006012  -0.002079
-21                   BTC=F     0.005888  -0.000988
-24                   3year     0.005429  -0.000544
-51      delta_mean_outlook     0.004501  -0.002548
-37  delta_Margin_Operating     0.003540  -0.003140
-34          delta_surprise     0.002971  -0.000512
-0          Close_diff_MA_7     0.002962  -0.004616
-29            mean_outlook     0.002173  -0.002079
-12                surprise     0.001501  -0.003140
-16       Margin_Net_Profit     0.001170  -0.002630
-18                     SPY     0.000709  -0.014790
-50    delta_mean_sentiment     0.000290  -0.001568
-20                    BZ=F     0.000120  -0.000544
+Ablation Study Results:
+           Feature  Loss Change  f1 Change
+0  Close_diff_MA_7     0.697478  -0.003172
 ````
-These columns are likely on the chopping block.
+
+Only `Close_diff_MA_7` ended up on the chopping block.
 
 ### SHAP
 
