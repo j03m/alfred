@@ -1,7 +1,7 @@
 from alfred.easy import trainer
 from alfred.metadata import TickerCategories
 from alfred.utils import trim_timerange, set_deterministic
-from alfred.model_metrics import BCEAccumulator, RegressionAccumulator, MSEWithSignPenalty
+from alfred.model_metrics import BCEAccumulator, RegressionAccumulator, HuberWithSignPenalty
 
 import torch.nn as nn
 
@@ -48,7 +48,7 @@ def main():
         model_name=args.model,
         labels=[args.label],
         epochs=args.epochs,
-        loss_function=nn.BCELoss() if args.loss == "bce" else MSEWithSignPenalty(),
+        loss_function=nn.BCELoss() if args.loss == "bce" else HuberWithSignPenalty(),
         stat_accumulator=BCEAccumulator() if args.loss == "bce" else RegressionAccumulator())
 
 if __name__ == "__main__":
