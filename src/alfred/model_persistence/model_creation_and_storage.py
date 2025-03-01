@@ -70,26 +70,28 @@ def model_from_config(config_token, num_features, sequence_length, size, output,
     elif config_token == 'trans-am':
         model = TransAm(features=num_features, model_size=size, heads=size / 16, output=output, last_bar=True)
     elif config_token == 'vanilla.small':
-        model = Vanilla(input_size=num_features, hidden_size=size, output_size=output)
+        model = Vanilla(input_size=num_features, hidden_size=size, layers=3, output_size=output)
     elif config_token == 'vanilla.large':
-        model = Vanilla(input_size=num_features, hidden_size=size, output_size=output, layers=100)
+        model = Vanilla(input_size=num_features, hidden_size=size, layers=20, output_size=output)
     elif config_token == 'vanilla.medium':
-        model = Vanilla(input_size=num_features, hidden_size=size, output_size=output, layers=10)
+        model = Vanilla(input_size=num_features, hidden_size=size, layers=10, output_size=output)
     elif config_token == 'vanilla.medium.identity':
-        model = Vanilla(input_size=num_features, hidden_size=size, output_size=output, layers=10, final_activation=nn.Identity())
+        model = Vanilla(input_size=num_features, hidden_size=size, layers=10, output_size=output, final_activation=nn.Identity())
+    elif config_token == 'vanilla.small.tanh':
+        model = Vanilla(input_size=num_features, hidden_size=size, layers=3, output_size=output, final_activation=nn.Tanh())
     else:
         raise Exception("Model type not supported")
 
     model.to(DEVICE)
 
     model_token = build_model_token(descriptors)
-    optimizer = optim.Adam(model.parameters(), lr=0.01)
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         mode='min',
-        patience=20,  # Increased patience to allow for more epochs before adjustment
-        factor=0.9,  # Less aggressive reduction
-        cooldown=20,  # Wait 3 epochs after reducing before considering another reduction
+        patience=25,  # Increased patience to allow for more epochs before adjustment
+        factor=0.75,  # Less aggressive reduction
+        cooldown=25,  # Wait 3 epochs after reducing before considering another reduction
     )
 
     # Load the latest model from MongoDB

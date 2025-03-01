@@ -344,16 +344,10 @@ through the backtester, but we'll only take a position in the stock with the hig
 
 From there based on the results we'll make a  call to train the model on a massive set of data (all stocks).
 
-That said, the result of our first run were absolutely abysmal indicating something very wrong:
+# TODO : train a classifer 
+# TODO : then load the same model and try to train on magnitudes - ie same model shape new activation
 
-```text
-Evaluation: Loss: 4.130457425939626 stats: {'mse': tensor(4.1860, device='mps:0'), 'error_variance': tensor(1103.5389)}
-```
 
-I realized quickly here that the model hadn't actually run out of patience it had just hit the epochs limit so I gave it some more time
-and got the training mse down to: 
-
-TODO: something is wrong. We can't load this model and continue training or retrain it without loss being insanely high
 
 ### Changing up our model and training data
 

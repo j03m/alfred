@@ -1,6 +1,6 @@
 from alfred.easy import evaler
 from alfred.metadata import TickerCategories
-from alfred.model_metrics import BCEAccumulator, MSEAccumulator
+from alfred.model_metrics import BCEAccumulator, RegressionAccumulator, MSEWithSignPenalty
 from alfred.utils import trim_timerange, set_deterministic
 
 import argparse
@@ -42,8 +42,8 @@ def main():
            model_name=args.model,
            files=files,
            labels=[args.label],
-           loss_function = nn.BCELoss() if args.loss == "bce" else nn.MSELoss(),
-           stat_accumulator = BCEAccumulator() if args.loss == "bce" else MSEAccumulator())
+           loss_function = nn.BCELoss() if args.loss == "bce" else MSEWithSignPenalty(),
+           stat_accumulator = BCEAccumulator() if args.loss == "bce" else RegressionAccumulator())
 
 
 
