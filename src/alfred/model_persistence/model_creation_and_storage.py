@@ -5,7 +5,7 @@ import joblib
 import zlib
 
 from alfred.devices import build_model_token, set_device
-from alfred.models import LSTMModel, LSTMConv1d, AdvancedLSTM, TransAm, Vanilla, VanillaCompress
+from alfred.models import LSTMModel, LSTMConv1d, AdvancedLSTM, TransAm, Vanilla
 from alfred.utils import MongoConnectionStrings
 
 import torch.optim as optim
@@ -95,12 +95,6 @@ def model_from_config(config_token, num_features, sequence_length, size, output,
     elif config_token == 'vanilla.large.tanh':
         model = Vanilla(input_size=num_features, hidden_size=size, layers=10, output_size=output,
                         final_activation=nn.Tanh())
-    elif config_token == 'vanilla.compress.tanh':
-        model = VanillaCompress(input_size=num_features, sizes=create_encoder_decoder_layers(size), output_size=output,
-                                final_activation=nn.Tanh())
-    elif config_token == 'vanilla.compress.identity':
-        model = VanillaCompress(input_size=num_features, sizes=create_encoder_decoder_layers(
-            size), output_size=output, final_activation=nn.Identity())
     else:
         raise Exception("Model type not supported")
 
