@@ -1,6 +1,6 @@
 from alfred.easy import evaler
 from alfred.metadata import TickerCategories
-from alfred.model_metrics import BCEAccumulator, RegressionAccumulator, MSEWithSignPenalty
+from alfred.model_metrics import BCEAccumulator, RegressionAccumulator, MSEWithSignPenalty, HuberWithSignPenalty, SignErrorRatioLoss
 from alfred.utils import trim_timerange, set_deterministic
 
 import argparse
@@ -24,7 +24,7 @@ def main():
                         help='assumes data/[ticker][args.file_post_fix].csv as data to use')
     parser.add_argument('--label', type=str, default="PQ",
                         help='label column')
-    parser.add_argument('--loss', choices=["bce", "mse"], default="bce", help='loss function')
+    parser.add_argument('--loss', choices=["bce", "mse", "huber-sign", "mse-sign", "sign-ratio"], default="bce", help='loss function')
 
     args = parser.parse_args()
 
@@ -36,13 +36,25 @@ def main():
 
     print("Starting easy evaler")
 
+    loss_function = None
+    if args.loss == "bce":
+        loss_function = nn.BCELoss()
+    elif args.loss == "mse":
+        loss_function = nn.MSELoss()
+    elif args.loss == "huber-sign":
+        loss_function = HuberWithSignPenalty()
+    elif args.loss == "mse-sign":
+        loss_function = MSEWithSignPenalty()
+    elif args.loss == "sign-ratio":
+        loss_function = SignErrorRatioLoss()
+
     evaler(category=args.category,
            augment_func=lambda df: trim_timerange(df, min_date=args.min_date, max_date=args.max_date),
            model_size=args.size,
            model_name=args.model,
            files=files,
            labels=[args.label],
-           loss_function = nn.BCELoss() if args.loss == "bce" else MSEWithSignPenalty(),
+           loss_function = loss_function,
            stat_accumulator = BCEAccumulator() if args.loss == "bce" else RegressionAccumulator())
 
 

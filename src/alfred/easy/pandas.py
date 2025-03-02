@@ -10,8 +10,19 @@ from alfred.model_persistence import model_from_config, crc32_columns
 from alfred.model_optimization import train_model, evaluate_model
 from alfred.utils import read_time_series_file
 
+
 def noop(df):
     return df
+
+
+def dfs_from_files(files, date_column="Unnamed: 0", augment_func=noop):
+    dfs = []
+    for file in files:
+        df = read_time_series_file(file, date_column)
+        df = augment_func(df)
+        dfs.append(df)
+    return dfs
+
 
 def prepare_data_and_model(category="easy_model",
                            model_name="vanilla",
@@ -67,11 +78,7 @@ def prepare_data_and_model_raw(category="easy_model",
     print("reading input pandas")
     dfs = []
     if data_frames is None:
-        for file in files:
-            df = read_time_series_file(file, date_column)
-            df = augment_func(df)
-            dfs.append(df)
-
+        dfs = dfs_from_files(files, date_column, augment_func)
     else:
         dfs = data_frames
     df = pd.concat(dfs)
@@ -81,7 +88,6 @@ def prepare_data_and_model_raw(category="easy_model",
         features = sorted(list(set(df.columns) - set(labels)))
     else:
         size = len(features)
-
 
     print("loading model from config or creating model")
     features_hash = crc32_columns(features)

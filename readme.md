@@ -344,8 +344,194 @@ through the backtester, but we'll only take a position in the stock with the hig
 
 From there based on the results we'll make a  call to train the model on a massive set of data (all stocks).
 
-# TODO : train a classifer 
-# TODO : then load the same model and try to train on magnitudes - ie same model shape new activation
+#### Try 1 - Same model, nn.Identity and MSE
+
+I tweaked the model just slightly before running this test. I replaced the `nn.Sigmoid` activation with `nn.Identity` as the final
+activation to `vanilla.medium` and gave it `nn.MSE` as our loss function. I also rolled a new accumulator `RegressionAccumulator` which
+track some metrics in the way our `BCEAccumulator` did, the most important of which was `sign accuracy`. However, when running this test
+I could not really get a decent level of loss and sign accuracy was never much higher than 50%. I'll explain why this was important to me below.
+
+#### Try 2 - Same model, nn.Identity and custom Loss
+
+After doing some thinking and some research I decided to try crafting my own loss function. The idea being I wanted to punish the model 
+harder for missing sign. MSE measure a broad error in either direction. But in our case, it is actually much worse to get the direction wrong than it is for the magnitude to be off. We also know with our classifier runs that we should realy be able to do a good job on direction. Magnitude is essentially the ability for use to decide which of things headed in a direction is going there the fastest so we can certainly tolerate more error there than we can on direction. Ie, prediction that a stock will be +3% and it actually ends up going +1% is must better than prediction a stock will go up +1% and it really goes up -1%. Both are off by 2% but one lead us to a loss.
+
+Initially I constructed `MSEWithSignPenalty` which you can see in `src/alfred/model_metrics/loss.py`. The idea here is based on some weight, we can apply the sign error to the mse and use that as the loss. I also rolled a version of this that uses Huber `HuberWithSignPenalty` and `SignErrorRatioLoss` which uses a score to either amplify or reduce mse and the sign error at some ratio. For example the default params for the ration are 0.5 to 2. This in theory dampens the value error and amplifies the sign error.
+
+I also changed the final activation to Tanh. I broke the rule of tweaking too many thing here, but decided to take a shotgun approach because my first try was so lack luster in its ability to memorize the training data.
+
+Huberloss and an increased model size (2024) gave us during training:
+
+```text
+Out of patience at epoch 1837. Patience count: 500/501. Limit: 500
+Best loss: 0.1627537259613244, Best Stats: {'mae': 0.05751076340675354, 'r2': 0.07053571939468384, 'pearson_corr': 0.3521348536014557, 'sign_accuracy': 0.9211391018619934}
+```
+
+And for eval:
+```text
+Evaluation: Loss: 0.9553842600552626 stats: {'mae': 0.10528900474309921, 'r2': 0.05812478065490723, 'pearson_corr': 0.40794986486434937, 'sign_accuracy': 0.6911281489594743}
+```
+
+I decided to try that again with `SignErrorRatioLoss`. 
+
+Evaluating with no training:
+
+```text
+(venv) jmordetsky in ~/alfred (main) > python scripts/experiments/easy_evaler.py --tickers ./metadata/basic-tickers.json --model vanilla.small.tanh --size 2048 --loss sign-ratio --file-post-fix=_quarterly_magnitude --label PM
+
+WARNING: You are evaluating an empty model. This model was unknown to the system.
+
+Evaluation: Loss: 1.4829210649276603 stats: {'mae': 0.36226388812065125, 'r2': -0.1713106632232666, 'pearson_corr': -0.021615857258439064, 'sign_accuracy': 0.547645125958379}
+```
+
+Best loss on the training data:
+```text
+(venv) jmordetsky in ~/alfred (main) > python scripts/experiments/easy_trainer.py --tickers ./metadata/basic-tickers.json --model vanilla.small.tanh --size 2048 --loss sign-ratio --file-post-fix=_quarterly_magnitude --label PM
+
+Best loss: 0.6709100175367925, Best Stats: {'mae': 0.06811121851205826, 'r2': 0.07829374074935913, 'pearson_corr': 0.3725942075252533, 'sign_accuracy': 0.864184008762322}
+
+```
+Which did slightly worse against from a loss and sign accuracy perspective, which I found suprising.
+
+Eval post training did worse on loss, but slightly better on sign accuracy.
+```text
+Evaluation: Loss: 1.0630815586506475 stats: {'mae': 0.10861995071172714, 'r2': 0.06449377536773682, 'pearson_corr': 0.40425240993499756, 'sign_accuracy': 0.7020810514786419}
+```
+
+I also wrote a script that looks at our label data and given a target accuracy tries to tell us what our mse should be `scripts/analyze-loss.py`. I was having a hard time knowing based on the range of my data if a "loss" was good or bad (though arguably most of our results are bad lol). This script will take a target r2 calculate mean, variance and std and based on that estimate an mse.
+If we want our model to explain 80% of the data’s variance it aims for an MSE that’s 20% of the variance (0.2 × variance) and we would supply 0.8 (the default) to the script. 
+
+```text
+TRAINING
+
+Analysis for 'PM' (Desired R² = 0.8):
+  Variance (Baseline MSE): 1.4121
+  Range: 49.4893
+  Mean: 0.0630, Std: 1.1883
+  Target MSE (R² = 0.8): 0.2824
+  Target MSE (10% Range): 24.4919
+  Suggested Target MSE: 24.4919
+  Suggested Target RMSE: 4.9489 (avg error)
+  Target RMSE as % of range: 10.0%
+EVAL
+
+Analysis for 'PM' (Desired R² = 0.8):
+  Variance (Baseline MSE): 1.5578
+  Range: 49.4874
+  Mean: 0.0593, Std: 1.2481
+  Target MSE (R² = 0.8): 0.3116
+  Target MSE (10% Range): 24.4900
+  Suggested Target MSE: 24.4900
+  Suggested Target RMSE: 4.9487 (avg error)
+  Target RMSE as % of range: 10.0%
+
+```
+Looking at our target MSE of roughly `.3` makes me feel okay about the Huber loss result on training but not great about any of our other
+results.
+
+### Trying out another network architecture
+
+I wired up a new model called `vanilla.compression.tahn`. This is basically the same setup but rather than N layers of a fixed size,
+the model uses 3 layers each decreasing the initial network size by 50%. I tested this at 2048 and landed with a post training loss of:
+
+```text
+Best loss: 0.6880370694501646, Best Stats: {'mae': 0.07100587338209152, 'r2': 0.0779222846031189, 'pearson_corr': 0.37335172295570374, 'sign_accuracy': 0.8521358159912377}
+```
+
+The eval loss was not a ton better than its previous version:
+```text
+Evaluation: Loss: 1.0694481803534943 stats: {'mae': 0.10864986479282379, 'r2': 0.0647653341293335, 'pearson_corr': 0.4073215425014496, 'sign_accuracy': 0.6987951807228916}
+```
+
+As a last check before looking at a back test and studying our outcomes more closely I trained another model of this kind at twice the size as well as our original model at twice the size 4096.
+
+`vanilla.compress.tahn.4096 huber-sign` training/eval: 
+```text
+Pre train eval: 
+
+Evaluation: Loss: 1.044123684537822 stats: {'mae': 0.2633186876773834, 'r2': -0.07346522808074951, 'pearson_corr': -0.00986915547400713, 'sign_accuracy': 0.5169769989047097}
+
+Training:
+
+Best loss: 0.1796942362862896, Best Stats: {'mae': 0.060097835958004, 'r2': 0.07199329137802124, 'pearson_corr': 0.3599674701690674, 'sign_accuracy': 0.9014238773274917}
+
+
+Post train eval:
+Evaluation: Loss: 0.6630501580473657 stats: {'mae': 0.11169926077127457, 'r2': 0.057153403759002686, 'pearson_corr': 0.35252252221107483, 'sign_accuracy': 0.6911281489594743}
+```
+
+Which, if I'm not mistaken is roughly our best result
+
+`vanilla.small.tahn.4096 huber-sign` training/eval: 
+```text
+Pre train:
+Evaluation: Loss: 1.1708936259664338 stats: {'mae': 0.3010151982307434, 'r2': -0.08084475994110107, 'pearson_corr': 0.02140171267092228, 'sign_accuracy': 0.45454545454545453}
+
+Training:
+Best loss: 0.18610617210325817, Best Stats: {'mae': 0.062222350388765335, 'r2': 0.07174217700958252, 'pearson_corr': 0.357318252325058, 'sign_accuracy': 0.8860898138006572}
+
+Post train:
+Evaluation: Loss: 0.7189666780402055 stats: {'mae': 0.11250916868448257, 'r2': 0.05626195669174194, 'pearson_corr': 0.36998236179351807, 'sign_accuracy': 0.6637458926615553}
+```
+
+The compressed architecture did slightly better, and our 4096 compressed did significantly better than our 2048. Given there was plenty of RAM available
+on my M4 I decided to really go for it and train at max size but still against our small dataset. I used size 24000 this time:  
+
+```text
+Pre train:
+Evaluation: Loss: 1.0985138457396935 stats: {'mae': 0.2700347304344177, 'r2': -0.09530162811279297, 'pearson_corr': -0.036143042147159576, 'sign_accuracy': 0.4939759036144578}
+
+
+Training:
+Out of patience at epoch 627. Patience count: 500/501. Limit: 500
+Best loss: 1.3837785391971982, Best Stats: {'mae': 1.0133318901062012, 'r2': -0.900772213935852, 'pearson_corr': 0.04850158095359802, 'sign_accuracy': 0.5355969331872946}
+
+Post train:
+Evaluation: Loss: 1.5134698645821933 stats: {'mae': 1.027387261390686, 'r2': -0.9289259910583496, 'pearson_corr': 0.03586142882704735, 'sign_accuracy': 0.5060240963855421}
+
+```
+Which was interesting, because it just couldn't seem to learn at all. I couldn't help but wonder if that had something to do with our learning rate or optimizer setup.
+
+Nonetheless, I went a little less aggressive afterward with 16384. It was equally unimpressive. I started to worry that the model was predicting
+a range that always evaluated to 1 and -1. To deal with this, I removed the inner Tanh activation layer fearing it might be unnecessary with
+the batch normalization right before it. I reran that with a 4096 model:
+
+```text
+Best loss: 0.18610617210325817, Best Stats: {'mae': 0.062222350388765335, 'r2': 0.07174217700958252, 'pearson_corr': 0.357318252325058, 'sign_accuracy': 0.8860898138006572}
+```
+But it had a harder time memorizing the training data than its predecessors. 
+
+I then also modified easy to be more patient, but in the training loop and in LR reduction. I reran this with a 8192 sized model:
+
+I then made some changes, I moved away from the compressed model and instead increased our number of layers AND added a normalization
+layer to our model. This lead to the first ever result that didn't end in a patience loss, but rather ran out of epochs:
+
+```
+Best loss: 0.113925356641191, Best Stats: {'mae': 0.06269007176160812, 'r2': 0.04430222511291504, 'pearson_corr': 0.247194305062294, 'sign_accuracy': 0.8992332968236583}
+```
+
+The loss was our best yet, but our sign accuracy was lower. Emboldened, I doubled the size again and left it overnight but got
+roughly the same result:
+
+```text
+Training:
+Out of patience at epoch 3945. Patience count: 1500/1501. Limit: 1500
+Best loss: 0.11361983619281091, Best Stats: {'mae': 0.05934416502714157, 'r2': 0.04976963996887207, 'pearson_corr': 0.26973167061805725, 'sign_accuracy': 0.9112814895947426}
+
+Eval:
+Evaluation: Loss: 0.5659032241256086 stats: {'mae': 0.10116428881883621, 'r2': 0.04964590072631836, 'pearson_corr': 0.41185587644577026, 'sign_accuracy': 0.7371303395399781}
+```
+
+Our MAE on the eval set means that we're going to roughly off by 10% when predicting magnitudes. Our pearson coeficient measures if the data 
+moves linearly together which is weak, and our R^2 is quite low meaning there may be some additional variance we're missing. Our sign accuracy is high though,
+higher than our previous accuracy on directionality. 
+
+
+### Another small backtester
+
+I wanted to see if given variability if we could still build a winning mini portfolio out of our eval set. If for example, if we were go 
+long the top 2 positive predictions and short the lowest negative positions, would we outperform the whole basket?
+
 
 
 

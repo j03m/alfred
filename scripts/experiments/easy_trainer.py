@@ -1,7 +1,7 @@
 from alfred.easy import trainer
 from alfred.metadata import TickerCategories
 from alfred.utils import trim_timerange, set_deterministic
-from alfred.model_metrics import BCEAccumulator, RegressionAccumulator, HuberWithSignPenalty
+from alfred.model_metrics import BCEAccumulator, RegressionAccumulator, HuberWithSignPenalty, MSEWithSignPenalty, SignErrorRatioLoss
 
 import torch.nn as nn
 
@@ -25,7 +25,7 @@ def main():
                         help='assumes data/[ticker][args.file_post_fix].csv as data to use')
     parser.add_argument('--label', type=str, default="PQ",
                         help='label column')
-    parser.add_argument('--loss', choices=["bce", "mse"], default="bce", help='loss function')
+    parser.add_argument('--loss', choices=["bce", "mse", "huber-sign", "mse-sign", "sign-ratio"], default="bce", help='loss function')
     parser.add_argument('--epochs', type=int, default=5000, help='number of epochs')
     parser.add_argument('--patience', type=int, default=500, help='number of epochs to allow without loss decrease')
 
@@ -36,6 +36,18 @@ def main():
     files = []
     for ticker in tickers:
         files.append(f"data/{ticker}{args.file_post_fix}.csv")
+
+    loss_function = None
+    if args.loss == "bce":
+        loss_function = nn.BCELoss()
+    elif args.loss == "mse":
+        loss_function = nn.MSELoss()
+    elif args.loss == "huber-sign":
+        loss_function = HuberWithSignPenalty()
+    elif args.loss == "mse-sign":
+        loss_function = MSEWithSignPenalty()
+    elif args.loss == "sign-ratio":
+        loss_function = SignErrorRatioLoss()
 
     print("Starting easy trainer")
     trainer(
@@ -48,7 +60,7 @@ def main():
         model_name=args.model,
         labels=[args.label],
         epochs=args.epochs,
-        loss_function=nn.BCELoss() if args.loss == "bce" else HuberWithSignPenalty(),
+        loss_function=loss_function,
         stat_accumulator=BCEAccumulator() if args.loss == "bce" else RegressionAccumulator())
 
 if __name__ == "__main__":

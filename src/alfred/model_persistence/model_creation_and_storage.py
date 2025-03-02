@@ -5,7 +5,7 @@ import joblib
 import zlib
 
 from alfred.devices import build_model_token, set_device
-from alfred.models import LSTMModel, LSTMConv1d, AdvancedLSTM, TransAm, Vanilla
+from alfred.models import LSTMModel, LSTMConv1d, AdvancedLSTM, TransAm, Vanilla, VanillaCompress
 from alfred.utils import MongoConnectionStrings
 
 import torch.optim as optim
@@ -21,6 +21,14 @@ fs = gridfs.GridFS(db)
 models_collection = db['models']
 status_collection = db['model_status']
 metrics_collection = db['metrics']
+
+
+def create_encoder_decoder_layers(size):
+    sizes = [size]
+    while size // 2 != 1:
+        size = size // 2
+        sizes.append(size)
+    return sizes
 
 
 def crc32_columns(strings):
@@ -76,9 +84,23 @@ def model_from_config(config_token, num_features, sequence_length, size, output,
     elif config_token == 'vanilla.medium':
         model = Vanilla(input_size=num_features, hidden_size=size, layers=10, output_size=output)
     elif config_token == 'vanilla.medium.identity':
-        model = Vanilla(input_size=num_features, hidden_size=size, layers=10, output_size=output, final_activation=nn.Identity())
+        model = Vanilla(input_size=num_features, hidden_size=size, layers=10, output_size=output,
+                        final_activation=nn.Identity())
     elif config_token == 'vanilla.small.tanh':
-        model = Vanilla(input_size=num_features, hidden_size=size, layers=3, output_size=output, final_activation=nn.Tanh())
+        model = Vanilla(input_size=num_features, hidden_size=size, layers=3, output_size=output,
+                        final_activation=nn.Tanh())
+    elif config_token == 'vanilla.medium.tanh':
+        model = Vanilla(input_size=num_features, hidden_size=size, layers=5, output_size=output,
+                        final_activation=nn.Tanh())
+    elif config_token == 'vanilla.large.tanh':
+        model = Vanilla(input_size=num_features, hidden_size=size, layers=10, output_size=output,
+                        final_activation=nn.Tanh())
+    elif config_token == 'vanilla.compress.tanh':
+        model = VanillaCompress(input_size=num_features, sizes=create_encoder_decoder_layers(size), output_size=output,
+                                final_activation=nn.Tanh())
+    elif config_token == 'vanilla.compress.identity':
+        model = VanillaCompress(input_size=num_features, sizes=create_encoder_decoder_layers(
+            size), output_size=output, final_activation=nn.Identity())
     else:
         raise Exception("Model type not supported")
 
@@ -89,9 +111,9 @@ def model_from_config(config_token, num_features, sequence_length, size, output,
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         mode='min',
-        patience=25,  # Increased patience to allow for more epochs before adjustment
+        patience=100,  # Increased patience to allow for more epochs before adjustment
         factor=0.75,  # Less aggressive reduction
-        cooldown=25,  # Wait 3 epochs after reducing before considering another reduction
+        cooldown=100,  # Wait 3 epochs after reducing before considering another reduction
     )
 
     # Load the latest model from MongoDB
@@ -105,6 +127,7 @@ def model_from_config(config_token, num_features, sequence_length, size, output,
         return model, optimizer, scheduler, scaler, model_token, True
     else:
         return model, optimizer, scheduler, None, model_token, False
+
 
 def maybe_save_model(model, optimizer, scheduler, scaler, eval_loss, model_token, training_label):
     best_loss = get_best_loss(model_token, training_label)
@@ -146,6 +169,7 @@ def check_model_status(model_token, ticker):
     else:
         return True
 
+
 def get_model_scaler(model_token):
     record = models_collection.find_one({'model_token': model_token}, sort=[('version', -1)])
     if not record:
@@ -157,6 +181,7 @@ def get_model_scaler(model_token):
     scaler_file_id = record['scaler_file_id']
     scaler_file = fs.get(scaler_file_id)
     return joblib.load(io.BytesIO(scaler_file.read()))
+
 
 def get_latest_model(model_token):
     print("Looking for:", model_token)

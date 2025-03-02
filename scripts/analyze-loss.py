@@ -2,11 +2,10 @@ import pandas as pd
 import numpy as np
 import argparse
 
+from alfred.metadata import TickerCategories
+from alfred.easy import dfs_from_files
 
-def analyze_labels(csv_file, label_column, desired_r2=0.8):
-    df = pd.read_csv(csv_file)
-
-    results = {}
+def analyze_labels(df, label_column, desired_r2=0.8):
     labels = df[label_column].values
     variance = np.var(labels)
     label_range = labels.max() - labels.min()
@@ -53,13 +52,35 @@ def print_results(label_col, stats):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Suggest a target MSE based on label columns in a CSV.")
-    parser.add_argument("--csv_file", default="data/AAPL_quarterly_magnitude.csv", type=str, help="Path to the CSV file")
     parser.add_argument("--label_column", type=str, default="PM", help="One or more label column names")
     parser.add_argument("--r2", type=float, default=0.8, help="Desired R² value (0 to 1), default 0.8")
+    parser.add_argument('--tickers', type=str, default="./metadata/basic-tickers.json", help='Tickers to train on')
+    parser.add_argument('--file-post-fix', type=str, default="_quarterly_magnitude",
+                        help='assumes data/[ticker][args.file_post_fix].csv as data to use')
 
     args = parser.parse_args()
 
-    results = analyze_labels(args.csv_file, args.label_column, desired_r2=args.r2)
+    tc = TickerCategories(args.tickers)
+    training = tc.get(["training"])
+    evals = tc.get(["evaluation"])
+
+    files = []
+    for ticker in training:
+        files.append(f"./data/{ticker}{args.file_post_fix}.csv")
+
+    dfs = dfs_from_files(files)
+    training_df = pd.concat(dfs)
+
+    print("TRAINING")
+    results = analyze_labels(training_df, args.label_column, desired_r2=args.r2)
     print_results(args.label_column, results)
 
-# Example: python script.py data.csv percent_change --r2 0.7
+    print("EVAL")
+    files = []
+    for ticker in evals:
+        files.append(f"./data/{ticker}{args.file_post_fix}.csv")
+
+    dfs = dfs_from_files(files)
+    eval_df = pd.concat(dfs)
+    results = analyze_labels(eval_df, args.label_column, desired_r2=args.r2)
+    print_results(args.label_column, results)

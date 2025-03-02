@@ -15,19 +15,18 @@ class HuberWithSignPenalty(nn.Module):
         return huber_loss + self.lambda_penalty * sign_penalty
 
 
-class ErrorAmplifiedSignLoss(nn.Module):
-    def __init__(self, error_factor=2.0, lambda_penalty=2.0):
-        super(ErrorAmplifiedSignLoss, self).__init__()
+class SignErrorRatioLoss(nn.Module):
+    def __init__(self, error_factor=0.5, sign_factor=2.0):
+        super(SignErrorRatioLoss, self).__init__()
         self.error_factor = error_factor
-        self.lambda_penalty = lambda_penalty
+        self.sign_factor = sign_factor
 
     def forward(self, predictions, labels):
         errors = (predictions - labels) ** 2
         sign_mismatch = (torch.sign(predictions) != torch.sign(labels)).float()
-        amplified_errors = errors * (1 + self.error_factor * sign_mismatch)
-        mse = amplified_errors.mean()
+        mse = errors.mean()
         sign_penalty = sign_mismatch.mean()
-        return mse + self.lambda_penalty * sign_penalty
+        return mse * self.error_factor + self.sign_factor * sign_penalty
 
 
 class MSEWithSignPenalty(nn.Module):

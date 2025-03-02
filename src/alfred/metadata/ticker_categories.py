@@ -34,5 +34,6 @@ class TickerCategories:
         for category in categories:
             if category in self.data:
                 combined_list.extend(self.data[category])
-
+            else:
+                raise Exception(f"{category} is not a category in the metadata")
         return combined_list
