@@ -1,3 +1,5 @@
+# Work in Progress 
+
 Alfred is an experimental set of machine learning for markets and portfolio management. 
 
 The plan for Alfred is to have 3 parts:
