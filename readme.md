@@ -879,7 +879,18 @@ So our real overall profit might be more like `5498.87% - 4874.92% = 623.94%` wh
 
 ## LSTMs, Convolutions and Transformers
 
-Explore how LSTMs aware of history might perform. 
+Given some bullish feedback on the large Vanilla NN Model, I wanted to consider leverage LSTM, Attention and Convolutions as feature
+extractors. As such, I built said classes into Alfred.
+
+Then I thought I had two approaches: 
+
+1) Approach 1, each extractor processes the input data and then the results are concatented together and delivered to the original Vanilla NN for prediction
+2) Approach 2, each extractor builds on the previous extractor Attention -> Conv -> LSTM before a final buffer is delivered to Vanilla NN
+
+### Approach 1 - concatenated extractors
+
+
+
 
 ## Bigger, Strong Faster
 
