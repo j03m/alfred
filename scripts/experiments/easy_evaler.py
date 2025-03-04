@@ -24,6 +24,8 @@ def main():
                         help='assumes data/[ticker][args.file_post_fix].csv as data to use')
     parser.add_argument('--label', type=str, default="PQ",
                         help='label column')
+    parser.add_argument('--seq-len', type=int, default=None,
+                        help='used with lstms')
     parser.add_argument('--loss', choices=["bce", "mse", "huber-sign", "mse-sign", "sign-ratio"], default="bce", help='loss function')
 
     args = parser.parse_args()
@@ -52,6 +54,7 @@ def main():
            augment_func=lambda df: trim_timerange(df, min_date=args.min_date, max_date=args.max_date),
            model_size=args.size,
            model_name=args.model,
+           seq_len=args.seq_len,
            files=files,
            labels=[args.label],
            loss_function = loss_function,

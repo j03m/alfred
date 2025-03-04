@@ -17,6 +17,7 @@ def main():
                         help='category can be used to put the same models into different buckets')
     parser.add_argument('--model', type=str, default='vanilla.small', help='Name of the model to use')
     parser.add_argument('--size', type=int, default=256, help='The size of the model to use')
+    parser.add_argument('--seq-len', type=int, default=None, help='Sequence length, supply when using lstms')
     parser.add_argument('--min_date', type=str, default="2004-03-31",
                         help='Minimum date for timerange trimming (YYYY-MM-DD)')
     parser.add_argument('--max_date', type=str, default=None, help='Maximum date for timerange trimming (YYYY-MM-DD)')
@@ -61,6 +62,7 @@ def main():
         labels=[args.label],
         epochs=args.epochs,
         loss_function=loss_function,
+        seq_len=args.seq_len,
         stat_accumulator=BCEAccumulator() if args.loss == "bce" else RegressionAccumulator())
 
 if __name__ == "__main__":

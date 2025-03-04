@@ -42,7 +42,7 @@ class Vanilla(nn.Module):
         return predictions
 
 
-class VanillaWithExtractors(nn.Module):
+class VanillaConcatExtractors(nn.Module):
     def __init__(self, extractor_types, input_size=None, seq_len=None,
                  hidden_size=128, output_size=1, layers=10, hidden_activation=nn.Tanh(),
                  final_activation=nn.Sigmoid(), dropout=0.3):

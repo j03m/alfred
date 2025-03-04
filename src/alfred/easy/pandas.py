@@ -16,6 +16,7 @@ from typing import List, Optional, Callable, Union
 import torch.optim as optim
 from torch.optim.lr_scheduler import LRScheduler
 
+
 @dataclass
 class ModelPrepConfig:
     category: str = "easy_model"
@@ -52,6 +53,7 @@ class RawModelPrepResult:
     scheduler: Optional[LRScheduler]
     was_loaded: bool
 
+
 @dataclass
 class ModelPrepResult:
     model: nn.Module
@@ -62,6 +64,7 @@ class ModelPrepResult:
     real_model_token: str
     scaler: 'CustomScaler'
     was_loaded: bool
+
 
 def noop(df):
     return df
@@ -86,7 +89,8 @@ def create_sequences(df, seq_len, features, labels):
         targets.append(target)
     return torch.tensor(sequences, dtype=torch.float32), torch.tensor(targets, dtype=torch.float32)
 
-def create_sequences_from_dfs(dfs, seq_len, features, labels, config):
+
+def create_sequences_from_dfs(dfs, seq_len, features, labels):
     all_sequences = []
     all_targets = []
     for df in dfs:
@@ -94,8 +98,9 @@ def create_sequences_from_dfs(dfs, seq_len, features, labels, config):
         all_sequences.append(sequences)
         all_targets.append(targets)
     x_tensor = torch.cat(all_sequences, dim=0)  # Shape: (num_samples, seq_len, num_features)
-    y_tensor = torch.cat(all_targets, dim=0)    # Shape: (num_samples, len(labels))
+    y_tensor = torch.cat(all_targets, dim=0)  # Shape: (num_samples, len(labels))
     return x_tensor, y_tensor
+
 
 def prepare_data_and_model(config: ModelPrepConfig):
     if config.seq_len is None:
@@ -122,6 +127,7 @@ def prepare_data_and_model(config: ModelPrepConfig):
     else:
         return prepare_data_and_model_seq(config)
 
+
 def prepare_data_and_model_seq(config: ModelPrepConfig):
     if config.data_frames is None:
         dfs = dfs_from_files(config.files, config.date_column, config.augment_func)
@@ -147,26 +153,27 @@ def prepare_data_and_model_seq(config: ModelPrepConfig):
         scaler = CustomScaler(config.scaler_config, df_all)
         scaler.fit(df_all)
 
-        # Scale each individual DataFrame using the fitted scaler
-        dfs_scaled = [scaler.transform(df) for df in dfs]
+    # Scale each individual DataFrame using the fitted scaler
+    dfs_scaled = [scaler.transform(df) for df in dfs]
 
-        # Create sequences from the scaled DataFrames
-        x_tensor, y_tensor = create_sequences_from_dfs(dfs_scaled, config.seq_len, features, config.labels)
+    # Create sequences from the scaled DataFrames
+    x_tensor, y_tensor = create_sequences_from_dfs(dfs_scaled, config.seq_len, features, config.labels)
 
-        # Create DataLoader
-        dataset = TensorDataset(x_tensor, y_tensor.squeeze(-1))
-        loader = DataLoader(dataset, batch_size=config.batch_size, shuffle=config.shuffle)
+    # Create DataLoader
+    dataset = TensorDataset(x_tensor, y_tensor.squeeze(-1))
+    loader = DataLoader(dataset, batch_size=config.batch_size, shuffle=config.shuffle)
 
-        return ModelPrepResult(
-            model=model,
-            optimizer=optimizer,
-            scheduler=scheduler,
-            loader=loader,
-            dataset=dataset,
-            real_model_token=real_model_token,
-            scaler=scaler,
-            was_loaded=was_loaded
-        )
+    return ModelPrepResult(
+        model=model,
+        optimizer=optimizer,
+        scheduler=scheduler,
+        loader=loader,
+        dataset=dataset,
+        real_model_token=real_model_token,
+        scaler=scaler,
+        was_loaded=was_loaded
+    )
+
 
 def prepare_data_and_model_raw(config: ModelPrepConfig):
     if config.data_frames is None:
@@ -246,22 +253,21 @@ def trainer(category="easy_model",
             loss_function=nn.BCELoss(),
             stat_accumulator=BCEAccumulator,
             seq_len=None):
-
     # todo debug seq creation, try out LSTMS
-    result:ModelPrepResult = prepare_data_and_model(
+    result: ModelPrepResult = prepare_data_and_model(
         ModelPrepConfig(category=category,
-        model_name=model_name,
-        model_size=model_size,
-        files=files,
-        scaler_config=scaler_config,
-        features=features,
-        labels=labels,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        date_column=date_column,
-        augment_func=augment_func,
-        seq_len=seq_len
-    ))
+                        model_name=model_name,
+                        model_size=model_size,
+                        files=files,
+                        scaler_config=scaler_config,
+                        features=features,
+                        labels=labels,
+                        batch_size=batch_size,
+                        shuffle=shuffle,
+                        date_column=date_column,
+                        augment_func=augment_func,
+                        seq_len=seq_len
+                        ))
 
     print("Starting training:")  # todo we need a dataclass, this param list is out of control
     return train_model(model=result.model,
@@ -289,24 +295,27 @@ def evaler(category="easy_model",
            date_column="Unnamed: 0",
            augment_func=noop,
            loss_function=nn.BCELoss(),
+           seq_len=None,
            stat_accumulator=BCEAccumulator()):
-    result:ModelPrepResult = prepare_data_and_model(
+    result: ModelPrepResult = prepare_data_and_model(
         ModelPrepConfig(category=category,
-        model_name=model_name,
-        model_size=model_size,
-        files=files,
-        scaler_config=scaler_config,
-        features=features,
-        labels=labels,
-        batch_size=batch_size,
-        shuffle=False,
-        date_column=date_column,
-        augment_func=augment_func
-    ))
+                        model_name=model_name,
+                        model_size=model_size,
+                        files=files,
+                        scaler_config=scaler_config,
+                        features=features,
+                        labels=labels,
+                        batch_size=batch_size,
+                        shuffle=False,
+                        seq_len=seq_len,
+                        date_column=date_column,
+                        augment_func=augment_func
+                        ))
     if not result.was_loaded:
         print("WARNING: You are evaluating an empty model. This model was unknown to the system.")
 
-    loss, data = evaluate_model(result.model, result.loader, stat_accumulator=stat_accumulator, loss_function=loss_function)
+    loss, data = evaluate_model(result.model, result.loader, stat_accumulator=stat_accumulator,
+                                loss_function=loss_function)
 
     print(f"Evaluation: Loss: {loss} stats: {data}")
     return loss, data

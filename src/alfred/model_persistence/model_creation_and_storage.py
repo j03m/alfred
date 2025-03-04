@@ -5,7 +5,7 @@ import joblib
 import zlib
 
 from alfred.devices import build_model_token, set_device
-from alfred.models import LSTMModel, LSTMConv1d, AdvancedLSTM, TransAm, Vanilla, VanillaWithExtractors, ExtractorType
+from alfred.models import LSTMModel, LSTMConv1d, AdvancedLSTM, TransAm, Vanilla, VanillaConcatExtractors, ExtractorType
 from alfred.utils import MongoConnectionStrings
 
 import torch.optim as optim
@@ -96,12 +96,17 @@ def model_from_config(config_token, num_features, sequence_length, size, output,
         model = Vanilla(input_size=num_features, hidden_size=size, layers=10, output_size=output,
                         final_activation=nn.Tanh())
     elif config_token == 'vanilla.medium.extractors.tanh':
-        model = VanillaWithExtractors(input_size=num_features, seq_len=12, hidden_size=size, output_size=output,
-                                      extractor_types=[ExtractorType.LSTM, ExtractorType.ATTENTION,
-                                                       ExtractorType.CONVOLUTION], final_activation=nn.Tanh())
+        model = VanillaConcatExtractors(input_size=num_features, seq_len=12, hidden_size=size, output_size=output,
+                                        extractor_types=[ExtractorType.LSTM, ExtractorType.ATTENTION,
+                                                         ExtractorType.CONVOLUTION], final_activation=nn.Tanh())
+    elif config_token == 'vanilla.medium.extractors.layered.tanh':
+        # same model but order here is important!
+        model = VanillaConcatExtractors(input_size=num_features, seq_len=12, hidden_size=size, output_size=output,
+                                        extractor_types=[ExtractorType.CONVOLUTION, ExtractorType.LSTM,
+                                                         ExtractorType.ATTENTION], final_activation=nn.Tanh(),
+                                        mode="layer")
     else:
         raise Exception("Model type not supported")
-
 
     model.to(DEVICE)
 

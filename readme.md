@@ -884,11 +884,29 @@ extractors. As such, I built said classes into Alfred.
 
 Then I thought I had two approaches: 
 
-1) Approach 1, each extractor processes the input data and then the results are concatented together and delivered to the original Vanilla NN for prediction
-2) Approach 2, each extractor builds on the previous extractor Attention -> Conv -> LSTM before a final buffer is delivered to Vanilla NN
+1) Approach 1, each extractor processes the input data and then the results are concatenated together and delivered to the original Vanilla NN for prediction
+2) Approach 2, each extractor builds on the previous extractor for example Attention -> Conv -> LSTM before a final buffer is delivered to Vanilla NN
 
 ### Approach 1 - concatenated extractors
 
+First take at concatenated extractors at size 4096:
+```text
+Training: Best loss: 0.11799683208475471, Best Stats: {'mae': 0.0646834671497345, 'r2': 0.048059701919555664, 'pearson_corr': 0.2695589065551758, 'sign_accuracy': 0.9206145966709347}
+Eval: Evaluation: Loss: 0.5690694918217923 stats: {'mae': 0.1162773072719574, 'r2': 0.04249417781829834, 'pearson_corr': 0.2870158851146698, 'sign_accuracy': 0.7400768245838668}
+```
+Which was slightly better than our raw 8192 model without extractors but not significantly so.
+
+The problem here to some extent because we're concatenting the extractors my gut feeling is that we're
+not getting the collaborative benefit of each extractor and that the initial buffer supplied to the 
+first layer of Vanilla is size * number of extractors. Given that the results were only slightly better 
+than just inflating the network to 8k, I'm not sure it's worth it. I didn't time the training sessions
+sadly so I'm not sure which was more efficient (I need to fix that).
+
+### Approach 2 - collaborative extractors
+
+Rather concatenating another approach is to operate on the timeseries first with convolution to smooth
+the timeseries in a meaningful way, then weight the smoothed convolutions with attention and finally 
+all the LSTM to predict a final hidden layer. We'll then feed that into Vanilla and make a final prediction.
 
 
 
