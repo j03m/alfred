@@ -1,5 +1,6 @@
 import torch
 from torch import nn as nn
+import time
 
 from alfred.model_persistence import maybe_save_model, get_best_loss, prune_old_versions
 from alfred.devices import set_device
@@ -16,6 +17,7 @@ def train_model(model, optimizer, scheduler, scaler, train_loader, patience, mod
     patience_count = 0
     last_mean_loss = None
     for epoch in range(epochs):
+        start_time = time.time()  # Record start time
         count = 0
         total_loss = 0.0
         for seq, labels in train_loader:
@@ -32,12 +34,13 @@ def train_model(model, optimizer, scheduler, scaler, train_loader, patience, mod
             total_loss += loss_value
             count += 1
             stat_accumulator.update(y_pred.squeeze(), labels)
-
+        end_time = time.time()  # Record end time
+        time_per_epoch = end_time - start_time  # Calculate time per epoch
 
         mean_loss = total_loss / count
         if verbose and epoch % verbosity_limit == 0:
             best_loss = get_best_loss(model_token, training_label)
-            print(f'Epoch {epoch} - patience {patience_count}/{patience} -  loss: {mean_loss} vs best loss: {best_loss}')
+            print(f'Epoch {epoch} (time: {time_per_epoch}) patience {patience_count}/{patience} -  loss: {mean_loss} vs best loss: {best_loss}')
             stats = stat_accumulator.compute()
             print ("Stats: ", stats)
             print("last learning rate:", scheduler.get_last_lr())

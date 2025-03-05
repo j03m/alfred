@@ -73,6 +73,24 @@ class AttentionLayer(nn.Module):
         context = torch.sum(weights * x, dim=1)  # (batch_size, num_features)
         return context ## ??? should be the correct shape I think? or maybe we just want the weights?
 
+class TransformerExtractor(nn.Module):
+    def __init__(self, input_size, hidden_size, seq_len, num_heads, num_layers, dropout=0.1):
+        super().__init__()
+        self.embedding = nn.Linear(input_size, hidden_size)
+        self.positional_encoding = nn.Embedding(seq_len, hidden_size)
+        self.transformer = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(hidden_size, num_heads, hidden_size, dropout),
+            num_layers
+        )
+
+    def forward(self, x):
+        # x: (batch_size, seq_len, input_size)
+        seq_len = x.size(1)
+        positions = torch.arange(0, seq_len).to(x.device)
+        x = self.embedding(x) + self.positional_encoding(positions)
+        x = self.transformer(x)  # (batch_size, seq_len, hidden_size)
+        x = x.mean(dim=1)  # Average to get (batch_size, hidden_size)
+        return x
 
 class TimeStepAttention(nn.Module):
     def __init__(self, hidden_size):

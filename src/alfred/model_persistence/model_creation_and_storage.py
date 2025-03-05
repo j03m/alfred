@@ -5,8 +5,8 @@ import joblib
 import zlib
 
 from alfred.devices import build_model_token, set_device
-from alfred.models import (LSTMModel, LSTMConv1d, AdvancedLSTM, TransAm, Vanilla, VanillaConcatExtractors,
-                           VanillaLayeredExtractors, ExtractorType)
+from alfred.models import (LSTMModel, LSTMConv1d, AdvancedLSTM, TransAm, Vanilla, LstmConcatExtractors,
+                           LstmLayeredExtractors, ExtractorType, TransformerLayeredExtractors)
 from alfred.utils import MongoConnectionStrings
 
 import torch.optim as optim
@@ -96,14 +96,18 @@ def model_from_config(config_token, num_features, sequence_length, size, output,
     elif config_token == 'vanilla.large.tanh':
         model = Vanilla(input_size=num_features, hidden_size=size, layers=10, output_size=output,
                         final_activation=nn.Tanh())
-    elif config_token == 'vanilla.medium.extractors.tanh':
-        model = VanillaConcatExtractors(input_size=num_features, seq_len=12, hidden_size=size, output_size=output,
-                                        extractor_types=[ExtractorType.LSTM, ExtractorType.ATTENTION,
-                                                         ExtractorType.CONVOLUTION], final_activation=nn.Tanh())
-    elif config_token == 'vanilla.medium.extractors.layered.tanh':
+    elif config_token == 'lstm.medium.extractors.tanh':
+        model = LstmConcatExtractors(input_size=num_features, seq_len=sequence_length, hidden_size=size, output_size=output,
+                                     extractor_types=[ExtractorType.LSTM, ExtractorType.ATTENTION,
+                                                      ExtractorType.CONVOLUTION], final_activation=nn.Tanh(), layers=3)
+    elif config_token == 'lstm.medium.extractors.layered.tanh':
         # same model but order here is important!
-        model = VanillaLayeredExtractors(input_size=num_features, seq_len=12, hidden_size=size, output_size=output,
-                                         final_activation=nn.Tanh())
+        model = LstmLayeredExtractors(input_size=num_features, seq_len=sequence_length, hidden_size=size, output_size=output,
+                                      final_activation=nn.Tanh(), layers=3)
+    elif config_token == 'trans.medium.extractors.layered.tanh':
+        # same model but order here is important!
+        model = TransformerLayeredExtractors(input_size=num_features, seq_len=sequence_length, hidden_size=size, output_size=output,
+                                             final_activation=nn.Tanh(), layers=3)
     else:
         raise Exception("Model type not supported")
 

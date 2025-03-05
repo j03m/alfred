@@ -902,12 +902,39 @@ first layer of Vanilla is size * number of extractors. Given that the results we
 than just inflating the network to 8k, I'm not sure it's worth it. I didn't time the training sessions
 sadly so I'm not sure which was more efficient (I need to fix that).
 
-### Approach 2 - collaborative extractors
+### Approach 2 - collaborative layers
 
 Rather concatenating another approach is to operate on the timeseries first with convolution to smooth
 the timeseries in a meaningful way, then weight the smoothed convolutions with attention and finally 
 all the LSTM to predict a final hidden layer. We'll then feed that into Vanilla and make a final prediction.
 
+### Results
+
+Concat 4096
+```text
+Evaluation: Loss: 0.5690694918217923 stats: {'mae': 0.1162773072719574, 'r2': 0.04249417781829834, 'pearson_corr': 0.2870158851146698, 'sign_accuracy': 0.7400768245838668}
+```
+
+Layers 1024
+```
+Evaluation: Loss: 0.6289685308925255 stats: {'mae': 0.11371823400259018, 'r2': 0.02586185932159424, 'pearson_corr': 0.2899762690067291, 'sign_accuracy': 0.7131882202304738}
+```
+
+Layers 1024
+```text
+Evaluation: Loss: 0.6690058812592179 stats: {'mae': 0.14168527722358704, 'r2': 0.027659177780151367, 'pearson_corr': 0.2162477672100067, 'sign_accuracy': 0.6952624839948783}
+```
+
+With concatenation being the best by a fairly wide margin. 
+
+TODO: Realized I called all of these medium but they were all 10 layers deep :/ trying again pinned at 3 layers
+TODO: Longer history? 24, 48?
+TODO: quick study layers vs width? shoot for same size, look for perf diffs?
+
+## Tracking Efficiency
+
+One thing I realized we weren't doing - Tracking how efficient the models were. Faster training
+times are going to weigh in here, especially if we look at transformers
 
 
 ## Bigger, Strong Faster
