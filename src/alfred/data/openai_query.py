@@ -46,7 +46,7 @@ class OpenAiQuery:
             f"JSON Response:"
         )
 
-        completion = self.query(prompt, f"you are a helpful stock analyst research {ticker}")
+        completion = self.query(prompt, f"you are a helpful stock analyst researching {ticker}")
 
         json_string = completion.choices[0].message.content
         json_string_cleaned = json_string.strip('```json\n').strip('```').strip()

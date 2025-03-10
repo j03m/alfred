@@ -8,3 +8,4 @@ from .scalers import CustomScaler, LogReturnScaler, PM_SCALER_CONFIG, ANALYST_SC
 from .edgar import download_master_index, parse_master_index, generic_sec_fetch
 from .edgar_filing_processor import EdgarFilingProcessor
 from .edgar_db import EdgarDb
+from .news_db import NewsDb

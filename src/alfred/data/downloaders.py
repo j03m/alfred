@@ -2,20 +2,15 @@ import os
 import pandas as pd
 import yfinance as yf
 import time
-import requests
 import ssl
 from datetime import datetime
-import json
 import binascii
-from requests import HTTPError
 
+from .news_db import NewsDb
 from .openai_query import OpenAiQuery
-from time import sleep
 import re
-from fuzzywuzzy import process
 
 ssl.create_default_https_context = ssl._create_unverified_context
-
 
 def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=-1, head=-1):
     bad_tickers = []
@@ -295,6 +290,7 @@ class AlphaDownloader:
         return prices_df[['close']].astype(float)
 
     def news_sentiment(self, symbol, time_from, time_to):
+        # transform dates for alphavantage
         formatted_from = time_from.strftime('%Y%m%dT%H%M')
         formatted_to = time_to.strftime('%Y%m%dT%H%M')
         url = f"https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers={symbol}&time_from={formatted_from}&time_to={formatted_to}&sort=RELEVANCE&limit=1000&apikey={self.api_key}"
@@ -309,6 +305,9 @@ class AlphaDownloader:
         filtered_articles = []
 
         # Iterate through each article in the feed
+        if data.get("items", 0) == 0:
+            print(f"No articles for {symbol}")
+
         for article in data.get("feed", []):
             # Convert time_published to datetime for comparison
             time_published_str = article.get("time_published", None)
@@ -465,13 +464,11 @@ class AlphaDownloader:
 
 
 class ArticleDownloader:
-    def __init__(self, cache_dir='./news', rate_limit=0.5):
-        self.cache_dir = cache_dir
+    def __init__(self, rate_limit=0.5):
         self.api = AlphaDownloader()
         self.openai = OpenAiQuery()
+        self.news_db = NewsDb()
         self.rate_limit = rate_limit
-        if not os.path.exists(cache_dir):
-            os.makedirs(cache_dir)
 
     def get(self, url):
         sleep(self.rate_limit)
@@ -490,60 +487,26 @@ class ArticleDownloader:
         """Generate a unique article ID based on the CRC32 hash of the URL."""
         return format(binascii.crc32(url.encode()), '08x')
 
-    def cache_article(self, ticker, date, article_id, metadata, body):
-        """Cache article metadata and body to disk."""
-        # Directory structure based on ticker and date
-        ticker_dir = os.path.join(self.cache_dir, ticker)
-        date_dir = os.path.join(ticker_dir, date)
-        os.makedirs(date_dir, exist_ok=True)
-
-        # Save metadata
-        metadata_path = os.path.join(date_dir, f"{article_id}.json")
-        with open(metadata_path, 'w') as meta_file:
-            json.dump(metadata, meta_file, indent=2)
-
-        # Save article body
-        body_path = os.path.join(date_dir, f"{article_id}.txt")
-        with open(body_path, 'w') as body_file:
-            body_file.write(body)
-
-    def download_and_cache_article(self, ticker, time_from, time_to):
-        """Fetch articles for a ticker and cache the metadata and bodies."""
-
+    def cache_article_metadata(self, ticker, time_from, time_to):
         # Fetch articles using `news_sentiment_for_window`
         articles = self.api.news_sentiment_for_window_and_symbol(ticker, time_from, time_to)
 
         for i, article in enumerate(articles):
             # Convert time_published to a date string for directory naming
-            publish = article.get('time_published', None)
-            if publish is None:
-                date = datetime.today().date()
-                publish_str = date.strftime("%Y%m%d")
+            published = article.get('time_published', None)
+            if published is None:
+                published = datetime.today().date().strftime('%Y-%m-%d')
             else:
-                publish_str = publish.strftime('%Y%m%d')
-            del article['time_published']
-
-            # Check if article is already cached by URL
-            article_id = self.generate_article_id(article["url"])
-            ticker_dir = os.path.join(self.cache_dir, ticker)
-            date_dir = os.path.join(ticker_dir, publish_str)
-            body_path = os.path.join(date_dir, f"{article_id}.txt")
-
-            # Skip fetching if already cached
-            if os.path.exists(body_path):
-                print(f"Article already cached: {ticker} - {publish_str} - {article_id}")
-                continue
-
-            # Fetch and cache the article body
+                published = datetime.strftime(published, '%Y-%m-%d')
             try:
-                print(f"Fetching article: {article['title']}")
-                body = self.fetch_article_body(article["url"])
-                article = self.enrich_metadata(ticker, article, body)
-                self.cache_article(ticker, publish_str, article_id, article, body)
+                if not self.news_db.has_article(ticker, article["url"]):
+                    print(f"Fetching article: {article['title']}")
+                    body = self.fetch_article_body(article["url"])
+                    metadata = self.get_metadata(ticker, body)
+                    self.news_db.save(published, ticker, article["url"], metadata["relevance"], metadata["sentiment"],
+                                      metadata["outlook"])
             except requests.RequestException as e:
                 print(f"Failed to fetch article {article['title']}: {e}")
 
-    def enrich_metadata(self, ticker, article, body):
-        response = self.openai.news_query(body, ticker)
-        article.update(response)
-        return article
+    def get_metadata(self, ticker, body):
+        return self.openai.news_query(body, ticker)
