@@ -1,4 +1,6 @@
 import sqlite3
+
+
 class EdgarDb:
     def __init__(self, db_file):
         self.db_file = db_file
@@ -6,14 +8,14 @@ class EdgarDb:
         self.cursor = self.conn.cursor()
         self.cursor.execute('CREATE TABLE IF NOT EXISTS crawled_urls (url TEXT PRIMARY KEY);')
         self.cursor.execute('''
-                CREATE TABLE IF NOT EXISTS filings (
-                    url TEXT,
-                    date TEXT,
-                    ticker TEXT,
-                    amount REAL,
-                    FOREIGN KEY (url) REFERENCES crawled_urls(url)
-                );
-            ''')
+                    CREATE TABLE IF NOT EXISTS filings (
+                        year INTEGER,
+                        month INTEGER,
+                        ticker TEXT,
+                        shares REAL,
+                        PRIMARY KEY (year, month, ticker)
+                    );
+                ''')
         self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_ticker ON filings(ticker);')
 
     def update(self, year, month, ticker, shares):
