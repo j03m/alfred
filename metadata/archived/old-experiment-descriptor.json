@@ -1,0 +1,58 @@
+{
+  "model_token": [
+    "lstm",
+    "lstm-conv1d",
+    "advanced-lstm",
+    "trans-am"
+  ],
+  "size": [
+    256
+  ],
+  "sequence_length": [
+    25
+  ],
+  "bar_type": [
+    "m"
+  ],
+  "data": [
+    [
+      "price-only"
+    ],
+    [
+      "core"
+    ],
+    [
+      "core",
+      "fundamentals"
+    ],
+    [
+      "core",
+      "technicals"
+    ],
+    [
+      "core",
+      "macro"
+    ],
+    [
+      "core",
+      "fundamentals",
+      "technicals"
+    ],
+    [
+      "core",
+      "fundamentals",
+      "macro"
+    ],
+    [
+      "core",
+      "technicals",
+      "macro"
+    ],
+    [
+      "core",
+      "fundamentals",
+      "technicals",
+      "macro"
+    ]
+  ]
+}

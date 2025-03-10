@@ -2,22 +2,20 @@ from sacred import Experiment
 from sacred.observers import MongoObserver
 from sacred import SETTINGS
 
-SETTINGS["CAPTURE_MODE"] = "no"
-
 import argparse
 import random
 
-from alfred.metadata import ExperimentSelector, TickerCategories, ColumnSelector
 from alfred.data import CachedStockDataSet, ANALYST_SCALER_CONFIG
 from alfred.model_persistence import model_from_config, prune_old_versions, crc32_columns, check_model_status, track_model_status
-from alfred.model_optimization import simple_profit_measure, analyze_ledger, evaluate_model
-from alfred.model_training import train_model
+from alfred.model_optimization import  evaluate_model, train_model
 from alfred.utils import plot_evaluation, MongoConnectionStrings, NotEnoughDataError
 from sklearn.metrics import mean_squared_error
 
 import numpy as np
 
 from torch.utils.data import DataLoader
+
+SETTINGS["CAPTURE_MODE"] = "no"
 
 gbl_args = None
 
@@ -212,6 +210,8 @@ def run_experiment(model_token, size, sequence_length, bar_type, data):
 
 
 def main(args):
+    global gbl_args
+    gbl_args = args
     # Use ExperimentSelector to select experiments based on ranges
     selector = ExperimentSelector(index_file=args.index_file, mongo=MONGO, db=DB)
     experiments = selector.get(include_ranges=args.include, exclude_ranges=args.exclude)

@@ -16,6 +16,7 @@ def train_model(model, optimizer, scheduler, scaler, train_loader, patience, mod
     stats = None
     patience_count = 0
     last_mean_loss = None
+    time_per_epoch = None
     for epoch in range(epochs):
         start_time = time.time()  # Record start time
         count = 0
@@ -67,6 +68,8 @@ def train_model(model, optimizer, scheduler, scaler, train_loader, patience, mod
         if patience_count > patience:
             print(f'Out of patience at epoch {epoch}. Patience count: {patience}/{patience_count}. Limit: {patience}')
             break
+    if best_stats is None:
+        best_stats = stats
 
     print(f'Best loss: {best_loss}, Best Stats: {stats}')
-    return get_best_loss(model_token, training_label), best_stats
+    return get_best_loss(model_token, training_label), best_stats, time_per_epoch

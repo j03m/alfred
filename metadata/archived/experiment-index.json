@@ -1,0 +1,374 @@
+{
+    "1": {
+        "model_token": "lstm",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "price-only"
+        ]
+    },
+    "2": {
+        "model_token": "lstm",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core"
+        ]
+    },
+    "3": {
+        "model_token": "lstm",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "4": {
+        "model_token": "lstm",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "5": {
+        "model_token": "lstm",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "6": {
+        "model_token": "lstm",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "7": {
+        "model_token": "lstm",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "8": {
+        "model_token": "lstm",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "9": {
+        "model_token": "lstm",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "10": {
+        "model_token": "lstm-conv1d",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "price-only"
+        ]
+    },
+    "11": {
+        "model_token": "lstm-conv1d",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core"
+        ]
+    },
+    "12": {
+        "model_token": "lstm-conv1d",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "13": {
+        "model_token": "lstm-conv1d",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "14": {
+        "model_token": "lstm-conv1d",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "15": {
+        "model_token": "lstm-conv1d",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "16": {
+        "model_token": "lstm-conv1d",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "17": {
+        "model_token": "lstm-conv1d",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "18": {
+        "model_token": "lstm-conv1d",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "19": {
+        "model_token": "advanced-lstm",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "price-only"
+        ]
+    },
+    "20": {
+        "model_token": "advanced-lstm",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core"
+        ]
+    },
+    "21": {
+        "model_token": "advanced-lstm",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "22": {
+        "model_token": "advanced-lstm",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "23": {
+        "model_token": "advanced-lstm",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "24": {
+        "model_token": "advanced-lstm",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "25": {
+        "model_token": "advanced-lstm",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "26": {
+        "model_token": "advanced-lstm",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "27": {
+        "model_token": "advanced-lstm",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    },
+    "28": {
+        "model_token": "trans-am",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "price-only"
+        ]
+    },
+    "29": {
+        "model_token": "trans-am",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core"
+        ]
+    },
+    "30": {
+        "model_token": "trans-am",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "fundamentals"
+        ]
+    },
+    "31": {
+        "model_token": "trans-am",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "technicals"
+        ]
+    },
+    "32": {
+        "model_token": "trans-am",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "macro"
+        ]
+    },
+    "33": {
+        "model_token": "trans-am",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals"
+        ]
+    },
+    "34": {
+        "model_token": "trans-am",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "fundamentals",
+            "macro"
+        ]
+    },
+    "35": {
+        "model_token": "trans-am",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "technicals",
+            "macro"
+        ]
+    },
+    "36": {
+        "model_token": "trans-am",
+        "size": 256,
+        "sequence_length": 25,
+        "bar_type": "m",
+        "data": [
+            "core",
+            "fundamentals",
+            "technicals",
+            "macro"
+        ]
+    }
+}

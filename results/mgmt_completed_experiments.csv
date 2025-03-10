@@ -1,3 +1,1 @@
-_id,start_time,stop_time,config_columns,config_model_token,config_seed,config_sequence_length,config_size,config_token,eval_mse,train_mse,model_token
-2,2025-02-09 20:25:09.699,2025-02-09 21:01:26.168,['price-only'],lstm-conv1d,918708309,12,128,mgmt_experiment_set,1.1453634085213034,,port_mgmt_lstm-conv1d_12_128_36_0xd2c0aec0_mps
-3,2025-02-09 21:01:26.246,2025-02-10 02:25:59.258,"['core', 'fundamentals', 'technicals', 'macro']",lstm-conv1d,367866271,12,1024,mgmt_experiment_set,1.1474519632414368,0.011226384189764136,port_mgmt_lstm-conv1d_12_1024_36_0x3c79ee85_mps
+

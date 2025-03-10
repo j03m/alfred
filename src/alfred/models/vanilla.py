@@ -43,7 +43,6 @@ class Vanilla(nn.Module):
         predictions = self.final_activation(final_x2)
         return predictions
 
-
 class LstmConcatExtractors(nn.Module):
     def __init__(self, extractor_types, input_size=None, seq_len=None,
                  hidden_size=128, output_size=1, layers=10, hidden_activation=nn.Tanh(),
@@ -182,19 +181,21 @@ class LstmLayeredExtractors(nn.Module):
         return predictions
 
 class TransformerLayeredExtractors(nn.Module):
-    def __init__(self, input_size, seq_len, hidden_size, output_size, layers, dropout=0.1, num_heads = 8, hidden_activation=nn.Tanh(), final_activation=nn.Sigmoid()):
+    def __init__(self, input_size, seq_len, hidden_size, output_size, layers, dropout=0.1, num_heads = 8, hidden_activation=nn.Tanh(), final_activation=nn.Sigmoid(), extra_attention=True):
         super().__init__()
         self.seq_len = seq_len
+        self.extra_attention = extra_attention
         self.conv = nn.Conv1d(input_size, hidden_size, kernel_size=1)  # Simple feature extraction
-        self.feature_attention = FeatureAttention(hidden_size)
         self.positional_encoding = nn.Embedding(seq_len, hidden_size)
         self.hidden_activation = hidden_activation
         self.dropout = nn.Dropout(p=dropout)
         self.transformer = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(hidden_size, num_heads, hidden_size, dropout),
-            layers
+            nn.TransformerEncoderLayer(hidden_size, num_heads, hidden_size, dropout, batch_first=True), num_layers=1
         )
-        self.step_attention = TimeStepAttention(hidden_size)  # Optional, can average instead
+        if self.extra_attention:
+            self.feature_attention = FeatureAttention(hidden_size)
+            self.step_attention = TimeStepAttention(hidden_size)  # Optional, can average instead
+
         self.final_activation = final_activation
         self.first_layer = nn.Linear(hidden_size, hidden_size)
         self.layers = nn.ModuleList()
@@ -215,12 +216,20 @@ class TransformerLayeredExtractors(nn.Module):
         x = input_data.permute(0, 2, 1)  # (batch_size, input_size, seq_len)
         x = self.conv(x)  # (batch_size, hidden_size, seq_len)
         x = x.permute(0, 2, 1)  # (batch_size, seq_len, hidden_size)
-        x = self.feature_attention(x)  # (batch_size, seq_len, hidden_size)
+        if self.extra_attention:
+            x = self.feature_attention(x)  # (batch_size, seq_len, hidden_size)
         positions = torch.arange(0, self.seq_len).to(x.device)
         x += self.positional_encoding(positions)
         x = self.transformer(x)  # (batch_size, seq_len, hidden_size)
-        x = self.step_attention(x)  # (batch_size, hidden_size), or x.mean(dim=1)
-        x = self.hidden_activation(self.first_layer(x))
+
+        if self.extra_attention:
+            x = self.step_attention(x)  # (batch_size, hidden_size), or x.mean(dim=1)
+            x = self.hidden_activation(self.first_layer(x))
+        else:
+            x = x[:, -1, :]
+            x = self.hidden_activation(self.first_layer(x))
+
+
         for i in range(0, len(self.layers), 2):
             linear_layer = self.layers[i]
             batch_norm_layer = self.layers[i + 1]

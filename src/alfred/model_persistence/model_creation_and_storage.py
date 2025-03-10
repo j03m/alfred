@@ -108,6 +108,10 @@ def model_from_config(config_token, num_features, sequence_length, size, output,
         # same model but order here is important!
         model = TransformerLayeredExtractors(input_size=num_features, seq_len=sequence_length, hidden_size=size, output_size=output,
                                              final_activation=nn.Tanh(), layers=3)
+    elif config_token == 'trans.medium.extractors.slim.tanh':
+        # same model but order here is important!
+        model = TransformerLayeredExtractors(input_size=num_features, seq_len=sequence_length, hidden_size=size, output_size=output,
+                                             final_activation=nn.Tanh(), layers=3, extra_attention=False)
     else:
         raise Exception("Model type not supported")
 

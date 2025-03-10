@@ -12,5 +12,4 @@ python scripts/cache-rates.py &&
 python scripts/cache-fundementals.py "--symbol-file=$1" &&
 python scripts/cache-edgar.py &&
 python scripts/compile-edgar.py &&
-python scripts/create-analyst-data-set.py "--symbol-file=$1" &&
-python scripts/produce-pm-training-set.py "--symbol-file=$1" &&
+python scripts/create-analyst-data-set.py "--symbol-file=$1"

@@ -1,5 +1,7 @@
 import pandas as pd
 
+import numpy as np
+
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
@@ -87,7 +89,7 @@ def create_sequences(df, seq_len, features, labels):
         target = df.iloc[i + seq_len][labels].values  # Shape: (len(labels),)
         sequences.append(seq)
         targets.append(target)
-    return torch.tensor(sequences, dtype=torch.float32), torch.tensor(targets, dtype=torch.float32)
+    return torch.tensor(np.array(sequences), dtype=torch.float32), torch.tensor(np.array(targets), dtype=torch.float32)
 
 
 def create_sequences_from_dfs(dfs, seq_len, features, labels):
@@ -145,7 +147,7 @@ def prepare_data_and_model_seq(config: ModelPrepConfig):
         config_token=config.model_name,
         sequence_length=config.seq_len, size=config.model_size, output=len(config.labels),
         descriptors=[
-            config.category, config.model_name, config.model_size, len(config.labels), features_hash
+            config.category, config.model_name, config.model_size, config.seq_len, len(config.labels), features_hash
         ])
 
     if scaler is None:
@@ -253,7 +255,7 @@ def trainer(category="easy_model",
             loss_function=nn.BCELoss(),
             stat_accumulator=BCEAccumulator,
             seq_len=None):
-    # todo debug seq creation, try out LSTMS
+
     result: ModelPrepResult = prepare_data_and_model(
         ModelPrepConfig(category=category,
                         model_name=model_name,
@@ -269,7 +271,7 @@ def trainer(category="easy_model",
                         seq_len=seq_len
                         ))
 
-    print("Starting training:")  # todo we need a dataclass, this param list is out of control
+    print("Starting training:")
     return train_model(model=result.model,
                        optimizer=result.optimizer,
                        scheduler=result.scheduler,

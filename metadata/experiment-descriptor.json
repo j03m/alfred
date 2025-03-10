@@ -1,58 +1,16 @@
 {
-  "model_token": [
-    "lstm",
-    "lstm-conv1d",
-    "advanced-lstm",
-    "trans-am"
+  "model_name": [
+    "lstm.medium.extractors.tanh",
+    "lstm.medium.extractors.layered.tanh",
+    "trans.medium.extractors.layered.tanh",
+    "trans.medium.extractors.slim.tanh"
   ],
   "size": [
-    256
+    1024,
+    4096
   ],
   "sequence_length": [
-    25
-  ],
-  "bar_type": [
-    "m"
-  ],
-  "data": [
-    [
-      "price-only"
-    ],
-    [
-      "core"
-    ],
-    [
-      "core",
-      "fundamentals"
-    ],
-    [
-      "core",
-      "technicals"
-    ],
-    [
-      "core",
-      "macro"
-    ],
-    [
-      "core",
-      "fundamentals",
-      "technicals"
-    ],
-    [
-      "core",
-      "fundamentals",
-      "macro"
-    ],
-    [
-      "core",
-      "technicals",
-      "macro"
-    ],
-    [
-      "core",
-      "fundamentals",
-      "technicals",
-      "macro"
-    ]
+    12,
+    24
   ]
 }

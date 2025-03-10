@@ -5,7 +5,7 @@ import argparse
 from datetime import datetime
 
 from alfred.utils import set_deterministic, read_time_series_file, trim_timerange
-from alfred.easy import prepare_data_and_model, dfs_from_files
+from alfred.easy import prepare_data_and_model, ModelPrepConfig
 from alfred.devices import set_device
 from alfred.model_backtesting import SimpleBacktester, NuancedBacktester, MagnitudeChoiceBacktester
 from alfred.metadata import TickerCategories
@@ -37,19 +37,31 @@ def portfolio_back_test(args):
         df = trim_timerange(read_time_series_file(file), start_date, end_date)
         df["ticker"] = ticker
         df = df[["ticker", "Close"]]
+        # if we're operating on a sequence, The model will make a prediction from seq_len on, so
+        # for the back test data that has to be removed.
+        if args.seq_len is not None:
+            df = df.iloc[args.seq_len:]
         dfs.append(df)
 
     df_final = pd.concat(dfs)
 
-    model, _, _, loader, _, _, was_loaded = prepare_data_and_model(model_name=args.model_name,
-                                                                   model_size=args.model_size,
-                                                                   shuffle=False,
-                                                                   files=files,
-                                                                   labels=["PM"],
-                                                                   batch_size=1,
-                                                                   augment_func=lambda df: trim_timerange(df,
-                                                                                                          min_date=start_date,
-                                                                                                          max_date=end_date))
+
+    config = ModelPrepConfig(model_name=args.model_name,
+                             model_size=args.model_size,
+                             shuffle=False,
+                             files=files,
+                             labels=["PM"],
+                             category=args.category,
+                             batch_size=1,
+                             seq_len=args.seq_len,
+                             augment_func=lambda df: trim_timerange(df,
+                                                                    min_date=start_date,
+                                                                    max_date=end_date))
+
+    result = prepare_data_and_model(config)
+
+    model = result.model
+    loader = result.loader
     outputs = []
     model.eval()
     for features, _ in loader:
@@ -66,6 +78,7 @@ def portfolio_back_test(args):
 
     pb.print_ledger_metrics(df_final, ledger)
 
+
 def basic_back_tests(args):
     # Validate dates
     start_date, end_date = extract_dates(args)
@@ -75,14 +88,23 @@ def basic_back_tests(args):
     # loader to the model. We'll reread the file here and capture the loader as a global
     df = trim_timerange(read_time_series_file(file), args.min_date, args.max_date)
     df = df[["Close"]]
-    model, _, _, loader, _, _, was_loaded = prepare_data_and_model(model_name=args.model_name,
-                                                                   model_size=args.model_size,
-                                                                   shuffle=False,
-                                                                   files=[file],
-                                                                   batch_size=1,
-                                                                   augment_func=lambda df: trim_timerange(df,
-                                                                                                          min_date=start_date,
-                                                                                                          max_date=end_date))
+
+
+    config = ModelPrepConfig(model_name=args.model_name,
+                             model_size=args.model_size,
+                             shuffle=False,
+                             files=[file],
+                             batch_size=1,
+                             seq_len=args.seq_len,
+                             category=args.category,
+                             augment_func=lambda df: trim_timerange(df,
+                                                                    min_date=start_date,
+                                                                    max_date=end_date))
+
+    result = prepare_data_and_model(config)
+    model = result.model
+    loader = result.loader
+    was_loaded = result.was_loaded
     if not was_loaded:
         print("WARNING: you're backtesting with a brand new model. ")
     operations = []
@@ -152,10 +174,12 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=0, help="Random seed for reproducibility")
     parser.add_argument("--model_name", type=str, default="vanilla.medium", help="model to back test")
     parser.add_argument("--model_size", type=int, default=1024, help="model size")
+    parser.add_argument("--seq_len", type=int,  help="sequence length, optional supply for lstm/transformers")
     parser.add_argument("--buy_confidence", type=float, default=0.7, help="score >= needed to initiate a buy")
     parser.add_argument("--close_buy_confidence", type=float, default=0.5, help="score >= needed to initiate a buy")
     parser.add_argument("--close_short_confidence", type=float, default=0.5, help="score <= needed to initiate a buy")
     parser.add_argument("--short_confidence", type=float, default=0.3, help="score <= needed to initiate a buy")
+    parser.add_argument("--category", type=str, help="Category label for the model")
 
     args = parser.parse_args()
     main(args)

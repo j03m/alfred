@@ -902,7 +902,7 @@ first layer of Vanilla is size * number of extractors. Given that the results we
 than just inflating the network to 8k, I'm not sure it's worth it. I didn't time the training sessions
 sadly so I'm not sure which was more efficient (I need to fix that).
 
-### Approach 2 - collaborative layers
+### Approach 2 - Collaborative layers
 
 Rather concatenating another approach is to operate on the timeseries first with convolution to smooth
 the timeseries in a meaningful way, then weight the smoothed convolutions with attention and finally 
@@ -910,36 +910,67 @@ all the LSTM to predict a final hidden layer. We'll then feed that into Vanilla 
 
 ### Results
 
-Concat 4096
+A created a number of different models leveraging LSTM, Convolutions, Attention and Transformer nodes. By far, the LSTM based concatenation model with a 12 quarter sequence did the best.
+The models and their configurations can be found in `alfred/src/models`:
+
+| config_model_name                   | config_seed | config_sequence_length | config_size | config_token       | eval_loss   | eval_mae    | eval_pearson_corr | eval_r2     | eval_sign_accuracy |
+|-------------------------------------|-------------|------------------------|-------------|--------------------|-------------|-------------|-------------------|-------------|--------------------|
+| lstm.medium.extractors.tanh         | 639942358   | 12                     | 4096        | alfred-experiments | 0.06624213568 | 0.04481314868 | 0.3098181784    | 0.0539162159 | 0.9846350832       |
+| lstm.medium.extractors.tanh         | 906691060   | 12                     | 1024        | alfred-experiments | 0.06887133493 | 0.04704646021 | 0.293700546     | 0.04997938871 | 0.9833546735      |
+| lstm.medium.extractors.tanh         | 861478505   | 24                     | 1024        | alfred-experiments | 0.07004536213 | 0.05067494884 | 0.2605755925    | 0.03715336323 | 0.9861325116      |
+| lstm.medium.extractors.tanh         | 6035767     | 24                     | 4096        | alfred-experiments | 0.09074203439 | 0.05200660229 | 0.2938904464    | 0.04321277142 | 0.9753466872      |
+| trans.medium.extractors.slim.tanh   | 596785441   | 12                     | 1024        | alfred-experiments | 0.1016417525 | 0.05761999637 | 0.328430891     | 0.05061048269 | 0.966709347       |
+| trans.medium.extractors.slim.tanh   | 844504463   | 24                     | 1024        | alfred-experiments | 0.0879487943 | 0.05856237933 | 0.2980934083    | 0.04005789757 | 0.9768875193      |
+| trans.medium.extractors.slim.tanh   | 245767955   | 12                     | 4096        | alfred-experiments | 0.146932605  | 0.06432399154 | 0.3346939981    | 0.04828602076 | 0.9436619718      |
+| lstm.medium.extractors.layered.tanh | 958572169   | 12                     | 1024        | alfred-experiments | 0.2457900628 | 0.06444357336 | 0.2933355272    | 0.04095387459 | 0.895006402       |
+| lstm.medium.extractors.layered.tanh | 602155971   | 24                     | 4096        | alfred-experiments | 0.2379171089 | 0.07791764289 | 0.3016633987    | 0.03205281496 | 0.907550077       |
+| lstm.medium.extractors.layered.tanh | 354074820   | 24                     | 1024        | alfred-experiments | 0.3401060378 | 0.09159037471 | 0.3602011204    | 0.02928012609 | 0.8551617874      |
+| trans.medium.extractors.layered.tanh| 821673444   | 12                     | 1024        | alfred-experiments | 0.6944169461 | 0.124157086   | -0.02212384716  | -0.001443624496 | 0.6786171575   |
+| trans.medium.extractors.layered.tanh| 361917709   | 24                     | 4096        | alfred-experiments | 0.687512726  | 0.1250008941  | 0.04015367106   | -0.001481175423 | 0.6856702619   |
+| trans.medium.extractors.layered.tanh| 378492463   | 24                     | 1024        | alfred-experiments | 0.6875126416 | 0.125049144   | 0.0007099309587 | -0.001453399658 | 0.6856702619   |
+| trans.medium.extractors.slim.tanh   | 126107164   | 24                     | 4096        | alfred-experiments | 0.6875127357 | 0.1250947863  | 0.004069761839  | -0.00142788887 | 0.6856702619    |
+| trans.medium.extractors.layered.tanh| 668742030   | 12                     | 4096        | alfred-experiments | 0.6944259399 | 0.1252781153  | 0.003606584389  | -0.0008866786957 | 0.6786171575  |
+| lstm.medium.extractors.layered.tanh | 144957214   | 12                     | 4096        | alfred-experiments | 0.7076712208 | 0.2111508548  | 0.1032510698    | -0.03447687626 | 0.6786171575    |
+
+Our lstm concatenating extractor model cam in at the top. Interestingly enough, the 4k model only performed slightly better than the 1k model. But at `0.066` mse and a 98% percent sign accuracy 
+I was very much ready for another backtest and then a move to train on larger dataset.
+
+#### Backtesting Again
+
+Same results backtesting, but the 
+
 ```text
-Evaluation: Loss: 0.5690694918217923 stats: {'mae': 0.1162773072719574, 'r2': 0.04249417781829834, 'pearson_corr': 0.2870158851146698, 'sign_accuracy': 0.7400768245838668}
+--- Basket Hold Metrics ---
+
+Equal-Weighted Buy and Hold Return (Entire Basket):
+  Average Return: 471.57%
+
+--- Trade Analysis ---
+Total Completed Trades: 59
+Profitable Trades: 37
+Losing Trades: 21
+Win Rate: 62.71%
+Average Profit Percentage per Trade: 89.20%
+Total Profit Percentage (sum of trade %): 5262.63%
 ```
 
-Layers 1024
-```
-Evaluation: Loss: 0.6289685308925255 stats: {'mae': 0.11371823400259018, 'r2': 0.02586185932159424, 'pearson_corr': 0.2899762690067291, 'sign_accuracy': 0.7131882202304738}
-```
-
-Layers 1024
-```text
-Evaluation: Loss: 0.6690058812592179 stats: {'mae': 0.14168527722358704, 'r2': 0.027659177780151367, 'pearson_corr': 0.2162477672100067, 'sign_accuracy': 0.6952624839948783}
-```
-
-With concatenation being the best by a fairly wide margin. 
-
-TODO: Realized I called all of these medium but they were all 10 layers deep :/ trying again pinned at 3 layers
-TODO: Longer history? 24, 48?
-TODO: quick study layers vs width? shoot for same size, look for perf diffs?
 
 ## Tracking Efficiency
 
 One thing I realized we weren't doing - Tracking how efficient the models were. Faster training
 times are going to weigh in here, especially if we look at transformers
 
+Some observations: 
+
+* On a single GPU the transformer model I wrote takes 2x the time the LSTM models take. 
+* They hardly ever got below a 0.6 MSE during training but were had ~0.1 lower loss for evaluation and had slightly higher sign accuracy.
+
 
 ## Bigger, Strong Faster
 
-Expanding the training set and testing to ALL equities
+Expanding the training set and testing to ALL equities. How to generate all the data: 
+
+
 
 ## Reinforcement Learning
 
