@@ -2,63 +2,20 @@ from logging import exception
 
 import os
 import argparse
-from pathlib import Path
+
 import json
 
 import pandas as pd
 
-from alfred.data import AlphaDownloader
+from alfred.data import AlphaDownloader, NewsDb
 from alfred.metadata import TickerCategories
 from alfred.utils import reindex_dataframes
 
 PROCESSED_TICKERS_FILE = 'data/processed_tickers.json'
 
-def create_news_indicators(symbol, news_dir="./news", required_rel=0.7):
-    ticker_dir = Path(news_dir) / symbol
-    data = []
-    # Check if the ticker directory exists
-    if not ticker_dir.exists() or not ticker_dir.is_dir():
-        return None
-
-    # Loop through each date directory in the ticker directory
-    for date_dir in ticker_dir.iterdir():
-        if date_dir.is_dir():  # Check if it's a directory (date in YYYYMMDD format)
-            date = date_dir.name  # e.g., '20241031'
-
-            # Initialize lists to collect sentiment and outlook for the date
-            sentiments = []
-            outlooks = []
-
-            # Loop through each JSON file in the date directory
-            for file_path in date_dir.glob("*.json"):
-                with open(file_path, 'r') as file:
-                    data_json = json.load(file)
-
-                    # Only consider files with relevance >= 0.7
-                    if data_json.get("relevance", 0) >= required_rel:
-                        sentiments.append(data_json.get("sentiment", 0))
-                        outlooks.append(data_json.get("outlook", 0))
-
-            # Calculate the mean sentiment and outlook if we have relevant data
-            if sentiments and outlooks:
-                mean_sentiment = sum(sentiments) / len(sentiments)
-                mean_outlook = sum(outlooks) / len(outlooks)
-
-                # Append the data as a row in the list
-                data.append({
-                    "Date": date,
-                    "mean_sentiment": mean_sentiment,
-                    "mean_outlook": mean_outlook
-                })
-
-    if len(data) == 0:
-        return None
-
-    # Convert the list to a DataFrame
-    df = pd.DataFrame(data)
-    df["Date"] = pd.to_datetime(df["Date"])
-    df = df.set_index("Date")
-    return df
+def create_news_indicators(symbol, required_rel=0.7):
+   news_db = NewsDb()
+   return news_db.get_summary(symbol, required_rel)
 
 def load_processed_tickers():
     if os.path.exists(PROCESSED_TICKERS_FILE):

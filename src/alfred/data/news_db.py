@@ -1,4 +1,5 @@
 import sqlite3
+import pandas as pd
 from datetime import datetime
 
 
@@ -48,3 +49,38 @@ class NewsDb:
         self.conn.close()
 
 
+    def get_summary(self, ticker, relevance=0.7, start_date=None, end_date=None):
+        # Base query
+        query = '''
+            SELECT date AS Date,
+                   AVG(sentiment) AS mean_sentiment,
+                   AVG(outlook) AS mean_outlook
+            FROM news
+            WHERE ticker = ? AND relevance >= ?
+        '''
+        params = [ticker, relevance]
+
+        # Add date range filtering if provided
+        if start_date:
+            query += ' AND date >= ?'
+            params.append(start_date)
+        if end_date:
+            query += ' AND date <= ?'
+            params.append(end_date)
+
+        # Group by date
+        query += ' GROUP BY date HAVING COUNT(*) > 0;'
+
+        # Execute query and load into DataFrame
+        df = pd.read_sql_query(query, self.conn, params=tuple(params))
+
+        # Return None if no data
+        if df.empty:
+            return None
+
+        # Convert Date to datetime and set as index
+        df['Date'] = pd.to_datetime(df['Date'])
+        df = df.set_index('Date')
+        df = df[['mean_sentiment', 'mean_outlook']]
+
+        return df
