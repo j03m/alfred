@@ -24,14 +24,16 @@ def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=
         print("ticker: ", ticker)
         data_file = os.path.join(output_dir, f"{ticker}.csv")
         if os.path.exists(data_file):
-            df = pd.read_csv(data_file)
-            df['Date'] = pd.to_datetime(df['Date'])
-            today = datetime.today().strftime('%m-%d-%Y')
-            latest_date = df['Date'].max().strftime('%m-%d-%Y')
-            if latest_date == today:
-                print(f"{ticker} prices are up2date")
-                continue
-
+            try:
+                df = pd.read_csv(data_file)
+                df['Date'] = pd.to_datetime(df['Date'])
+                today = datetime.today().strftime('%m-%d-%Y')
+                latest_date = df['Date'].max().strftime('%m-%d-%Y')
+                if latest_date == today:
+                    print(f"{ticker} prices are up2date")
+                    continue
+            except:
+                print(f"Bad on disk file time in {ticker} file. Re-downloading")
         try:
             ticker_obj = yf.download(tickers=ticker, interval=interval)
             df = pd.DataFrame(ticker_obj)
@@ -40,6 +42,10 @@ def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=
         except (requests.exceptions.HTTPError, ValueError) as e:
             print(f"Failed to download {ticker} due to an HTTP or Value error: {e}")
             bad_tickers.append(ticker)
+        except Exception as e:
+            print(f"General exception {e}")
+            bad_tickers.append(ticker)
+
     return bad_tickers
 
 

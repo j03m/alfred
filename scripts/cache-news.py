@@ -38,8 +38,6 @@ def main(args):
         print(f"caching {ticker} {start_date}, {end_date}")
         dl.download_and_cache_article(ticker, start_date, end_date)
 
-
-
         #todo: run and test me
 
 if __name__ == "__main__":

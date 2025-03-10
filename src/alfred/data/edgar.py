@@ -1,4 +1,3 @@
-from bs4 import BeautifulSoup
 import requests
 import re
 import time
@@ -36,7 +35,7 @@ def download_master_index(year, quarter):
         content = response.content.decode('latin-1')
         return content
     else:
-        raise Exception(f"Failed to download index file: {response.status_code}")
+        print(f"Failed to download index file for {year} {quarter}: {response.status_code}")
 
 
 def generic_sec_fetch(url, retries=3):
@@ -80,3 +79,4 @@ def parse_master_index(content, form_types=['13F-HR']):
         elif separator_pattern.fullmatch(line.strip()):
             start_parsing = True
     return entries
+

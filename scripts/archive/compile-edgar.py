@@ -1,6 +1,7 @@
 from alfred.utils import FileSystemCrawler
 from alfred.data import OpenFigiDownloader
-from alfred.utils import make_datetime_index
+import sqlite3
+
 import pandas as pd
 from datetime import datetime
 from lxml import etree
