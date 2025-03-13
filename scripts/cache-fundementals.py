@@ -7,15 +7,19 @@ import json
 
 import pandas as pd
 
-from alfred.data import AlphaDownloader, NewsDb
+from alfred.data import AlphaDownloader, NewsDb, EdgarDb
 from alfred.metadata import TickerCategories
-from alfred.utils import reindex_dataframes
 
 PROCESSED_TICKERS_FILE = 'data/processed_tickers.json'
 
+news_db = NewsDb()
+edgar_db = EdgarDb()
+
 def create_news_indicators(symbol, required_rel=0.7):
-   news_db = NewsDb()
    return news_db.get_summary(symbol, required_rel)
+
+def get_institutional_ownership(symbol):
+   return edgar_db.get_filings(symbol)
 
 def load_processed_tickers():
     if os.path.exists(PROCESSED_TICKERS_FILE):
@@ -41,7 +45,7 @@ def main(symbols_file, data_dir, test_symbol):
     processed_already = load_processed_tickers()
     bad_tickers = []
     for symbol in symbols:
-        if symbol in processed_already:
+        if symbol in processed_already and not args.force:
             print(f"skipping {symbol}")
             continue
 
@@ -50,8 +54,12 @@ def main(symbols_file, data_dir, test_symbol):
         margins = alpha.margins(symbol)
         insiders = alpha.get_normalized_insider_transactions(symbol)
         df_news = create_news_indicators(symbol)
+        df_inst_ownership = get_institutional_ownership(symbol)
+
         price_file_path = os.path.join(data_dir, f"{symbol}.csv")
 
+
+        # TODO: could all these joins use merge_asof instead?
         if os.path.exists(price_file_path):
             if quarterly_earnings is None:
                 bad_tickers.append(symbol)
@@ -82,44 +90,27 @@ def main(symbols_file, data_dir, test_symbol):
             # before we combine anything, prices is the main date range, we need to trim everything
             # else to align with prices otherwise combine will give us 0's for Close price etc
             # Determine date range from prices
-            quarterly_earnings, margins = reindex_dataframes(df_prices, quarterly_earnings, margins)
+            # quarterly_earnings, margins = reindex_dataframes(df_prices, quarterly_earnings, margins)
 
             # Merging data
-            df_combined = df_prices.join(quarterly_earnings, how='left')
-            df_combined = df_combined.join(margins, how='left')
-
-            # forward will earnings - prevents lookahead
-            df_combined.ffill(inplace=True)
-
-            # after forward fill, we may still have na if price goes back further than earnings, treat these as 0
-            df_combined.fillna(0, inplace=True)
+            df_combined = pd.merge_asof(df_prices, quarterly_earnings, left_index=True, right_index=True)
+            df_combined = pd.merge_asof(df_combined, margins, left_index=True, right_index=True)
 
             if insiders is not None:
-                df_combined = df_combined.join(insiders, how='left')
-                df_combined.fillna(0, inplace=True)
+                df_combined = pd.merge_asof(df_combined, insiders, left_index=True, right_index=True)
             else:
                 df_combined["insider_acquisition"] = 0
                 df_combined["insider_disposal"] = 0
 
             if df_news is not None:
-                df_combined = df_combined.join(df_news, how='left')
+                df_combined = pd.merge_asof(df_combined, df_news,left_index=True, right_index=True)
                 df_combined.fillna(0, inplace=True)
             else:
                 df_combined["mean_sentiment"] = 0
                 df_combined["mean_outlook"] = 0
 
-            # before storing there could be insider trading dates that didn't fall on dates where
-            # we have pricing (weekends etc). We need to ffill these rows to avoid issues:
-            # zero_index = df_combined.index[df_combined['Close'] == 0]
-            # for idx in zero_index:
-            #     for column in df_prices.columns:
-            #         assert column in df_combined.columns, "assumption broken here"
-            #         if df_combined.loc[idx, column] == 0:
-            #             current_pos = df_combined.index.get_loc(idx)
-            #             if idx == df_combined.index[0]:
-            #                 df_combined.loc[idx, column] = df_combined.iloc[current_pos + 1][column]
-            #             else:
-            #                 df_combined.loc[idx, column] = df_combined.iloc[current_pos - 1][column]
+            # institutional ownership
+            df_combined = pd.merge_asof(df_combined, df_inst_ownership, left_index=True, right_index=True)
 
             close_zeros = len(df_combined[df_combined['Close'] == 0])
             assert (close_zeros == 0)
@@ -145,6 +136,7 @@ if __name__ == "__main__":
     parser.add_argument("--symbol", type=str, help="one symbol for testing")
     parser.add_argument("--data-dir", default="./data", type=str,
                         help="Directory to look for pricing data and save output")
+    parser.add_argument("--force", action="store_true", help="force")
 
     args = parser.parse_args()
     main(args.symbol_file, args.data_dir, args.symbol)

@@ -1,4 +1,3 @@
-import os
 from openai import OpenAI
 import trafilatura
 import json
@@ -27,14 +26,24 @@ class OpenAiQuery:
         )
         return completion
 
-    def news_query(self, body, ticker):
+    def news_query(self, body, ticker, max_prompt=128000):
 
         # Load and extract main content from the HTML file
         contents = trafilatura.extract(body)
 
         # Check if content was extracted
         if not contents:
-            raise ValueError("No content could be extracted from the HTML.")
+            print("No content could be extracted from the HTML.")
+            empty_value = {
+                "relevance": 0,
+                "sentiment": 0,
+                "outlook": 0
+            }
+            return empty_value
+
+        # trim to max prompt
+        if len(contents) > max_prompt:
+            contents = contents[:max_prompt]
 
         # Construct the prompt
         prompt = (
@@ -46,7 +55,16 @@ class OpenAiQuery:
             f"JSON Response:"
         )
 
-        completion = self.query(prompt, f"you are a helpful stock analyst researching {ticker}")
+        try:
+            completion = self.query(prompt, f"you are a helpful stock analyst researching {ticker}")
+        except Exception as e:
+            print("Failed to contact openai:", e)
+            empty_value = {
+                "relevance": 0,
+                "sentiment": 0,
+                "outlook": 0
+            }
+            return empty_value
 
         json_string = completion.choices[0].message.content
         json_string_cleaned = json_string.strip('```json\n').strip('```').strip()

@@ -25,7 +25,14 @@ class EdgarFilingProcessor:
         # Encountering issues because the SEC filing content is not a well-formed XML document—it’s a mix of SGML-like
         # tags and embedded XML sections. Specifically, the presence of an <?xml ... ?> declaration inside the <XML> tags
         # violates XML’s well-formedness rules, causing parsing errors.
-        xml_sections = re.findall(r'<XML>(.*?)</XML>', content, re.DOTALL)
+        if content is None:
+            return {}
+        try:
+            xml_sections = re.findall(r'<XML>(.*?)</XML>', content, re.DOTALL)
+        except Exception as e:
+            print("something wrong with content object", e)
+            return {}
+
         roots = {}
         for section in xml_sections:
             # Remove any embedded XML declarations
@@ -58,18 +65,29 @@ class EdgarFilingProcessor:
         if signature_block is not None:
             signature_date = signature_block.findtext("signatureDate")
             if signature_date:
-                date_obj = parse_date(signature_date)
+                try:
+                    date_obj = parse_date(signature_date)
+                except Exception as e:
+                    print("Failed to parse data: ", e)
+                    return None, None
                 return date_obj.year, date_obj.month
 
         raise Exception("Could not find date in dateFiled or signatureBlock")
 
 
     def processor(self, content):
+        if content is None:
+            return
 
         roots = self.extract_embedded_xml(content)
 
-        # Extract the filing date
+        if roots.get('edgarSubmission', None) is None:
+            return
+
         year, month = self.extract_filing_date(roots['edgarSubmission'])
+        if year is None or month is None:
+            return
+
         table = roots.get("informationTable", None)
         if table is None:
             print(f"Does not contain informationTable")

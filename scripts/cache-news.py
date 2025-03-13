@@ -16,7 +16,6 @@ def date_type(date_str):
     except ValueError:
         raise argparse.ArgumentTypeError(f"Invalid date format: '{date_str}'. Use YYYY-MM-DD.")
 
-
 def main(args):
     tickers = load_symbols_from_file(args.symbol_file)
     dl = ArticleDownloader()

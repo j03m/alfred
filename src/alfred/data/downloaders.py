@@ -1,19 +1,24 @@
 import os
 import pandas as pd
-import yfinance as yf
 import time
 import ssl
 from datetime import datetime
 import binascii
+from io import StringIO
 
 from .news_db import NewsDb
 from .openai_query import OpenAiQuery
+from fuzzywuzzy import process
 import re
+
+from fake_useragent import UserAgent
+
 
 ssl.create_default_https_context = ssl._create_unverified_context
 
 def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=-1, head=-1):
     bad_tickers = []
+    downloader = AlphaDownloader()
     for ticker in ticker_list:
         time.sleep(0.25)
         print("ticker: ", ticker)
@@ -30,9 +35,12 @@ def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=
             except:
                 print(f"Bad on disk file time in {ticker} file. Re-downloading")
         try:
-            ticker_obj = yf.download(tickers=ticker, interval=interval)
-            df = pd.DataFrame(ticker_obj)
-            df = df.apply(lambda col: col.mask((col <= 0) | col.isna()).ffill())
+            df = downloader.prices(ticker, interval=interval)
+            if len(df) == 0:
+                print(f"no data for {ticker}")
+                bad_tickers.append(ticker)
+                continue
+
             df.to_csv(data_file)
         except (requests.exceptions.HTTPError, ValueError) as e:
             print(f"Failed to download {ticker} due to an HTTP or Value error: {e}")
@@ -132,6 +140,13 @@ class AlphaDownloader:
         sleep(self.rate_limit)
         return requests.get(url, verify=False)
 
+    def prices(self, symbol, interval="1d"):
+        url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&interval={interval}&apikey={self.api_key}&datatype=csv'
+        response = self.get(url)
+        df = pd.read_csv(StringIO(response.text))
+        df.rename(columns={"timestamp": "Date", "open":"Open", "high":"High", "low":"Low", "close":"Close", "volume": "Volume"}, inplace=True)
+        return df
+
     def earnings(self, symbol):
         # Construct the URL for the API request
         url = f'https://www.alphavantage.co/query?function=EARNINGS&symbol={symbol}&apikey={self.api_key}'
@@ -140,8 +155,8 @@ class AlphaDownloader:
         data = response.json()
 
         # Convert the earnings data to a DataFrame
-        quarterly_earnings = data.get('quarterlyEarnings', None)
-        if quarterly_earnings is None:
+        quarterly_earnings = data.get('quarterlyEarnings', [])
+        if len(quarterly_earnings) == 0:
             return None
         quarterly_earnings = pd.DataFrame(quarterly_earnings)
         quarterly_earnings = quarterly_earnings.drop(columns=['reportTime'])
@@ -176,38 +191,34 @@ class AlphaDownloader:
         operating_margins = []
         net_profit_margins = []
 
+        # scrub - javascript makes the world bad
+        for report in quarterly_reports:
+            for key, value in report.items():
+                if value in ['None', 'N/A', '0']:
+                    report[key] = 0
+                else:
+                    try:
+                        if key not in ["reportedCurrency", "fiscalDateEnding"]:
+                            report[key] = float(value)
+                    except ValueError:
+                        print(f"Don't convert {key} / {value} to float")
+
         for report in quarterly_reports:
             dates.append(report['fiscalDateEnding'])
-            # handle the case where totalRev is missing (happens for AAPL for example)
-            if report['totalRevenue'] in ['None', 'N/A', '0']:
-                if report['grossProfit'] != 'None' and report['costofGoodsAndServicesSold'] != 'None':
-                    report['totalRevenue'] = str(
-                        float(report['grossProfit']) + float(report['costofGoodsAndServicesSold']))
-                elif report['grossProfit'] != 'None' and report['costOfRevenue'] != 'None':
-                    report['totalRevenue'] = str(float(report['grossProfit']) + float(report['costOfRevenue']))
-                else:
-                    report['totalRevenue'] = '0'
+            report['totalRevenue'] = report['grossProfit'] + report['costofGoodsAndServicesSold']
 
-            if report['operatingIncome'] == 'None':
-                report['operatingIncome'] = '0'
 
-            # Calculate Gross Margin
-
-            total_revenue = float(report['totalRevenue']) if report['totalRevenue'] not in [None, 'None', '', 0] else 0
-            if report['grossProfit'] in [None, 'None', '']:
-                gross_margin = 0
-            else:
-                # Ensure totalRevenue is a valid float
-                gross_margin = (float(report['grossProfit']) / total_revenue) if total_revenue != 0 else 0
+            total_revenue = report['totalRevenue']
+            gross_margin = report['grossProfit'] / total_revenue if total_revenue != 0 else 0
 
             gross_margins.append(gross_margin)
 
             # Calculate Operating Margin
-            operating_margin = (float(report['operatingIncome']) / total_revenue) if total_revenue != 0 else 0
+            operating_margin = report['operatingIncome'] / total_revenue if total_revenue != 0 else 0
             operating_margins.append(operating_margin)
 
             # Calculate Net Profit Margin
-            net_profit_margin = (float(report['netIncome']) / total_revenue) if total_revenue != 0 else 0
+            net_profit_margin = report['netIncome'] / total_revenue if total_revenue != 0 else 0
             net_profit_margins.append(net_profit_margin)
 
         # Create a DataFrame with the margin data
@@ -469,6 +480,7 @@ class ArticleDownloader:
         self.openai = OpenAiQuery()
         self.news_db = NewsDb()
         self.rate_limit = rate_limit
+        self.ua = UserAgent()
 
     def get(self, url):
         sleep(self.rate_limit)
@@ -477,9 +489,9 @@ class ArticleDownloader:
     def fetch_article_body(self, url):
         """Fetch the article body from the given URL. Note we don't rate limit here since we're not hitting AA"""
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+            'User-Agent': self.ua.random
         }
-        response = requests.get(url, headers=headers, timeout=30)
+        response = requests.get(url, headers=headers, timeout=1)
         response.raise_for_status()  # Ensure we handle errors
         return response.text
 
@@ -505,8 +517,12 @@ class ArticleDownloader:
                     metadata = self.get_metadata(ticker, body)
                     self.news_db.save(published, ticker, article["url"], metadata["relevance"], metadata["sentiment"],
                                       metadata["outlook"])
-            except requests.RequestException as e:
-                print(f"Failed to fetch article {article['title']}: {e}")
+            except Exception as e:
+                print(f"Failed to fetch article or get metadata {article['title']}: {e} caching to avoid it next time")
+                self.news_db.save(published, ticker, article["url"], article['relevance_score'],
+                                  article['ticker_sentiment_score'],
+                                  1 if article['ticker_sentiment_label'] == 'Bullish' else 0)
+
 
     def get_metadata(self, ticker, body):
         return self.openai.news_query(body, ticker)

@@ -23,6 +23,7 @@ def trim_timerange(df, min_date=None, max_date=None):
         end_date = pd.Timestamp(max_date, tz='UTC')
         return df[(df.index >= start_date) & (df.index <= end_date)]
 
+# don't use this use pd.merge_asof
 def reindex_dataframes(main_df, *target_dfs):
     '''
     This will reindex all parameters following main to main's index

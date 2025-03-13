@@ -112,6 +112,7 @@ def main():
     else:
         symbols = ticker_categories.get(["training", "evaluation"])
 
+
     ticker_data_frames = []
     for symbol in symbols:
         print("pre-processing: ", symbol)
@@ -127,10 +128,6 @@ def main():
 
         # lose some history from the back due to missing moving avg
         df.dropna(inplace=True)
-
-        # attach labels - this is commented out because I suspected its backwards and didn't have time to fix
-        # not really needed at this time
-        # attach_price_prediction_labels(args, columns, df)
 
         # fill where we can't predict with 0
         df.fillna(0, inplace=True)
@@ -150,9 +147,6 @@ def main():
         # prepare to merge all
         ticker_data_frames.append(df)
 
-    # if not args.individual_files:
-    #     finalize_single_data_file(args, ticker_data_frames)
-    # else:
     for frame, symbol in zip(ticker_data_frames, symbols):
         print("adding additional data to :", symbol)
         data_tickers = ticker_categories.get(["data"])
@@ -165,23 +159,6 @@ def main():
         frame.index = frame.index.normalize()
         frame.index.name = None
         frame.to_csv(new_file_path)
-
-# def finalize_single_data_file(args, ticker_data_frames):
-#     final_df = pd.concat(ticker_data_frames)
-#     final_df = add_vix(final_df, args)
-#
-#     final_df = add_treasuries(final_df, args)
-#
-#     final_df, _, _ = align_date_range(final_df)
-#
-#     assert not final_df.isnull().any().any(), f"unscaled df has null after transform"
-#
-#     # save unscaled interim path
-#     base_name = os.path.basename(args.symbol_file)
-#     file_name, file_extension = os.path.splitext(base_name)
-#     new_file_name = f"{file_name}_processed_unscaled{file_extension}"
-#     new_file_path = os.path.join(args.data, new_file_name)
-#     final_df.to_csv(new_file_path)
 
 if __name__ == "__main__":
     main()
