@@ -84,3 +84,33 @@ class NewsDb:
         df = df[['mean_sentiment', 'mean_outlook']]
 
         return df
+
+    def has_news(self, ticker):
+        """
+        Check if the supplied ticker has news articles in the system for the current month and year.
+
+        :param ticker: The stock ticker symbol to check.
+        :return: A tuple (has_news, latest_date, today)
+                 - has_news: bool, True if there is at least one news article in the current month
+                 - latest_date: str or None, the latest date in 'YYYY-MM-DD' format when news is available in the current month, or None if no news
+                 - today: str, today's date in 'YYYY-MM-DD' format
+        """
+        # Get the current date and define the current month's range
+        current_date = datetime.now()
+        first_day = current_date.replace(day=1)
+        first_day_str = first_day.strftime('%Y-%m-%d')
+
+        # Query the latest date for the ticker in the current month
+        self.cursor.execute('''
+               SELECT MAX(date) FROM news
+               WHERE ticker = ? AND date <= ?
+           ''', (ticker, first_day_str))
+
+        # Fetch the result
+        result = self.cursor.fetchone()
+        latest_date = result[0]  # Will be a date string or None
+        has_news = latest_date is not None
+        if latest_date is not None:
+            latest_date = datetime.strptime(latest_date, '%Y-%m-%d').date()
+        # Return the tuple
+        return has_news, latest_date

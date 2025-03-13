@@ -500,6 +500,15 @@ class ArticleDownloader:
         return format(binascii.crc32(url.encode()), '08x')
 
     def cache_article_metadata(self, ticker, time_from, time_to):
+
+        # reduce the window or skip
+        has_news, latest = self.news_db.has_news(ticker)
+        if has_news:
+            if latest < time_to:
+                time_from = latest
+            else:
+                return
+
         # Fetch articles using `news_sentiment_for_window`
         articles = self.api.news_sentiment_for_window_and_symbol(ticker, time_from, time_to)
 
@@ -526,3 +535,4 @@ class ArticleDownloader:
 
     def get_metadata(self, ticker, body):
         return self.openai.news_query(body, ticker)
+
