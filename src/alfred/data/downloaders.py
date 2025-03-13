@@ -13,6 +13,8 @@ import re
 
 from fake_useragent import UserAgent
 
+from alfred.utils import print_in_place
+
 
 ssl.create_default_https_context = ssl._create_unverified_context
 
@@ -317,7 +319,7 @@ class AlphaDownloader:
 
         # Iterate through each article in the feed
         if data.get("items", 0) == 0:
-            print(f"No articles for {symbol}")
+            print(f"\nNo articles for {symbol}")
 
         for article in data.get("feed", []):
             # Convert time_published to datetime for comparison
@@ -500,20 +502,20 @@ class ArticleDownloader:
         return format(binascii.crc32(url.encode()), '08x')
 
     def cache_article_metadata(self, ticker, time_from, time_to):
-
         # reduce the window or skip
         has_news, latest = self.news_db.has_news(ticker)
         if has_news:
             if latest < time_to:
                 time_from = latest
             else:
+                print("skipping: ", ticker)
                 return
 
         # Fetch articles using `news_sentiment_for_window`
         articles = self.api.news_sentiment_for_window_and_symbol(ticker, time_from, time_to)
-
+        total = len(articles)
         for i, article in enumerate(articles):
-            # Convert time_published to a date string for directory naming
+            print_in_place(f"Fetching article: {i} of {total} for {ticker}")
             published = article.get('time_published', None)
             if published is None:
                 published = datetime.today().date().strftime('%Y-%m-%d')
@@ -521,13 +523,13 @@ class ArticleDownloader:
                 published = datetime.strftime(published, '%Y-%m-%d')
             try:
                 if not self.news_db.has_article(ticker, article["url"]):
-                    print(f"Fetching article: {article['title']}")
+
                     body = self.fetch_article_body(article["url"])
                     metadata = self.get_metadata(ticker, body)
                     self.news_db.save(published, ticker, article["url"], metadata["relevance"], metadata["sentiment"],
                                       metadata["outlook"])
             except Exception as e:
-                print(f"Failed to fetch article or get metadata {article['title']}: {e} caching to avoid it next time")
+                #print(f"Failed to fetch article or get metadata {article['title']}: {e} caching to avoid it next time")
                 self.news_db.save(published, ticker, article["url"], article['relevance_score'],
                                   article['ticker_sentiment_score'],
                                   1 if article['ticker_sentiment_label'] == 'Bullish' else 0)
