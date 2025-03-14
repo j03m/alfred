@@ -15,6 +15,9 @@ from fake_useragent import UserAgent
 
 from alfred.utils import print_in_place
 
+import json
+import requests
+from time import sleep
 
 ssl.create_default_https_context = ssl._create_unverified_context
 
@@ -52,11 +55,6 @@ def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=
             bad_tickers.append(ticker)
 
     return bad_tickers
-
-
-import json
-import requests
-from time import sleep
 
 
 class OpenFigiDownloader:
