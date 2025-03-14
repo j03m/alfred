@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import argparse
-from alfred.data import ArticleDownloader
+from alfred.data import MultiArticleDownloader
 from alfred.metadata import TickerCategories
 from datetime import datetime, timedelta, date
 
@@ -18,11 +18,16 @@ def date_type(date_str):
 
 def main(args):
     tickers = load_symbols_from_file(args.symbol_file)
-    dl = ArticleDownloader()
+    dl = MultiArticleDownloader(workers=10)
+    total = len(tickers)
+    count = 0
     for ticker in tickers:
         end_date = args.end_date
         start_date = args.start_date
+        # this fans out and downloads all the articles for the ticker
         dl.cache_article_metadata(ticker, start_date, end_date)
+        count+=1
+        print(f"{count}/{total}")
 
 
 if __name__ == "__main__":

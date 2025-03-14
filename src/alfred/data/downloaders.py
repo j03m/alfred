@@ -15,6 +15,9 @@ from fake_useragent import UserAgent
 
 from alfred.utils import print_in_place
 
+import json
+import requests
+from time import sleep
 
 ssl.create_default_https_context = ssl._create_unverified_context
 
@@ -52,11 +55,6 @@ def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=
             bad_tickers.append(ticker)
 
     return bad_tickers
-
-
-import json
-import requests
-from time import sleep
 
 
 class OpenFigiDownloader:
@@ -468,73 +466,4 @@ class AlphaDownloader:
         if "bestMatches" in data and len(data["bestMatches"]) > 0:
             return data["bestMatches"][0]["1. symbol"]
         return None
-
-
-# Example usage:
-# downloader = AlphaDownloader(key_file='./keys/alpha.txt')
-# treasury_df = downloader.treasury_yields()
-# downloader.treasury_yields_to_csv(csv_file='treasury_yields.csv')
-
-
-class ArticleDownloader:
-    def __init__(self, rate_limit=0.5):
-        self.api = AlphaDownloader()
-        self.openai = OpenAiQuery()
-        self.news_db = NewsDb()
-        self.rate_limit = rate_limit
-        self.ua = UserAgent()
-
-    def get(self, url):
-        sleep(self.rate_limit)
-        return requests.get(url, verify=False)
-
-    def fetch_article_body(self, url):
-        """Fetch the article body from the given URL. Note we don't rate limit here since we're not hitting AA"""
-        headers = {
-            'User-Agent': self.ua.random
-        }
-        response = requests.get(url, headers=headers, timeout=1)
-        response.raise_for_status()  # Ensure we handle errors
-        return response.text
-
-    def generate_article_id(self, url):
-        """Generate a unique article ID based on the CRC32 hash of the URL."""
-        return format(binascii.crc32(url.encode()), '08x')
-
-    def cache_article_metadata(self, ticker, time_from, time_to):
-        # reduce the window or skip
-        has_news, latest = self.news_db.has_news(ticker)
-        if has_news:
-            if latest < time_to:
-                time_from = latest
-            else:
-                print("skipping: ", ticker)
-                return
-
-        # Fetch articles using `news_sentiment_for_window`
-        articles = self.api.news_sentiment_for_window_and_symbol(ticker, time_from, time_to)
-        total = len(articles)
-        for i, article in enumerate(articles):
-            print_in_place(f"Fetching article: {i} of {total} for {ticker}")
-            published = article.get('time_published', None)
-            if published is None:
-                published = datetime.today().date().strftime('%Y-%m-%d')
-            else:
-                published = datetime.strftime(published, '%Y-%m-%d')
-            try:
-                if not self.news_db.has_article(ticker, article["url"]):
-
-                    body = self.fetch_article_body(article["url"])
-                    metadata = self.get_metadata(ticker, body)
-                    self.news_db.save(published, ticker, article["url"], metadata["relevance"], metadata["sentiment"],
-                                      metadata["outlook"])
-            except Exception as e:
-                #print(f"Failed to fetch article or get metadata {article['title']}: {e} caching to avoid it next time")
-                self.news_db.save(published, ticker, article["url"], article['relevance_score'],
-                                  article['ticker_sentiment_score'],
-                                  1 if article['ticker_sentiment_label'] == 'Bullish' else 0)
-
-
-    def get_metadata(self, ticker, body):
-        return self.openai.news_query(body, ticker)
 
