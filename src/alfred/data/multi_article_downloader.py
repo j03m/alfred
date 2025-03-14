@@ -1,26 +1,18 @@
-import os
-import pandas as pd
-import time
 import ssl
 from datetime import datetime
 import binascii
-from io import StringIO
-import requests
 import queue
 import threading
 import concurrent.futures
-
-from .news_db import NewsDb
-from .openai_query import OpenAiQuery
-from fuzzywuzzy import process
-import re
-import json
 import requests
 from time import sleep
+
 from fake_useragent import UserAgent
 
 from alfred.utils import print_in_place
-from downloaders import AlphaDownloader
+from .news_db import NewsDb
+from .openai_query import OpenAiQuery
+from .downloaders import AlphaDownloader
 
 ssl._create_default_context = ssl._create_unverified_context
 
@@ -28,12 +20,12 @@ SENTINEL = object()  # Unique object to signal the end of processing
 
 
 class MultiArticleDownloader:
-    def __init__(self, workers=5, rate_limit=0.5):
+    def __init__(self, workers=5, rate_limit=0.1):
         self.api = AlphaDownloader()
         self.openai = OpenAiQuery()
-        self.news_db = NewsDb()
         self.rate_limit = rate_limit
         self.workers = 5
+        self.news_db = NewsDb()
         self.ua = UserAgent()
         self.url_queue = queue.Queue()
         self.result_queue = queue.Queue(maxsize=100)  # Bounded queue to limit memory usage
@@ -77,13 +69,14 @@ class MultiArticleDownloader:
         total = len(articles)
         # Populate the URL queue with articles
         for i, article in enumerate(articles):
-            print_in_place(f"Fetching article: {i} of {total} for {ticker}")
+            print_in_place(f"Queueing article: {i} of {total} for {ticker}")
             published = article.get('time_published', None)
             if published is None:
                 published = datetime.today().date().strftime('%Y-%m-%d')
             else:
                 published = datetime.strftime(published, '%Y-%m-%d')
             self.url_queue.put((article, published, ticker))
+            print("Queue len: ", self.url_queue.qsize())
 
         # Start the saving thread to process results as they come
         results_thread = threading.Thread(target=self.save)
@@ -91,8 +84,8 @@ class MultiArticleDownloader:
 
         # Process articles with 4 concurrent workers
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.workers) as executor:
-            for _ in range(self.workers):
-                executor.submit(self.process_article)
+            for i in range(self.workers):
+                executor.submit(self.process_article, i)
 
         # Wait for all articles to be processed
         self.url_queue.join()
@@ -103,27 +96,31 @@ class MultiArticleDownloader:
         # Wait for the saving thread to finish
         results_thread.join()
 
-    def process_article(self):
+    def process_article(self, worker_id):
         """
             Worker function to process articles from the URL queue.
             Runs until the url queue is empty
         """
+        news_db = NewsDb()
         while True:
             try:
                 # Get an article from the queue with a timeout
                 article, published, ticker = self.url_queue.get(timeout=1)
                 try:
-                    if not self.news_db.has_article(ticker, article["url"]):
+                    if not news_db.has_article(ticker, article["url"]):
                         # Fetch and process the article if it doesn't exist in the DB
+                        print(f"({worker_id}) fetching: ", article["url"])
                         body = self.fetch_article_body(article["url"])
                         metadata = self.get_metadata(ticker, body)
                         self.result_queue.put((published, ticker, article["url"], metadata["relevance"],
                                                metadata["sentiment"], metadata["outlook"]))
                     else:
                         # Skip if article already exists
+                        print(f"({worker_id}) skipping: ",  article["url"])
                         pass
                 except Exception as e:
                     # Use fallback values if fetching or processing fails
+                    print(f"({worker_id}) failed: ", article["url"])
                     self.result_queue.put((published, ticker, article["url"], article['relevance_score'],
                                            article['ticker_sentiment_score'],
                                            1 if article['ticker_sentiment_label'] == 'Bullish' else 0))
@@ -139,6 +136,7 @@ class MultiArticleDownloader:
             Consumer function to save results from the result queue to the database.
             Runs against the results queue until it gets a SENTINEL item and then breaks
         """
+        news_db = NewsDb()
         while True:
             item = self.result_queue.get()
             if item is SENTINEL:
@@ -146,7 +144,8 @@ class MultiArticleDownloader:
                 break
             # Unpack and save the result
             date, ticker, url, relevance, sentiment, outlook = item
-            self.news_db.save(date, ticker, url, relevance, sentiment, outlook)
+            print_in_place(f"{ticker}: saving data: {relevance}, {sentiment}, {outlook} for {url}")
+            news_db.save(date, ticker, url, relevance, sentiment, outlook)
             self.result_queue.task_done()
 
     def get_metadata(self, ticker, body):
