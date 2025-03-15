@@ -24,7 +24,7 @@ class MultiArticleDownloader:
         self.api = AlphaDownloader()
         self.openai = OpenAiQuery()
         self.rate_limit = rate_limit
-        self.workers = 5
+        self.workers = workers
         self.news_db = NewsDb()
         self.ua = UserAgent()
         self.url_queue = queue.Queue()
@@ -69,7 +69,7 @@ class MultiArticleDownloader:
         total = len(articles)
         # Populate the URL queue with articles
         for i, article in enumerate(articles):
-            print_in_place(f"Queueing article: {i} of {total} for {ticker}")
+            print(f"Queueing article: {i} of {total} for {ticker}")
             published = article.get('time_published', None)
             if published is None:
                 published = datetime.today().date().strftime('%Y-%m-%d')
