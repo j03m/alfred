@@ -40,6 +40,7 @@ def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=
             except:
                 print(f"Bad on disk file time in {ticker} file. Re-downloading")
         try:
+            print("downloading: ", ticker)
             df = downloader.prices(ticker, interval=interval)
             if len(df) == 0:
                 print(f"no data for {ticker}")

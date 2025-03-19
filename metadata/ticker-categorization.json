@@ -505,11 +505,11 @@
     "ELV"
   ],
   "data": [
-    "^VIX",
+    "VIX",
     "SPY",
-    "CL=F",
-    "BZ=F",
-    "GC=F",
-    "BTC=F"
+    "CL",
+    "BZ",
+    "GC",
+    "BTC"
   ]
 }

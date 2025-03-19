@@ -62,11 +62,13 @@ def main(symbols_file, data_dir, test_symbol):
         # TODO: could all these joins use merge_asof instead?
         if os.path.exists(price_file_path):
             if quarterly_earnings is None:
+                print(f"no earnings data: {symbol}")
                 bad_tickers.append(symbol)
                 continue
 
             df_prices = pd.read_csv(price_file_path)
             if len(df_prices) == 0:
+                print(f"no price data: {symbol}")
                 bad_tickers.append(symbol)
                 continue
 

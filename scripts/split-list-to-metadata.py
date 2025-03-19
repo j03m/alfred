@@ -18,7 +18,7 @@ def main(input_file, output_file, train_percent):
     metadata = {
         "training": training_set,
         "evaluation": evaluation_set,
-        "data": ["^VIX", "SPY", "CL=F", "BZ=F"]
+        "data": ["VIX", "SPY", "CL", "BZ", "BTC"]
     }
 
     # Write to JSON file

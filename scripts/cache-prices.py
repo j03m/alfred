@@ -13,11 +13,13 @@ parser.add_argument("-f", "--symbol-file", default="./metadata/ticker-categoriza
                     help="Load symbols from a file")
 parser.add_argument("-i", "--interval", choices=['1d', '1wk', '1mo'], default='1d', help="Load symbols from a file")
 parser.add_argument("-o", "--output-dir", default="./data", help="Output directory (default: ./data)")
+parser.add_argument("-t", "--types", nargs='+', choices=['training', 'evaluation', 'data'],
+                    default=['training', 'evaluation', 'data'], help="portion of the file to download")
 
 args = parser.parse_args()
 
 tickers = TickerCategories(args.symbol_file)
-metadata_tickers = tickers.get(["training", "evaluation", "data"])
+metadata_tickers = tickers.get(args.types)
 
 symbols = []
 if args.symbols is not None:
