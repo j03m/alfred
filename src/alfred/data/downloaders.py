@@ -3,21 +3,17 @@ import pandas as pd
 import time
 import ssl
 from datetime import datetime
-import binascii
+
 from io import StringIO
 
-from .news_db import NewsDb
-from .openai_query import OpenAiQuery
 from fuzzywuzzy import process
 import re
-
-from fake_useragent import UserAgent
-
-from alfred.utils import print_in_place
 
 import json
 import requests
 from time import sleep
+
+import yfinance as yf
 
 ssl.create_default_https_context = ssl._create_unverified_context
 
@@ -27,6 +23,7 @@ def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=
     for ticker in ticker_list:
         time.sleep(0.25)
         print("ticker: ", ticker)
+        # TODO what to do about VIX?
         data_file = os.path.join(output_dir, f"{ticker}.csv")
         if os.path.exists(data_file):
             try:
@@ -41,7 +38,16 @@ def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=
                 print(f"Bad on disk file time in {ticker} file. Re-downloading")
         try:
             print("downloading: ", ticker)
-            df = downloader.prices(ticker, interval=interval)
+            yahoo_only= ["BTC=F", "BZ=F", "CL=F", "^VIX"]
+            if ticker in yahoo_only:
+                ticker_obj = yf.download(tickers=ticker, interval=interval)
+                if isinstance(ticker_obj.columns, pd.MultiIndex):
+                    ticker_obj.columns = ticker_obj.columns.get_level_values(0)
+                df = pd.DataFrame(ticker_obj)
+                df.columns.name = None
+            else:
+                df = downloader.prices(ticker, interval=interval)
+
             if len(df) == 0:
                 print(f"no data for {ticker}")
                 bad_tickers.append(ticker)
