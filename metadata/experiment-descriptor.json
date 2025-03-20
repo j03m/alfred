@@ -1,9 +1,6 @@
 {
   "model_name": [
-    "lstm.medium.extractors.tanh",
-    "lstm.medium.extractors.layered.tanh",
-    "trans.medium.extractors.layered.tanh",
-    "trans.medium.extractors.slim.tanh"
+    "lstm.medium.extractors.tanh"
   ],
   "size": [
     1024,
