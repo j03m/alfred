@@ -957,6 +957,8 @@ Total Profit Percentage (sum of trade %): 5262.63%
 
 ## Tracking Efficiency
 
+TODO: return to this, flesh this out
+
 One thing I realized we weren't doing - Tracking how efficient the models were. Faster training
 times are going to weigh in here, especially if we look at transformers
 
@@ -968,8 +970,11 @@ Some observations:
 
 ## Bigger, Strong Faster
 
-Expanding the training set and testing to ALL equities. How to generate all the data: 
+Given the data in the last experiment, I decided to focus on `lstm.medium.extractors.tanh` but expand the training and 
+validation set to MOST of the nasdaq. I couldn't get fundamentals for a few different symbols which ended up dropping,
+but we were left with roughly ~5300 to work with in `metadata/nasdaq.json` (the original set is in `metadata/archived/nadaq.json`).
 
+pyt
 
 
 ## Reinforcement Learning

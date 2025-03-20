@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import argparse
 from alfred.metadata import TickerCategories, ColumnSelector
-from alfred.utils import make_datetime_index
+from alfred.utils import make_datetime_index, print_in_place
 from alfred.data import attach_moving_average_diffs
 
 # add something like BTC as a column
@@ -46,12 +46,16 @@ def main():
     agg_config = column_selector.get_aggregation_config()
     tickers = categories.get(["training", "evaluation"])
     data_tickers = categories.get(["data"])
+    total = len(tickers)
+    count = 0
     for ticker in tickers:
+        count+=1
+        print_in_place(f"Processing {ticker}: {count} of {total}")
         df = pd.read_csv(os.path.join(args.data, f"{ticker}_fundamentals.csv"))
         df = make_datetime_index(df, "Unnamed: 0")
         # for each data ticker, merge into the main set as a column
-        for ticker in data_tickers:
-            df = add_data_column(df, args, ticker)
+        for data_ticker in data_tickers:
+            df = add_data_column(df, args, data_ticker)
 
         df, _ = attach_moving_average_diffs(df)
 

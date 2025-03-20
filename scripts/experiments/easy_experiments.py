@@ -23,7 +23,7 @@ DB = 'sacred_db'
 MONGO = connection_data.connection_string()
 
 # I hate that this is global
-experiment_namespace = "alfred-experiments"
+experiment_namespace = "alfred-experiments-2"
 ex = Experiment(experiment_namespace)
 ex.add_config({'token': experiment_namespace})
 ex.observers.append(MongoObserver(
