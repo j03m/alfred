@@ -53,7 +53,7 @@ def main():
         for ticker in data_tickers:
             df = add_data_column(df, args, ticker)
 
-        df = attach_moving_average_diffs(df)
+        df, _ = attach_moving_average_diffs(df)
 
         # add treasuries
         df = add_treasuries(df, args)
