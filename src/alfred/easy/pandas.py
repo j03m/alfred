@@ -78,6 +78,7 @@ def dfs_from_files(files, date_column="Unnamed: 0", augment_func=noop):
         df = read_time_series_file(file, date_column)
         df = augment_func(df)
         dfs.append(df)
+        assert len(df) > 0
     return dfs
 
 

@@ -32,7 +32,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--symbol-file', type=str, help="List of symbols in a file")
+    parser.add_argument('--symbol-file', type=str, default="metadata/nasdaq.json", help="List of symbols in a file")
     parser.add_argument('--start-date',
                         type=date_type,
                         default=date(2004, 3, 31),

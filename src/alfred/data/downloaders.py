@@ -38,15 +38,12 @@ def download_ticker_list(ticker_list, output_dir="./data/", interval="1d", tail=
                 print(f"Bad on disk file time in {ticker} file. Re-downloading")
         try:
             print("downloading: ", ticker)
-            yahoo_only= ["BTC=F", "BZ=F", "CL=F", "^VIX"]
-            if ticker in yahoo_only:
-                ticker_obj = yf.download(tickers=ticker, interval=interval)
-                if isinstance(ticker_obj.columns, pd.MultiIndex):
-                    ticker_obj.columns = ticker_obj.columns.get_level_values(0)
-                df = pd.DataFrame(ticker_obj)
-                df.columns.name = None
-            else:
-                df = downloader.prices(ticker, interval=interval)
+
+            ticker_obj = yf.download(tickers=ticker, interval=interval)
+            if isinstance(ticker_obj.columns, pd.MultiIndex):
+                ticker_obj.columns = ticker_obj.columns.get_level_values(0)
+            df = pd.DataFrame(ticker_obj)
+            df.columns.name = None
 
             if len(df) == 0:
                 print(f"no data for {ticker}")

@@ -3,6 +3,7 @@ import argparse
 from alfred.metadata import TickerCategories
 import os
 import yfinance as yf
+import time
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--symbols",
@@ -31,6 +32,7 @@ if not os.path.exists(args.output_dir):
 symbols = list(set(symbols))
 for symbol in symbols:
     try:
+        time.sleep(0.25)
         print("dividends for: ", symbol)
         ticker = yf.Ticker(symbol)
         dividends = ticker.dividends

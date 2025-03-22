@@ -52,7 +52,7 @@ def main():
         count+=1
         print_in_place(f"Processing {ticker}: {count} of {total}")
         df = pd.read_csv(os.path.join(args.data, f"{ticker}_fundamentals.csv"))
-        df = make_datetime_index(df, "Unnamed: 0")
+        df = make_datetime_index(df, "Date")
         # for each data ticker, merge into the main set as a column
         for data_ticker in data_tickers:
             df = add_data_column(df, args, data_ticker)

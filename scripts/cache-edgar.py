@@ -74,7 +74,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Download and parse 13F filings for tickers.")
     parser.add_argument("--output-folder", default="./filings", help="Output folder for filings.")
-    parser.add_argument("--start", default=2014,
+    parser.add_argument("--start", default=2014, type=int,
                         help="start year")
     parser.add_argument("--end", default=datetime.now().year,
                         help="end year")
