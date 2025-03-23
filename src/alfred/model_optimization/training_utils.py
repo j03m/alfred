@@ -9,7 +9,7 @@ from alfred.model_metrics import BCEAccumulator
 import tracemalloc
 
 DUMP_MEMORY_DIFFS = False
-
+FLUSH_MPS_CACHE = True
 from alfred.utils import print_in_place
 
 device = set_device()
@@ -37,7 +37,7 @@ def train_model(model, optimizer, scheduler, scaler, train_loader, patience, mod
 
         for seq, labels in train_loader:
             if verbose:
-                print_in_place(f"training seq {count} of {total_seqs}")
+                print_in_place(f"epoch: {epoch} training seq {count} of {total_seqs}")
             seq, labels = seq.to(device), labels.to(device)
             optimizer.zero_grad()
             y_pred = model(seq).squeeze()
@@ -90,6 +90,11 @@ def train_model(model, optimizer, scheduler, scaler, train_loader, patience, mod
             stats = snapshot2.compare_to(snapshot1, 'lineno')
             for stat in stats[:10]:  # Top 10 differences
                 print(stat)
+
+        if FLUSH_MPS_CACHE:
+            print(f"Before flush, MPS memory: {torch.mps.current_allocated_memory() / 1024 ** 3:.2f} GB")
+            torch.mps.empty_cache()
+            print(f"After flush, MPS memory: {torch.mps.current_allocated_memory() / 1024 ** 3:.2f} GB")
 
     if best_stats is None:
         best_stats = stats
