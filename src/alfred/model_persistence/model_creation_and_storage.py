@@ -187,7 +187,7 @@ def get_model_scaler(model_token):
         print("No previous model.")
         return None
 
-    print(f"Found model version {record['version']} for {model_token}.")
+    print(f"Found scaler version {record['version']} for {model_token}.")
 
     scaler_file_id = record['scaler_file_id']
     scaler_file = fs.get(scaler_file_id)

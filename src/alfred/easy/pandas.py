@@ -10,7 +10,7 @@ from alfred.data import CustomScaler, PM_SCALER_CONFIG
 from alfred.model_metrics import BCEAccumulator
 from alfred.model_persistence import model_from_config, crc32_columns
 from alfred.model_optimization import train_model, evaluate_model
-from alfred.utils import read_time_series_file
+from alfred.utils import read_time_series_file, print_in_place
 
 from dataclasses import dataclass
 from typing import List, Optional, Callable, Union
@@ -30,7 +30,7 @@ class ModelPrepConfig:
     labels: List[str] = None
     batch_size: int = 32
     shuffle: bool = True
-    date_column: str = "Unnamed: 0"
+    date_column: str = "Date"
     augment_func: Optional[Callable[[pd.DataFrame], pd.DataFrame]] = None
     data_frames: Optional[List[pd.DataFrame]] = None
     seq_len: Optional[int] = None
@@ -72,9 +72,13 @@ def noop(df):
     return df
 
 
-def dfs_from_files(files, date_column="Unnamed: 0", augment_func=noop):
+def dfs_from_files(files, date_column="Date", augment_func=noop):
     dfs = []
+    count = 0
+    total = len(files)
     for file in files:
+        count += 1
+        print_in_place(f"loading df {count} of {total}")
         df = read_time_series_file(file, date_column)
         df = augment_func(df)
         dfs.append(df)
@@ -250,13 +254,14 @@ def trainer(category="easy_model",
             patience=500,
             batch_size=32,
             shuffle=True,
-            date_column="Unnamed: 0",
+            date_column="Date",
             augment_func=noop,
             verbose=False,
             loss_function=nn.BCELoss(),
             stat_accumulator=BCEAccumulator,
             seq_len=None):
 
+    print("Prepping data")
     result: ModelPrepResult = prepare_data_and_model(
         ModelPrepConfig(category=category,
                         model_name=model_name,
@@ -295,7 +300,7 @@ def evaler(category="easy_model",
            features=[],
            labels=["PQ"],
            batch_size=32,
-           date_column="Unnamed: 0",
+           date_column="Date",
            augment_func=noop,
            loss_function=nn.BCELoss(),
            seq_len=None,

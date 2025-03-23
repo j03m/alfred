@@ -6,6 +6,12 @@ from alfred.model_persistence import maybe_save_model, get_best_loss, prune_old_
 from alfred.devices import set_device
 from alfred.model_metrics import BCEAccumulator
 
+import tracemalloc
+
+DUMP_MEMORY_DIFFS = False
+
+from alfred.utils import print_in_place
+
 device = set_device()
 
 def train_model(model, optimizer, scheduler, scaler, train_loader, patience, model_token, training_label, epochs=20,
@@ -17,11 +23,21 @@ def train_model(model, optimizer, scheduler, scaler, train_loader, patience, mod
     patience_count = 0
     last_mean_loss = None
     time_per_epoch = None
+    total_seqs = len(train_loader)
+    snapshot1 = None
+
+    if DUMP_MEMORY_DIFFS:
+        tracemalloc.start()
+        snapshot1 = tracemalloc.take_snapshot()
+
     for epoch in range(epochs):
         start_time = time.time()  # Record start time
         count = 0
         total_loss = 0.0
+
         for seq, labels in train_loader:
+            if verbose:
+                print_in_place(f"training seq {count} of {total_seqs}")
             seq, labels = seq.to(device), labels.to(device)
             optimizer.zero_grad()
             y_pred = model(seq).squeeze()
@@ -68,6 +84,13 @@ def train_model(model, optimizer, scheduler, scaler, train_loader, patience, mod
         if patience_count > patience:
             print(f'Out of patience at epoch {epoch}. Patience count: {patience}/{patience_count}. Limit: {patience}')
             break
+
+        if DUMP_MEMORY_DIFFS and snapshot1 is not None:
+            snapshot2 = tracemalloc.take_snapshot()
+            stats = snapshot2.compare_to(snapshot1, 'lineno')
+            for stat in stats[:10]:  # Top 10 differences
+                print(stat)
+
     if best_stats is None:
         best_stats = stats
 

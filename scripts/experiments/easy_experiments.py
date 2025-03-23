@@ -1,10 +1,10 @@
-from sacred import Experiment
+from sacred import Experiment, SETTINGS
+
 from sacred.observers import MongoObserver
 from alfred.utils import trim_timerange, set_deterministic
 from alfred.easy import trainer, evaler
 from alfred.metadata import ExperimentSelector, TickerCategories
 from alfred.utils import MongoConnectionStrings
-from alfred.model_persistence import crc32_columns
 from alfred.model_metrics import BCEAccumulator, RegressionAccumulator, HuberWithSignPenalty, MSEWithSignPenalty, \
     SignErrorRatioLoss
 
@@ -19,6 +19,7 @@ set_deterministic(0)
 connection_data = MongoConnectionStrings()
 connection_data.get_mongo_client()  # don't use this but it will force the right connection strings
 
+SETTINGS['CAPTURE_MODE'] = 'no'
 DB = 'sacred_db'
 MONGO = connection_data.connection_string()
 
@@ -151,7 +152,7 @@ if __name__ == "__main__":
                         help="If supplied, will circumvent the metadate file and only test this symbol")
     parser.add_argument("--column-file", type=str, default="./metadata/column-descriptors.json",
                         help="Path to the JSON file containing indexed experiments")
-    parser.add_argument("--ticker-categories-file", type=str, default="./metadata/basic-tickers.json",
+    parser.add_argument("--ticker-categories-file", type=str, default="./metadata/nasdaq.json",
                         help="Path to the JSON file containing tickers for the experiments")
     parser.add_argument("--include", type=str, default="",
                         help="Ranges of experiments to include (e.g., 1-5,10-15)")
