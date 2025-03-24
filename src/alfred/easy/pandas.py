@@ -100,7 +100,11 @@ def create_sequences(df, seq_len, features, labels):
 def create_sequences_from_dfs(dfs, seq_len, features, labels):
     all_sequences = []
     all_targets = []
+    count = 0
+    total = len(dfs)
     for df in dfs:
+        count += 1
+        print_in_place(f"creating seq {count} of {total}")
         sequences, targets = create_sequences(df, seq_len, features, labels)
         all_sequences.append(sequences)
         all_targets.append(targets)
@@ -145,7 +149,7 @@ def prepare_data_and_model_seq(config: ModelPrepConfig):
 
     features, size = set_final_feature_and_size(config, df_all)
 
-    print("loading model from config or creating model")
+    print("\nloading model from config or creating model")
     features_hash = crc32_columns(features)
     model, optimizer, scheduler, scaler, real_model_token, was_loaded = model_from_config(
         num_features=size,
@@ -161,12 +165,20 @@ def prepare_data_and_model_seq(config: ModelPrepConfig):
         scaler.fit(df_all)
 
     # Scale each individual DataFrame using the fitted scaler
-    dfs_scaled = [scaler.transform(df) for df in dfs]
+    print("\nScaling")
+    dfs_scaled = []
+    count = 0
+    for df in dfs:
+        count += 1
+        print_in_place(f"Scaling {count} of {len(dfs)}")
+        dfs_scaled.append(scaler.transform(df))
 
     # Create sequences from the scaled DataFrames
+    print("\nGenerating sequences")
     x_tensor, y_tensor = create_sequences_from_dfs(dfs_scaled, config.seq_len, features, config.labels)
 
     # Create DataLoader
+    print("\nGenerating DataLoader")
     dataset = TensorDataset(x_tensor, y_tensor.squeeze(-1))
     loader = DataLoader(dataset, batch_size=config.batch_size, shuffle=config.shuffle)
 
@@ -289,7 +301,8 @@ def trainer(category="easy_model",
                        verbose=verbose,
                        loss_function=loss_function,
                        scaler=result.scaler,
-                       stat_accumulator=stat_accumulator)
+                       stat_accumulator=stat_accumulator,
+                       retrain=result.was_loaded)
 
 
 def evaler(category="easy_model",

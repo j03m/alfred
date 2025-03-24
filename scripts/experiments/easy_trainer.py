@@ -13,22 +13,22 @@ set_deterministic(0)
 def main():
     # Set up argument parser
     parser = argparse.ArgumentParser(description="Run trainer with specified model and timerange.")
-    parser.add_argument('--category', type=str, default="easy_model",
+    parser.add_argument('--category', type=str, default="easy_experiments",
                         help='category can be used to put the same models into different buckets')
-    parser.add_argument('--model', type=str, default='vanilla.small', help='Name of the model to use')
-    parser.add_argument('--size', type=int, default=256, help='The size of the model to use')
-    parser.add_argument('--seq-len', type=int, default=None, help='Sequence length, supply when using lstms')
+    parser.add_argument('--model', type=str, default='lstm.medium.extractors.tanh', help='Name of the model to use')
+    parser.add_argument('--size', type=int, default=1024, help='The size of the model to use')
+    parser.add_argument('--seq-len', type=int, default=12, help='Sequence length, supply when using lstms')
     parser.add_argument('--min_date', type=str, default="2004-03-31",
                         help='Minimum date for timerange trimming (YYYY-MM-DD)')
     parser.add_argument('--max_date', type=str, default=None, help='Maximum date for timerange trimming (YYYY-MM-DD)')
-    parser.add_argument('--tickers', type=str, default="./metadata/basic-tickers.json", help='Tickers to train on')
-    parser.add_argument('--file-post-fix', type=str, default="_quarterly_directional",
+    parser.add_argument('--tickers', type=str, default="./metadata/nasdaq.json", help='Tickers to train on')
+    parser.add_argument('--file-post-fix', type=str, default="_quarterly_magnitude",
                         help='assumes data/[ticker][args.file_post_fix].csv as data to use')
-    parser.add_argument('--label', type=str, default="PQ",
+    parser.add_argument('--label', type=str, default="PM",
                         help='label column')
-    parser.add_argument('--loss', choices=["bce", "mse", "huber-sign", "mse-sign", "sign-ratio"], default="bce", help='loss function')
+    parser.add_argument('--loss', choices=["bce", "mse", "huber-sign", "mse-sign", "sign-ratio"], default="huber-sign", help='loss function')
     parser.add_argument('--epochs', type=int, default=5000, help='number of epochs')
-    parser.add_argument('--patience', type=int, default=500, help='number of epochs to allow without loss decrease')
+    parser.add_argument('--patience', type=int, default=1000, help='number of epochs to allow without loss decrease')
 
     args = parser.parse_args()
 

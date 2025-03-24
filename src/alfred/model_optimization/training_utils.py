@@ -2,7 +2,7 @@ import torch
 from torch import nn as nn
 import time
 
-from alfred.model_persistence import maybe_save_model, get_best_loss, prune_old_versions
+from alfred.model_persistence import maybe_save_model, get_best_loss, set_best_loss, prune_old_versions
 from alfred.devices import set_device
 from alfred.model_metrics import BCEAccumulator
 
@@ -15,7 +15,7 @@ from alfred.utils import print_in_place
 device = set_device()
 
 def train_model(model, optimizer, scheduler, scaler, train_loader, patience, model_token, training_label, epochs=20,
-                loss_function=nn.BCELoss(), stat_accumulator=BCEAccumulator(), verbose=False, verbosity_limit=10):
+                loss_function=nn.BCELoss(), stat_accumulator=BCEAccumulator(), verbose=False, verbosity_limit=10, retrain=False):
     model.train()
     best_stats = None
     best_loss = None
@@ -25,7 +25,7 @@ def train_model(model, optimizer, scheduler, scaler, train_loader, patience, mod
     time_per_epoch = None
     total_seqs = len(train_loader)
     snapshot1 = None
-
+    should_retrain = retrain
     if DUMP_MEMORY_DIFFS:
         tracemalloc.start()
         snapshot1 = tracemalloc.take_snapshot()
@@ -50,7 +50,7 @@ def train_model(model, optimizer, scheduler, scaler, train_loader, patience, mod
             loss_value = batch_loss.item()
             total_loss += loss_value
             count += 1
-            stat_accumulator.update(y_pred.squeeze(), labels)
+            stat_accumulator.update(y_pred.squeeze().detach(), labels.detach())
         end_time = time.time()  # Record end time
         time_per_epoch = end_time - start_time  # Calculate time per epoch
 
@@ -63,6 +63,11 @@ def train_model(model, optimizer, scheduler, scaler, train_loader, patience, mod
             print("last learning rate:", scheduler.get_last_lr())
             print(f"Predictions: {y_pred.detach().cpu().numpy().flatten()}")  # Flatten and print on one line
             print(f"Labels:      {labels.detach().cpu().numpy().flatten()}")  # Flatten and print on one line
+
+        # if we should retrain, then override the loss with our first run
+        if should_retrain:
+            set_best_loss(model_token, training_label, mean_loss)
+            should_retrain = False # only once
 
         saved = maybe_save_model(model, optimizer, scheduler, scaler, mean_loss, model_token, training_label)
 
