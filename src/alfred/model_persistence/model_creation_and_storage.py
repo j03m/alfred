@@ -224,13 +224,15 @@ def save_next_model(model, optimizer, scheduler, scaler, model_token, eval_loss)
     buffer.seek(0)
 
     # needed due to models being > bson limit (laaaaame)
-    model_file_id = fs.put(buffer.getvalue(), filename=f"{model_token}_v{next_version}")
+    file_buffer_value = buffer.getvalue()
+    model_file_id = fs.put(file_buffer_value, filename=f"{model_token}_v{next_version}")
 
     # --- Serialize Scaler ---
     scaler_buffer = io.BytesIO()
     joblib.dump(scaler, scaler_buffer)  # Serialize scaler to buffer
     scaler_buffer.seek(0)
-    scaler_file_id = fs.put(scaler_buffer.getvalue(),
+    scaler_buffer_value = scaler_buffer.getvalue()
+    scaler_file_id = fs.put(scaler_buffer_value,
                             filename=f"{model_token}_scaler_v{next_version}")  # Save scaler to GridFS
 
     # Save to MongoDB
@@ -241,6 +243,11 @@ def save_next_model(model, optimizer, scheduler, scaler, model_token, eval_loss)
         'model_file_id': model_file_id,
         'scaler_file_id': scaler_file_id
     })
+    del buffer
+    del scaler_buffer
+    del scaler_buffer_value
+    del file_buffer_value
+
     print(f"Model version {next_version} saved for {model_token}.")
 
 

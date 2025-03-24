@@ -6,10 +6,6 @@ from alfred.model_persistence import maybe_save_model, get_best_loss, set_best_l
 from alfred.devices import set_device
 from alfred.model_metrics import BCEAccumulator
 
-import tracemalloc
-
-DUMP_MEMORY_DIFFS = False
-FLUSH_MPS_CACHE = True
 from alfred.utils import print_in_place
 
 device = set_device()
@@ -24,11 +20,7 @@ def train_model(model, optimizer, scheduler, scaler, train_loader, patience, mod
     last_mean_loss = None
     time_per_epoch = None
     total_seqs = len(train_loader)
-    snapshot1 = None
     should_retrain = retrain
-    if DUMP_MEMORY_DIFFS:
-        tracemalloc.start()
-        snapshot1 = tracemalloc.take_snapshot()
 
     for epoch in range(epochs):
         start_time = time.time()  # Record start time
@@ -89,17 +81,6 @@ def train_model(model, optimizer, scheduler, scaler, train_loader, patience, mod
         if patience_count > patience:
             print(f'Out of patience at epoch {epoch}. Patience count: {patience}/{patience_count}. Limit: {patience}')
             break
-
-        if DUMP_MEMORY_DIFFS and snapshot1 is not None:
-            snapshot2 = tracemalloc.take_snapshot()
-            stats = snapshot2.compare_to(snapshot1, 'lineno')
-            for stat in stats[:10]:  # Top 10 differences
-                print(stat)
-
-        if FLUSH_MPS_CACHE:
-            print(f"Before flush, MPS memory: {torch.mps.current_allocated_memory() / 1024 ** 3:.2f} GB")
-            torch.mps.empty_cache()
-            print(f"After flush, MPS memory: {torch.mps.current_allocated_memory() / 1024 ** 3:.2f} GB")
 
     if best_stats is None:
         best_stats = stats
