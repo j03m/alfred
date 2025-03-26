@@ -41,10 +41,10 @@ class BCEAccumulator(StatAccumulator):
 
     def update(self, predictions:torch.Tensor, labels:torch.Tensor):
         predicted_classes = (predictions > 0.5).int()
-        self._metric_accuracy.update(predicted_classes.detach(), labels.detach().int())
-        self._metric_precision.update(predicted_classes.detach(), labels.detach().int())
-        self._metric_recall.update(predicted_classes.detach(), labels.detach().int())
-        self._metric_f1.update(predicted_classes.detach(), labels.detach().int())
+        self._metric_accuracy.update(predicted_classes, labels.int())
+        self._metric_precision.update(predicted_classes, labels.int())
+        self._metric_recall.update(predicted_classes, labels.int())
+        self._metric_f1.update(predicted_classes, labels.int())
 
     def compute(self):
         self._computed_once = True
@@ -109,10 +109,10 @@ class RegressionAccumulator:
     def update(self, predictions: torch.Tensor, labels: torch.Tensor):
         """Update metrics with a batch of predictions and labels."""
         # Update standard metrics
-        labels = labels.detach()
-        self._metric_mae.update(predictions.detach(), labels)
-        self._metric_r2.update(predictions.detach(), labels)
-        self._metric_corr.update(predictions.detach(), labels)
+        labels = labels
+        self._metric_mae.update(predictions, labels)
+        self._metric_r2.update(predictions, labels)
+        self._metric_corr.update(predictions, labels)
 
         # Compute sign matches
         same_sign = (torch.sign(predictions) == torch.sign(labels)).float()

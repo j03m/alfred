@@ -1,6 +1,9 @@
 import torch.nn as nn
 import torch
 
+import sys
+import gc
+
 from .layers import (LSTMExtractor, ConvExtractor, AttentionExtractor, ExtractorType, ConvLayer, TimeStepAttention,
                      FeatureAttention)
 
@@ -98,8 +101,11 @@ class LstmConcatExtractors(nn.Module):
     def forward(self, input_data):
 
         # Apply each extractor and concatenate outputs
-        extractor_outputs = [extractor(input_data) for extractor in self.extractors]
+        extractor_outputs =[]
+        for extractor in self.extractors:
+            extractor_outputs.append(extractor(input_data))
         x = torch.cat(extractor_outputs, dim=1)  # (batch_size, hidden_size * num_extractors)
+
         x = self.hidden_activation(self.first_layer(x))
 
         # Pass through hidden layers
@@ -115,6 +121,7 @@ class LstmConcatExtractors(nn.Module):
         x = self.last_layer(x)
         x = self.last_norm(x)
         predictions = self.final_activation(x)
+
         return predictions
 
 class LstmLayeredExtractors(nn.Module):

@@ -1,0 +1,14 @@
+{
+  "training": [
+    "AAPL",
+    "LNC",
+    "ATI"
+  ],
+  "evaluation": [
+    "F",
+    "AVB",
+    "MAC",
+    "ZION"
+  ]
+}
+

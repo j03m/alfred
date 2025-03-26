@@ -100,6 +100,10 @@ def model_from_config(config_token, num_features, sequence_length, size, output,
         model = LstmConcatExtractors(input_size=num_features, seq_len=sequence_length, hidden_size=size, output_size=output,
                                      extractor_types=[ExtractorType.LSTM, ExtractorType.ATTENTION,
                                                       ExtractorType.CONVOLUTION], final_activation=nn.Tanh(), layers=3)
+    elif config_token == 'att.conv.medium.extractors.tanh':
+        model = LstmConcatExtractors(input_size=num_features, seq_len=sequence_length, hidden_size=size, output_size=output,
+                                     extractor_types=[ExtractorType.ATTENTION,
+                                                      ExtractorType.CONVOLUTION], final_activation=nn.Tanh(), layers=3)
     elif config_token == 'lstm.medium.extractors.layered.tanh':
         # same model but order here is important!
         model = LstmLayeredExtractors(input_size=num_features, seq_len=sequence_length, hidden_size=size, output_size=output,

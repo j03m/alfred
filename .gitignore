@@ -26,3 +26,4 @@ filings/*
 data/cusip_cache.json
 *.output
 archive/*
+profiles/*

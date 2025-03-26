@@ -26,6 +26,8 @@ def main():
                         help='assumes data/[ticker][args.file_post_fix].csv as data to use')
     parser.add_argument('--label', type=str, default="PM",
                         help='label column')
+    parser.add_argument('--batch-size', type=int, default=32,
+                        help='batch size')
     parser.add_argument('--loss', choices=["bce", "mse", "huber-sign", "mse-sign", "sign-ratio"], default="huber-sign", help='loss function')
     parser.add_argument('--epochs', type=int, default=5000, help='number of epochs')
     parser.add_argument('--patience', type=int, default=1000, help='number of epochs to allow without loss decrease')
@@ -62,6 +64,7 @@ def main():
         labels=[args.label],
         epochs=args.epochs,
         loss_function=loss_function,
+        batch_size=args.batch_size,
         seq_len=args.seq_len,
         stat_accumulator=BCEAccumulator() if args.loss == "bce" else RegressionAccumulator())
 
