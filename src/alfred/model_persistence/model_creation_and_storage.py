@@ -147,7 +147,7 @@ def model_from_config(config_token, num_features, sequence_length, size, output,
 def maybe_save_model(model, optimizer, scheduler, scaler, eval_loss, model_token, training_label):
     best_loss = get_best_loss(model_token, training_label)
     if eval_loss < best_loss:
-        print(f"New best model: {eval_loss} vs {best_loss}: saving")
+        print(f"\nNew best model: {eval_loss} vs {best_loss}: saving")
         save_next_model(model, optimizer, scheduler, scaler, model_token, eval_loss)
         set_best_loss(model_token, training_label, eval_loss)
         return True

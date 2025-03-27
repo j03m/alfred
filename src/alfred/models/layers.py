@@ -12,11 +12,10 @@ class ExtractorType:
 
 # LSTM Extractor: Outputs the final hidden state
 class LSTMExtractor(nn.Module):
-    def __init__(self, num_features, hidden_size, num_layers=2):
+    def __init__(self, num_features, hidden_size, num_layers=1):
         super().__init__()
         self.lstm = nn.LSTM(num_features, hidden_size, num_layers, batch_first=True)
 
-    # todo what do we want to do here?
     def forward(self, x):
         _, (h_n, _) = self.lstm(x)  # h_n: (num_layers, batch_size, hidden_size)
         return h_n[-1]  # (batch_size, hidden_size)
